@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
+import { env } from '@/lib/env';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -24,6 +26,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
+        {/* Google AdSense 사이트 확인/서빙 스크립트 — client 설정 시에만 모든 페이지 head에 로드 */}
+        {env.NEXT_PUBLIC_ADSENSE_CLIENT && (
+          <Script
+            id="adsbygoogle-init"
+            async
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${env.NEXT_PUBLIC_ADSENSE_CLIENT}`}
+          />
+        )}
       </head>
       <body className="min-h-screen bg-background text-foreground">{children}</body>
     </html>

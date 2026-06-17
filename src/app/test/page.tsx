@@ -97,7 +97,7 @@ export default function TestPage() {
             </div>
             <p className="mt-2 text-xs text-muted-foreground">예상 1분 남음 — 기다리는 동안:</p>
 
-            <AdSlot className="mt-4 min-h-[120px]" note="처리 대기 배너 · AdCash · Pro는 숨김" />
+            <AdSlot className="mt-4 min-h-[120px]" note="처리 대기 배너 · AdSense · Pro는 숨김" />
           </div>
           <p className="mt-3 text-center text-xs text-muted-foreground/60">
             * 대기 시간은 어차피 비는 시간 → 가장 덜 거슬리는 광고 지점. 팝업·전면광고는 배제, 배너/네이티브만.

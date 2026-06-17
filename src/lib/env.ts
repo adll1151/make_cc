@@ -45,9 +45,9 @@ const envSchema = z.object({
   DISCORD_GUILD_ID: z.string().optional().default(''), // (옵션) 서버 참여 점검용
   NEXT_PUBLIC_DISCORD_INVITE_URL: z.string().optional().default(''), // 헤더/마이페이지 초대 링크
 
-  // Ads (AdCash) — 무료 티어 광고. zone 미설정 시 슬롯은 플레이스홀더로 표시
-  NEXT_PUBLIC_ADCASH_ZONE_ID: z.string().optional().default(''), // AutoTag 존 (페이지 자동 배치)
-  NEXT_PUBLIC_ADCASH_BANNER_ZONE_ID: z.string().optional().default(''), // Banner 존 (AdSlot 고정 위치)
+  // Ads (Google AdSense) — 무료 티어 광고. client/slot 미설정 시 슬롯은 플레이스홀더로 표시
+  NEXT_PUBLIC_ADSENSE_CLIENT: z.string().optional().default(''), // 퍼블리셔 ID (ca-pub-XXXXXXXXXXXXXXXX)
+  NEXT_PUBLIC_ADSENSE_SLOT: z.string().optional().default(''), // 기본 광고 유닛 slot ID (AdSlot 고정 위치)
 
   // Whisper (워커 전용 — 웹에서는 미사용)
   WHISPER_MODEL: z
