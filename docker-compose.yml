@@ -1,0 +1,24 @@
+# 로컬 STT 큐용 Redis만 띄움
+# (Postgres / Storage는 Supabase가 제공)
+# 사용: docker compose up -d
+#
+# Redis 없이 개발하려면 Upstash(https://upstash.com) 무료 티어 사용 → REDIS_URL 교체
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: make-cc-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: ['redis-server', '--appendonly', 'yes']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:

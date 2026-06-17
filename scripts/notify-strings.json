@@ -1,0 +1,15 @@
+{
+  "displayName": "JARVIS",
+  "closeLabel": "닫기",
+  "biggerLabel": "크게",
+  "smallerLabel": "작게",
+  "resetLabel": "기본 크기",
+  "done": {
+    "title": "JARVIS · 작업 완료",
+    "message": "요청하신 작업을 끝냈어요."
+  },
+  "decision": {
+    "title": "JARVIS · 결정이 필요해요",
+    "message": "선택을 기다리고 있어요."
+  }
+}

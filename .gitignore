@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Testing
+coverage/
+*.lcov
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# Vercel
+.vercel
+
+# Misc
+*.tsbuildinfo
+next-env.d.ts
+
+# Worker (별도 패키지로 분리 예정)
+worker/dist/
+worker/.env
+worker/*.wav
+
+# bkit / AI 에이전트 개발 메타 (포트폴리오 저장소에서 제외)
+.bkit/
+.claude/
+
+# 개인 데스크톱 마스코트 스크립트 (Windows 전용, 프로젝트 무관)
+scripts/mascot/
+
+# 로컬 테스트 산출물
+test.mp4
+test-tmp/
+*.wav

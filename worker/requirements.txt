@@ -1,0 +1,6 @@
+faster-whisper>=1.0.0
+# 화자 분리 (speaker-diarization)
+pyannote.audio>=3.1.0
+# wav 디코딩 (Windows + pyannote 4.x에서 torchcodec 우회용)
+soundfile>=0.12.0
+# pyannote가 의존: torch (CUDA 휠은 사용자 환경에 맞춰 설치 권장)
