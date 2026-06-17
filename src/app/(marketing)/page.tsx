@@ -189,7 +189,12 @@ export default function LandingPage() {
             <span className="font-semibold text-foreground">make_cc</span>
             <span>· 한국어 음성→자막 자동화</span>
           </div>
-          <p className="text-xs">© 2026 make_cc</p>
+          <div className="flex items-center gap-4 text-xs">
+            <Link href="/privacy" className="transition hover:text-foreground">
+              개인정보처리방침
+            </Link>
+            <span>© 2026 make_cc</span>
+          </div>
         </div>
       </footer>
     </main>
