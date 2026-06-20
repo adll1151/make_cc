@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { FloatingNav } from '@/components/ui/floating-nav';
+import { AdSlot } from '@/components/ads/AdSlot';
 
 export default function LandingPage() {
   return (
@@ -155,6 +156,11 @@ export default function LandingPage() {
           <Stat number="100+" label="지원 영상 포맷 (Whisper)" />
           <Stat number="₩0" label="게스트 무료 체험" />
         </div>
+      </section>
+
+      {/* ============ 광고 (콘텐츠 페이지에만) ============ */}
+      <section className="relative mx-auto max-w-3xl px-6 pb-24">
+        <AdSlot className="min-h-[120px]" note="스폰서 광고" />
       </section>
 
       {/* ============ CTA ============ */}

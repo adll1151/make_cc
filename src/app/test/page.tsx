@@ -1,16 +1,32 @@
 'use client';
 
 import { useState } from 'react';
+import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { FloatingNav } from '@/components/ui/floating-nav';
-import { AdSlot } from '@/components/ads/AdSlot';
 
 /**
  * /test — 디자인·기능 프리뷰 샌드박스.
  * 실제 라우트/네비에 연결 안 함. 여기서 시안을 보고 피드백 → 확정되면 실제 페이지로 이관.
  *
- * 현재 시안: 수익화 UI (요금제 카드 + 업그레이드 CTA + 광고 슬롯 예시)
+ * ⚠️ 프로덕션에선 404 (notFound). AdSense 정책상 "준비 중/콘텐츠 없는 화면"이
+ *    크롤러에 노출되면 안 됨 → 실제 광고(AdSlot) 대신 정적 mockup 박스만 둔다.
  */
+
+/** 광고 자리 mockup — 실제 AdSlot 대신 시안 표시용(서빙 안 함). */
+function AdMock({ className, note }: { className?: string; note?: string }) {
+  return (
+    <div
+      className={`flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card/30 p-6 text-center ${className ?? ''}`}
+      aria-label="광고 자리 (mockup)"
+    >
+      <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Ad mockup
+      </span>
+      {note && <p className="text-xs text-muted-foreground/60">{note}</p>}
+    </div>
+  );
+}
 
 type Cycle = 'monthly' | 'yearly';
 
@@ -65,6 +81,8 @@ const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 
 export default function TestPage() {
   const [cycle, setCycle] = useState<Cycle>('monthly');
+  // 프로덕션에선 노출 금지 (AdSense: 준비 중 화면 광고 위반 방지). hooks 뒤에서 호출.
+  if (process.env.NODE_ENV === 'production') notFound();
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -97,7 +115,7 @@ export default function TestPage() {
             </div>
             <p className="mt-2 text-xs text-muted-foreground">예상 1분 남음 — 기다리는 동안:</p>
 
-            <AdSlot className="mt-4 min-h-[120px]" note="처리 대기 배너 · AdSense · Pro는 숨김" />
+            <AdMock className="mt-4 min-h-[120px]" note="처리 대기 배너 (mockup) · Pro는 숨김" />
           </div>
           <p className="mt-3 text-center text-xs text-muted-foreground/60">
             * 대기 시간은 어차피 비는 시간 → 가장 덜 거슬리는 광고 지점. 팝업·전면광고는 배제, 배너/네이티브만.
@@ -236,7 +254,7 @@ export default function TestPage() {
             <div className="bento flex min-h-[220px] items-center justify-center p-6 text-sm text-muted-foreground">
               (메인 콘텐츠 영역 — 예: 이력/결과 페이지)
             </div>
-            <AdSlot className="min-h-[220px]" note="무료 티어 전용 · 300×250 · Pro는 광고 없음" />
+            <AdMock className="min-h-[220px]" note="무료 티어 전용 · 300×250 (mockup)" />
           </div>
           <p className="mt-4 text-center text-xs text-muted-foreground/60">
             * 광고는 업로드·편집기 등 핵심 흐름엔 넣지 않고, 비핵심 페이지에만. 넣을지 여부는 피드백으로 결정.

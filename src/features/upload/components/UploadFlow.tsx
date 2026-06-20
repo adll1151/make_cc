@@ -7,7 +7,6 @@ import { JobProgress, type JobProgressData } from './JobProgress';
 import { GuestCapBanner } from './GuestCapBanner';
 import { Button } from '@/components/ui/button';
 import { createBrowserSupabase } from '@/lib/supabase/browser';
-import { AdSlot } from '@/components/ads/AdSlot';
 import { extractVideoMetadata } from '../lib/video-metadata';
 import { putFile, UploadError } from '../lib/upload-client';
 import {
@@ -442,17 +441,6 @@ export function UploadFlow() {
             </Button>
           )}
       </div>
-
-      {/* 처리 대기 광고 — STT 도는 동안(비는 시간)에만. 업로드·완료 화면엔 없음.
-          (구독 도입 후 Pro 사용자에겐 숨길 예정) */}
-      {(state.phase === 'queued' || state.phase === 'transcribing') && (
-        <div className="pt-2">
-          <p className="mb-2 text-center text-[11px] uppercase tracking-widest text-muted-foreground/40">
-            기다리는 동안
-          </p>
-          <AdSlot className="min-h-[100px]" note="처리 대기 광고" />
-        </div>
-      )}
     </div>
   );
 }
