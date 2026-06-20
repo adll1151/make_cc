@@ -29,12 +29,27 @@ export const bullConnection: ConnectionOptions = {
   url: env.REDIS_URL,
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
+  // 실제 enqueue(.add) 전까진 연결하지 않음. DB 폴링 워커(worker:poll)는 큐를
+  // 쓰지 않으므로 import만으로 연결 시도→에러 스팸 하던 것을 없앤다. 웹 enqueue는
+  // 첫 .add 때 연결 시도(실패해도 services/queue가 timeout+graceful false 처리).
+  lazyConnect: true,
 };
 
-/** Queue의 연결 'error'를 삼켜 미처리 이벤트로 인한 함수 크래시를 방지(로그만). */
+/**
+ * Queue의 연결 'error'를 삼켜 미처리 이벤트로 인한 함수 크래시를 방지.
+ * ioredis는 재연결마다 'error'를 반복 발생시키므로 큐당 1회만 로그(스팸 방지).
+ * 특히 DB 폴링 워커(worker:poll)는 큐를 안 쓰는데 BullMQ가 시작 시 연결을 시도해
+ * 3초마다 같은 에러를 찍던 것을 잡는다.
+ */
 function attachErrorHandler<T>(queue: Queue<T>, name: string): Queue<T> {
+  let logged = false;
   queue.on('error', (err) => {
-    logger.warn({ err: (err as Error)?.message, queue: name }, 'BullMQ 큐 연결 오류 (무시)');
+    if (logged) return;
+    logged = true;
+    logger.warn(
+      { err: (err as Error)?.message, queue: name },
+      'BullMQ 큐 연결 오류 (이후 동일 오류는 생략, Redis 미연결 시 정상)',
+    );
   });
   return queue;
 }
