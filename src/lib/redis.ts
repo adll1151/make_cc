@@ -1,31 +1,25 @@
-import IORedis, { type Redis } from 'ioredis';
-import { Queue, QueueEvents, type ConnectionOptions } from 'bullmq';
+import { Queue, type ConnectionOptions } from 'bullmq';
 import { env } from '@/lib/env';
+import { logger } from '@/lib/logger';
 
 /**
- * Redis + BullMQ 싱글톤.
+ * BullMQ 큐 싱글톤.
  *
- * - `redis`: 일반 read/write (캡 카운터, anonymousId 조회 등)
  * - `bullConnection`: BullMQ용 connection options (URL 기반)
- * - `transcribeQueue`: STT 잡 큐
+ * - `transcribeQueue` / `renderQueue`: enqueue 전용 (웹). 워커는 자체 Worker 생성.
  *
- * BullMQ는 자체 ioredis를 번들하므로 Redis 인스턴스를 직접 넘기지 않고
- * connection options를 넘긴다 (버전 충돌 방지).
+ * ⚠️ Redis 미연결 graceful degrade (Design): Vercel 서버리스에서 Redis가 없거나
+ * 닿지 않아도 enqueue는 try/catch+timeout으로 false 반환(services/queue), 잡은 DB에서
+ * queued로 남아 polling 워커가 픽업한다. 단, ioredis가 'error' 이벤트를 발생시켰을 때
+ * 리스너가 없으면 EventEmitter가 throw해 서버리스 함수를 죽이므로(=업로드→큐 대기 화면
+ * 멈춤의 원인), 모든 Queue에 'error' 핸들러를 반드시 붙인다. 또한 import만으로 즉시
+ * blocking 연결을 여는 QueueEvents/raw IORedis 싱글톤은 어디서도 쓰지 않아 제거했다.
  */
 
 const globalForRedis = globalThis as unknown as {
-  redis: Redis | undefined;
   transcribeQueue: Queue<TranscribeJobData> | undefined;
-  transcribeQueueEvents: QueueEvents | undefined;
   renderQueue: Queue<RenderJobData> | undefined;
 };
-
-export const redis: Redis =
-  globalForRedis.redis ??
-  new IORedis(env.REDIS_URL, {
-    maxRetriesPerRequest: 3,
-    enableReadyCheck: true,
-  });
 
 /**
  * BullMQ는 blocking 명령을 사용하므로 maxRetriesPerRequest=null 필요.
@@ -37,6 +31,14 @@ export const bullConnection: ConnectionOptions = {
   enableReadyCheck: false,
 };
 
+/** Queue의 연결 'error'를 삼켜 미처리 이벤트로 인한 함수 크래시를 방지(로그만). */
+function attachErrorHandler<T>(queue: Queue<T>, name: string): Queue<T> {
+  queue.on('error', (err) => {
+    logger.warn({ err: (err as Error)?.message, queue: name }, 'BullMQ 큐 연결 오류 (무시)');
+  });
+  return queue;
+}
+
 export const TRANSCRIBE_QUEUE = 'transcribe' as const;
 
 export interface TranscribeJobData {
@@ -45,19 +47,18 @@ export interface TranscribeJobData {
 
 export const transcribeQueue: Queue<TranscribeJobData> =
   globalForRedis.transcribeQueue ??
-  new Queue<TranscribeJobData>(TRANSCRIBE_QUEUE, {
-    connection: bullConnection,
-    defaultJobOptions: {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 30_000 },
-      removeOnComplete: { age: 7 * 24 * 3600, count: 1000 },
-      removeOnFail: { age: 30 * 24 * 3600 },
-    },
-  });
-
-export const transcribeQueueEvents: QueueEvents =
-  globalForRedis.transcribeQueueEvents ??
-  new QueueEvents(TRANSCRIBE_QUEUE, { connection: bullConnection });
+  attachErrorHandler(
+    new Queue<TranscribeJobData>(TRANSCRIBE_QUEUE, {
+      connection: bullConnection,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 30_000 },
+        removeOnComplete: { age: 7 * 24 * 3600, count: 1000 },
+        removeOnFail: { age: 30 * 24 * 3600 },
+      },
+    }),
+    TRANSCRIBE_QUEUE,
+  );
 
 export const RENDER_QUEUE = 'render' as const;
 
@@ -72,19 +73,21 @@ export interface RenderJobData {
  */
 export const renderQueue: Queue<RenderJobData> =
   globalForRedis.renderQueue ??
-  new Queue<RenderJobData>(RENDER_QUEUE, {
-    connection: bullConnection,
-    defaultJobOptions: {
-      attempts: 2,
-      backoff: { type: 'exponential', delay: 15_000 },
-      removeOnComplete: { age: 7 * 24 * 3600, count: 1000 },
-      removeOnFail: { age: 30 * 24 * 3600 },
-    },
-  });
+  attachErrorHandler(
+    new Queue<RenderJobData>(RENDER_QUEUE, {
+      connection: bullConnection,
+      defaultJobOptions: {
+        attempts: 2,
+        backoff: { type: 'exponential', delay: 15_000 },
+        removeOnComplete: { age: 7 * 24 * 3600, count: 1000 },
+        removeOnFail: { age: 30 * 24 * 3600 },
+      },
+    }),
+    RENDER_QUEUE,
+  );
 
+// dev에서 HMR 재생성 방지(연결 누수) — prod는 매 인스턴스 새로 생성.
 if (env.NODE_ENV !== 'production') {
-  globalForRedis.redis = redis;
   globalForRedis.transcribeQueue = transcribeQueue;
-  globalForRedis.transcribeQueueEvents = transcribeQueueEvents;
   globalForRedis.renderQueue = renderQueue;
 }
