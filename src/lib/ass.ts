@@ -76,7 +76,10 @@ function scriptInfo(res: AssResolution): string {
   return [
     '[Script Info]',
     'ScriptType: v4.00+',
-    'WrapStyle: 2',
+    // 0 = 스마트 자동 줄바꿈(윗줄이 더 김). 긴 자막이 프레임 폭을 넘으면 좌우
+    // 마진(MarginL/R) 안쪽에서 어절 단위로 자동 줄바꿈된다(\N 수동 줄바꿈도 유지).
+    // 2(자동 줄바꿈 없음)였을 땐 긴 한 줄이 화면 밖으로 잘려 나갔음.
+    'WrapStyle: 0',
     'ScaledBorderAndShadow: yes',
     `PlayResX: ${res.playResX}`,
     `PlayResY: ${res.playResY}`,
@@ -95,9 +98,12 @@ function stylesSection(style: CaptionStyle, res: AssResolution): string {
   const outline = hexToAss(style.outlineColor);
   const back = '&H80000000&'; // 반투명 검정 (box 배경/그림자)
   const marginV = Math.round(res.playResY * 0.06);
+  // 좌우 마진도 폭 비례(6%) — WrapStyle 0의 자동 줄바꿈 폭을 결정한다.
+  // 고정 40px이면 1080p에선 거의 안 잘리고(줄바꿈 늦음), 720p에선 과하게 좁았음.
+  const marginH = Math.round(res.playResX * 0.06);
   const format =
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding';
-  const styleLine = `Style: Default,${assFontName(style.fontFamily)},${size},${primary},${secondary},${outline},${back},-1,0,0,0,100,100,0,0,${borderStyle},${style.outlineWidth},0,${align},40,40,${marginV},1`;
+  const styleLine = `Style: Default,${assFontName(style.fontFamily)},${size},${primary},${secondary},${outline},${back},-1,0,0,0,100,100,0,0,${borderStyle},${style.outlineWidth},0,${align},${marginH},${marginH},${marginV},1`;
   return ['[V4+ Styles]', format, styleLine, ''].join('\n');
 }
 

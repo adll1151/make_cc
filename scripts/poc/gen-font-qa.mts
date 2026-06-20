@@ -9,8 +9,13 @@ import type { Cue } from '../../src/types/subtitle';
 import type { CaptionStyle } from '../../src/types/caption-style';
 
 const cues: Cue[] = [
-  { index: 1, startMs: 0, endMs: 5000, text: '안녕하세요 자막 테스트입니다' },
-  { index: 2, startMs: 0, endMs: 5000, text: '다람쥐 헌 쳇바퀴에 타고파 123' },
+  // 일부러 프레임 폭을 넘는 긴 한 줄 — WrapStyle 0이면 자동 줄바꿈되어야 함(잘림 X)
+  {
+    index: 1,
+    startMs: 0,
+    endMs: 5000,
+    text: '안녕하세요 이 문장은 한 줄에 다 담기에는 충분히 길어서 자동 줄바꿈이 되는지 확인하기 위한 테스트 자막입니다',
+  },
 ];
 
 const base: CaptionStyle = {

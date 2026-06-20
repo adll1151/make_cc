@@ -99,6 +99,14 @@ describe('buildAss', () => {
     expect(/,3,3,0,2,/.test(ass)).toBe(true);
   });
 
+  it('WrapStyle 0 (자동 줄바꿈) + 좌우 마진 폭 비례', () => {
+    const ass = buildAss(cues, baseStyle, RES);
+    expect(ass).toContain('WrapStyle: 0');
+    // MarginL/R = round(1080*0.06)=65, MarginV = round(1920*0.06)=115
+    expect(ass).toContain(',2,65,65,115,1');
+    expect(ass).not.toContain(',2,40,40,'); // 고정 40px 제거됨
+  });
+
   it('카라오케 + words → \\k 태그', () => {
     const c: Cue[] = [
       {
