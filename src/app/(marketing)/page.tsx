@@ -195,7 +195,13 @@ export default function LandingPage() {
             <span className="font-semibold text-foreground">make_cc</span>
             <span>· 한국어 음성→자막 자동화</span>
           </div>
-          <div className="flex items-center gap-4 text-xs">
+          <div className="flex flex-wrap items-center gap-4 text-xs">
+            <Link href="/guide" className="transition hover:text-foreground">
+              사용법 가이드
+            </Link>
+            <Link href="/faq" className="transition hover:text-foreground">
+              자주 묻는 질문
+            </Link>
             <Link href="/privacy" className="transition hover:text-foreground">
               개인정보처리방침
             </Link>
