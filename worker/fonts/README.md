@@ -10,11 +10,16 @@ ffmpeg `ass` 필터(`fontsdir=worker/fonts`)가 여기서 폰트를 로드합니
 | `Pretendard` | `Pretendard-Regular.ttf` (+ `-Bold`) | `Pretendard` |
 | `NotoSansKR` | `NotoSansKR-Regular.ttf` (+ `-Bold`) | `Noto Sans KR` ⚠️ |
 
-> **중요**: `buildAss`가 출력하는 `fontFamily`(`Pretendard`/`NotoSansKR`)와 폰트의
-> **내부 family명**이 일치해야 fontconfig가 매칭합니다(불일치 시 tofu □□□).
-> Noto Sans KR의 내부 family명은 보통 `Noto Sans KR`(공백 포함)이므로,
-> `NotoSansKR` 식별자를 쓰려면 ① 파일 family명을 맞추거나 ② fontconfig alias를 추가하거나
-> ③ `buildAss` 호출 측에서 family명을 정규화해야 함. (module-4/6에서 매핑 확정)
+> **매핑 확정(2026-06-20)**: `lib/ass.ts`의 `assFontName()`가 식별자 →
+> fontconfig 내부 family명을 매핑한다(`NotoSansKR` → `Noto Sans KR`, `Pretendard` → `Pretendard`).
+> 번들된 `.ttf`의 내부 family명도 이에 맞춰 둠:
+> - `Pretendard-{Regular,Bold}.ttf` → family `Pretendard` (npm pretendard@1.3.9 alternative static)
+> - `NotoSansKR-{Regular,Bold}.ttf` → family `Noto Sans KR` (google/fonts 가변폰트를
+>   `wght=400/700`으로 인스턴싱 + name 테이블 정규화. 가변폰트 기본 인스턴스가
+>   Thin이라 정적화하지 않으면 자막이 너무 얇게 렌더됨)
+>
+> WSL Ubuntu ffmpeg `ass:fontsdir=worker/fonts`로 두 폰트 모두 한국어 번인 렌더
+> tofu 없이 검증 완료(2026-06-20). 재현: `scripts/poc/gen-font-qa.mts`.
 
 ## 출처
 

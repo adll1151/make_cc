@@ -9,11 +9,28 @@
  */
 
 import type { Cue } from '@/types/subtitle';
-import type { CaptionPosition, CaptionStyle } from '@/types/caption-style';
+import type { CaptionFont, CaptionPosition, CaptionStyle } from '@/types/caption-style';
 
 export interface AssResolution {
   playResX: number;
   playResY: number;
+}
+
+/**
+ * CaptionFont 식별자 → fontconfig가 매칭하는 폰트 **내부 family명**.
+ *
+ * ASS `Style:`의 Fontname은 폰트 파일의 내부 family명과 정확히 일치해야 함.
+ * Noto Sans KR의 내부 family명은 공백 포함 `Noto Sans KR`이므로 식별자
+ * `NotoSansKR`를 그대로 쓰면 fontconfig가 못 찾아 tofu(□□□)로 렌더된다.
+ * (브라우저 미리보기 CaptionPreview.tsx와 동일한 매핑.)
+ */
+const FONTCONFIG_FAMILY: Record<CaptionFont, string> = {
+  Pretendard: 'Pretendard',
+  NotoSansKR: 'Noto Sans KR',
+};
+
+export function assFontName(font: CaptionFont): string {
+  return FONTCONFIG_FAMILY[font] ?? font;
 }
 
 /** `#RRGGBB` → ASS `&HBBGGRR&` (BGR 역순, 대문자). 잘못된 입력은 흰색. */
@@ -80,7 +97,7 @@ function stylesSection(style: CaptionStyle, res: AssResolution): string {
   const marginV = Math.round(res.playResY * 0.06);
   const format =
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding';
-  const styleLine = `Style: Default,${style.fontFamily},${size},${primary},${secondary},${outline},${back},-1,0,0,0,100,100,0,0,${borderStyle},${style.outlineWidth},0,${align},40,40,${marginV},1`;
+  const styleLine = `Style: Default,${assFontName(style.fontFamily)},${size},${primary},${secondary},${outline},${back},-1,0,0,0,100,100,0,0,${borderStyle},${style.outlineWidth},0,${align},40,40,${marginV},1`;
   return ['[V4+ Styles]', format, styleLine, ''].join('\n');
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAss, hexToAss, alignment, assTime, escapeAssText } from '@/lib/ass';
+import { buildAss, hexToAss, alignment, assTime, escapeAssText, assFontName } from '@/lib/ass';
 import type { Cue } from '@/types/subtitle';
 import type { CaptionStyle } from '@/types/caption-style';
 
@@ -55,6 +55,14 @@ describe('escapeAssText', () => {
   });
 });
 
+describe('assFontName', () => {
+  it('식별자 → fontconfig 내부 family명', () => {
+    expect(assFontName('Pretendard')).toBe('Pretendard');
+    // NotoSansKR 내부 family명은 공백 포함 — 불일치 시 tofu
+    expect(assFontName('NotoSansKR')).toBe('Noto Sans KR');
+  });
+});
+
 describe('buildAss', () => {
   const cues: Cue[] = [
     { index: 1, startMs: 0, endMs: 2000, text: '안녕하세요' },
@@ -68,6 +76,12 @@ describe('buildAss', () => {
     expect(ass).toContain('PlayResY: 1920');
     expect(ass).toContain('[V4+ Styles]');
     expect(ass).toContain('Style: Default,Pretendard,96,'); // 1920*5% = 96
+  });
+
+  it('NotoSansKR → ASS Fontname은 내부 family명 "Noto Sans KR"로 정규화', () => {
+    const ass = buildAss(cues, { ...baseStyle, fontFamily: 'NotoSansKR' }, RES);
+    expect(ass).toContain('Style: Default,Noto Sans KR,96,');
+    expect(ass).not.toContain('Style: Default,NotoSansKR,');
     expect(ass).toContain('[Events]');
     // Events Format은 반드시 Text로 끝나야 libass가 본문을 렌더 (PoC 검증)
     expect(ass).toContain('MarginR, MarginV, Effect, Text');
