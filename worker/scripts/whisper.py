@@ -7,9 +7,13 @@ Usage:
 
 stdout (line-delimited JSON):
   {"type": "info", "message": ...}
-  {"type": "segment", "start": float, "end": float, "text": str}
+  {"type": "segment", "start": float, "end": float, "text": str,
+   "words": [{"start": float, "end": float, "text": str}, ...]}
   {"type": "done", "duration": float, "language": str}
   {"type": "error", "message": str}     (exit 1)
+
+words는 word_timestamps=True일 때만 채워짐 (번인 카라오케 하이라이트용).
+빈 리스트면 워커가 평문 fallback (카라오케 OFF).
 
 stderr는 로그용 (워커가 캡처해서 logger에 흘려 보냄).
 """
@@ -59,6 +63,18 @@ if sys.platform == "win32":
 
 def emit(obj):
     print(json.dumps(obj, ensure_ascii=False), flush=True)
+
+
+def extract_words(seg):
+    """faster-whisper segment → [{start, end, text}]. word_timestamps off면 []."""
+    words = []
+    for w in getattr(seg, "words", None) or []:
+        # Word.word은 보통 선행 공백 포함 → strip. start/end가 None이면 스킵.
+        text = (w.word or "").strip()
+        if not text or w.start is None or w.end is None:
+            continue
+        words.append({"start": float(w.start), "end": float(w.end), "text": text})
+    return words
 
 
 def main():
@@ -112,6 +128,7 @@ def main():
         beam_size=5,
         vad_filter=True,
         vad_parameters={"min_silence_duration_ms": 500},
+        word_timestamps=True,  # 번인 카라오케용 단어 단위 타임스탬프
     )
 
     for seg in segments:
@@ -120,6 +137,7 @@ def main():
             "start": float(seg.start),
             "end": float(seg.end),
             "text": seg.text.strip(),
+            "words": extract_words(seg),
         })
 
     emit({

@@ -62,3 +62,7 @@ scripts/mascot/
 test.mp4
 test-tmp/
 *.wav
+
+# Python
+__pycache__/
+*.pyc

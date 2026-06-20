@@ -11,6 +11,7 @@ export {
   renderStorageKey,
   putWordsJson,
   getWordsJson,
+  getSubtitleText,
   deleteJobAssets,
   STORAGE_BUCKETS,
   type VideoUploadTicket,

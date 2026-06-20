@@ -16,6 +16,7 @@ import type { Job } from '@/types/job';
 export { presignVideoDownload } from '@/lib/storage';
 
 // 번인 렌더 출력 + 단어 타이밍 JSON (burnin-captions)
+// render 워커가 자막 본문(평문 fallback)·단어 타이밍을 직접 로드하므로 함께 노출.
 export {
   putRender,
   presignRenderDownload,
@@ -23,6 +24,7 @@ export {
   renderStorageKey,
   putWordsJson,
   getWordsJson,
+  getSubtitleText,
 } from '@/lib/storage';
 
 /**

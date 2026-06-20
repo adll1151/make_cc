@@ -12,7 +12,7 @@ import {
   markFailed,
   getJobAdmin,
 } from '@/services/jobs';
-import { saveSubtitle } from '@/services/storage';
+import { saveSubtitle, putWordsJson } from '@/services/storage';
 import { videosBucket } from '@/lib/storage';
 import { dispatchJobCompleted, dispatchJobFailed } from '@/services/notify';
 import { extractAudio } from './lib/ffmpeg';
@@ -105,11 +105,17 @@ export async function processTranscribe(jobId: string): Promise<{
       device,
       onInfo: (msg) => log.info({ whisper: msg }, 'whisper info'),
       onSegment: (seg) => {
+        const words = seg.words?.map((w) => ({
+          text: w.text,
+          startMs: Math.round(w.start * 1000),
+          endMs: Math.round(w.end * 1000),
+        }));
         cues.push({
           index: cues.length + 1,
           startMs: Math.round(seg.start * 1000),
           endMs: Math.round(seg.end * 1000),
           text: seg.text,
+          ...(words && words.length > 0 ? { words } : {}),
         });
         // 진행률은 5% 단위 throttle (Design §11.3 cue 처리 정책)
         const ratio = Math.min(1, seg.end / Math.max(1, durationSec));
@@ -142,6 +148,21 @@ export async function processTranscribe(jobId: string): Promise<{
     const srtText = buildSrt(cues);
     log.info({ chars: srtText.length }, 'uploading srt');
     const { path: subtitleKey } = await saveSubtitle({ jobId, srtText });
+
+    // 4b. 단어 타이밍 저장 (있을 때만) — 번인 카라오케 하이라이트용.
+    //     render 워커가 {jobId}.words.json을 우선 로드해 카라오케 활성화.
+    const wordCueCount = cues.filter((c) => c.words && c.words.length > 0).length;
+    if (wordCueCount > 0) {
+      try {
+        await putWordsJson(jobId, cues);
+        log.info({ wordCues: wordCueCount, totalCues: cues.length }, 'words.json saved (카라오케 가능)');
+      } catch (err) {
+        // 단어 타이밍 저장 실패는 비치명적 — SRT 평문 fallback으로 렌더 가능
+        log.warn({ err: (err as Error)?.message }, 'words.json 저장 실패 (평문 fallback 유지)');
+      }
+    } else {
+      log.info('단어 타이밍 없음 — words.json 생략 (평문 렌더)');
+    }
 
     // 5. 잡 완료 + 자동 삭제 예약 (Plan FR-17)
     //    게스트: 즉시 (finished_at 기준) → 다음 cleanup 사이클에서 영상 자산 삭제

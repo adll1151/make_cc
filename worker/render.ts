@@ -2,7 +2,7 @@ import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { logger } from '@/lib/logger';
+import { logger, type Logger } from '@/lib/logger';
 import { buildAss } from '@/lib/ass';
 import { parseSrt } from '@/lib/srt';
 import type { Cue, WordTiming } from '@/types/subtitle';
@@ -60,7 +60,7 @@ function normalizeWords(payload: unknown): Cue[] | null {
 }
 
 /** 렌더용 cues 로드: words.json 우선(카라오케 가능) → 없으면 SRT 평문 fallback. */
-async function loadCues(jobId: string, log: ReturnType<typeof logger.child>): Promise<Cue[]> {
+async function loadCues(jobId: string, log: Logger): Promise<Cue[]> {
   const wordsPayload = await getWordsJson(jobId);
   const fromWords = wordsPayload ? normalizeWords(wordsPayload) : null;
   if (fromWords) {

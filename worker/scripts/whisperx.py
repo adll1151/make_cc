@@ -16,7 +16,8 @@ Env:
 
 stdout (line-delimited JSON):
   {"type": "info", "message": ...}
-  {"type": "segment", "start": float, "end": float, "text": str, "speaker": str|null}
+  {"type": "segment", "start": float, "end": float, "text": str, "speaker": str|null,
+   "words": [{"start": float, "end": float, "text": str}, ...]}
   {"type": "done", "duration": float, "language": str, "elapsed": float, "diarized": bool}
   {"type": "error", "message": str}     (exit 1)
 
@@ -68,6 +69,17 @@ def emit(obj):
     print(json.dumps(obj, ensure_ascii=False), flush=True)
 
 
+def extract_words(seg):
+    """faster-whisper segment → [{start, end, text}]. word_timestamps off면 []."""
+    words = []
+    for w in getattr(seg, "words", None) or []:
+        text = (w.word or "").strip()
+        if not text or w.start is None or w.end is None:
+            continue
+        words.append({"start": float(w.start), "end": float(w.end), "text": text})
+    return words
+
+
 def main():
     if len(sys.argv) < 3:
         emit({"type": "error", "message": "Usage: whisperx.py <model> <audio> [language] [device]"})
@@ -116,6 +128,7 @@ def main():
         beam_size=5,
         vad_filter=True,
         vad_parameters={"min_silence_duration_ms": 500},
+        word_timestamps=True,  # 번인 카라오케용 단어 단위 타임스탬프
     )
     # generator → list (diarization과 매핑 필요)
     segments = []
@@ -124,6 +137,7 @@ def main():
             "start": float(seg.start),
             "end": float(seg.end),
             "text": seg.text.strip(),
+            "words": extract_words(seg),
         })
     stt_elapsed = time.time() - transcribe_start
     emit({"type": "info", "message": f"STT complete: {len(segments)} segments in {stt_elapsed:.1f}s"})
@@ -242,6 +256,7 @@ def main():
             "end": seg["end"],
             "text": seg["text"],
             "speaker": speaker_id,  # str or None
+            "words": seg.get("words", []),
         })
 
     emit({

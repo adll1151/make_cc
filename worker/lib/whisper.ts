@@ -1,10 +1,18 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 
+export interface WhisperWord {
+  start: number; // sec
+  end: number; // sec
+  text: string;
+}
+
 export interface WhisperSegment {
   start: number; // sec
   end: number; // sec
   text: string;
+  /** 단어 단위 타임스탬프 (word_timestamps=True). 없거나 빈 배열이면 카라오케 OFF. */
+  words?: WhisperWord[];
 }
 
 export interface WhisperResult {
@@ -69,6 +77,7 @@ export async function runWhisper(
               start: Number(m.start),
               end: Number(m.end),
               text: String(m.text ?? ''),
+              words: parseWords(m.words),
             });
             break;
           case 'done':
@@ -107,6 +116,22 @@ export async function runWhisper(
       }
     });
   });
+}
+
+/** segment.words(JSON) → WhisperWord[]. 형식 불량/누락은 무시(빈 배열). */
+function parseWords(raw: unknown): WhisperWord[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const words: WhisperWord[] = [];
+  for (const w of raw) {
+    if (!w || typeof w !== 'object') continue;
+    const o = w as Record<string, unknown>;
+    const start = Number(o.start);
+    const end = Number(o.end);
+    const text = String(o.text ?? '');
+    if (!text || Number.isNaN(start) || Number.isNaN(end)) continue;
+    words.push({ start, end, text });
+  }
+  return words.length > 0 ? words : undefined;
 }
 
 function pythonCommand(): string {
