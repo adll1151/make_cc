@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { FloatingNav } from '@/components/ui/floating-nav';
 import { createBrowserSupabase } from '@/lib/supabase/browser';
