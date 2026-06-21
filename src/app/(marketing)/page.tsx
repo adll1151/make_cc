@@ -4,6 +4,7 @@ import { FloatingNav } from '@/components/ui/floating-nav';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AdsenseScript } from '@/components/ads/AdsenseScript';
 import { LiveCaptionDemo } from '@/components/LiveCaptionDemo';
+import { EditorDemo } from '@/components/EditorDemo';
 
 export default function LandingPage() {
   return (
@@ -121,11 +122,7 @@ export default function LandingPage() {
 
           {/* 작은 카드 — Edit */}
           <BentoCard badge="02" title="브라우저 편집기" description="미리보기 + 라인 단위 텍스트 수정.">
-            <div className="absolute right-4 top-4 font-mono text-xs text-muted-foreground/60">
-              <p>00:00:00,000</p>
-              <p>00:00:02,400</p>
-              <p className="text-foreground/80">안녕하세요.</p>
-            </div>
+            <EditorDemo />
           </BentoCard>
 
           {/* 작은 카드 — Share */}
