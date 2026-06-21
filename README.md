@@ -1,7 +1,7 @@
 # make_cc — 한국어 영상 자막 자동 생성 + 번인 자막 스튜디오
 
-> 한국어 영상을 업로드하면 self-hosted Whisper로 **CC(폐쇄형 자막)** 를 자동 생성하고,
-> 브라우저에서 미리보기·편집·공유하고, **스타일이 입혀진 번인(burn-in) 자막 영상**까지 내보내는 풀스택 웹 서비스.
+> 한국어 영상을 올리면 self-hosted Whisper로 **자막(SRT)** 을 자동 생성하고,
+> 브라우저에서 미리보기·편집·공유하고, **스타일을 입혀 영상에 박는 번인(burn-in) 자막 영상**까지 만드는 풀스택 웹 서비스.
 
 <p align="center">
   <strong>🔗 라이브 데모 · <a href="https://makecc.vercel.app">makecc.vercel.app</a></strong>
@@ -39,10 +39,11 @@
 - **브라우저 편집기** — `<video>` 동기화 + cue 단위 텍스트 편집 + 5초 디바운스 자동 저장
 - **번인 자막 스튜디오** ⭐ — 프리셋 5종 + 폰트·색·외곽선·위치·박스·카라오케 커스텀 → **스타일이 박힌 MP4** 내보내기 (원본 / 9:16 / 1:1)
 - **무료/Pro 게이팅** — 무료는 워터마크 + 720p, Pro는 워터마크 제거 + 1080p (서버·워커 강제)
-- **공유** — 회원이 공유 토큰 생성 → 익명 다운로드
+- **공유** — 회원이 공유 토큰 생성 → 익명 다운로드 (`/s/[token]`)
 - **게스트 지원** — 비로그인도 HTTP-only 쿠키로 잡 생성 (일일 캡)
-- **알림** — 잡 완료 시 이메일(Resend) / Discord DM
-- **자동 청소** — 만료된 영상·렌더 출력 스토리지 자동 삭제
+- **알림** — 잡 완료 시 이메일(Resend) / Discord DM. **Discord 계정 연동**으로 알림 채널 선택(email/discord/both)
+- **자동 청소** — 만료된 영상·렌더 출력 스토리지 자동 삭제 (게스트 영상은 번인용 1시간 보존)
+- **콘텐츠/법적 페이지** — 사용법 가이드(`/guide`) · FAQ(`/faq`) · 개인정보처리방침(`/privacy`)
 
 ---
 
@@ -88,8 +89,8 @@ flowchart TD
 | STT | self-host Whisper large-v3 (ko) — 별도 GPU 워커 |
 | 번인 | ffmpeg + libass (ASS 필터) |
 | UI | Tailwind v4 · shadcn/ui · Zustand · TanStack Query |
-| 알림 | Resend (이메일) · Discord |
-| 테스트 | Vitest (단위·통합) · Playwright (e2e) |
+| 알림 | Resend (이메일) · Discord (봇 DM + 계정 연동) |
+| 테스트 | Vitest (단위·통합) |
 | 배포 | Vercel (앱) + GPU 노드 (워커) |
 
 ---
