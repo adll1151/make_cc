@@ -13,6 +13,8 @@ export interface WhisperSegment {
   text: string;
   /** 단어 단위 타임스탬프 (word_timestamps=True). 없거나 빈 배열이면 카라오케 OFF. */
   words?: WhisperWord[];
+  /** 화자 id (diarize=true + pyannote). 예: 'spk_0'. 없으면 화자 미분리. */
+  speaker?: string;
 }
 
 export interface WhisperResult {
@@ -25,6 +27,8 @@ export interface RunWhisperOptions {
   model: string; // 'small' | 'medium' | 'large-v3' ...
   language: string; // 'ko'
   device?: 'auto' | 'cuda' | 'cpu';
+  /** true면 whisperx.py(STT+pyannote 화자분리) 실행. false면 whisper.py(STT만). */
+  diarize?: boolean;
   onSegment?: (seg: WhisperSegment) => void;
   onInfo?: (message: string) => void;
 }
@@ -39,7 +43,10 @@ export async function runWhisper(
   audioPath: string,
   opts: RunWhisperOptions,
 ): Promise<WhisperResult> {
-  const scriptPath = path.resolve(process.cwd(), 'worker/scripts/whisper.py');
+  // diarize면 whisperx.py(STT+pyannote 화자분리), 아니면 whisper.py(STT만).
+  // 둘 다 동일한 line-delimited JSON 프로토콜(info/segment/done/error) + whisperx는 speaker 필드 추가.
+  const scriptName = opts.diarize ? 'whisperx.py' : 'whisper.py';
+  const scriptPath = path.resolve(process.cwd(), 'worker/scripts', scriptName);
 
   return new Promise<WhisperResult>((resolve, reject) => {
     const py = spawn(
@@ -78,6 +85,7 @@ export async function runWhisper(
               end: Number(m.end),
               text: String(m.text ?? ''),
               words: parseWords(m.words),
+              speaker: m.speaker != null ? String(m.speaker) : undefined,
             });
             break;
           case 'done':

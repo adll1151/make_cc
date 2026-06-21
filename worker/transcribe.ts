@@ -4,13 +4,14 @@ import fs from 'node:fs/promises';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logger } from '@/lib/logger';
 import { buildSrt } from '@/lib/srt';
-import type { Cue } from '@/types/subtitle';
+import type { Cue, SpeakerMap } from '@/types/subtitle';
 import {
   markStarted,
   updateProgress,
   markFinished,
   markFailed,
   getJobAdmin,
+  updateSpeakerMap,
 } from '@/services/jobs';
 import { saveSubtitle, putWordsJson } from '@/services/storage';
 import { videosBucket } from '@/lib/storage';
@@ -91,7 +92,9 @@ export async function processTranscribe(jobId: string): Promise<{
     // 3. Whisper STT (스트리밍)
     const modelName = process.env.WHISPER_MODEL ?? 'small';
     const device = (process.env.WHISPER_DEVICE as 'auto' | 'cuda' | 'cpu') ?? 'auto';
-    log.info({ model: modelName, device }, 'running whisper');
+    // 화자 분리: 잡 설정 + 전역 env 둘 다 허용일 때. (HF 토큰 없으면 whisperx가 STT로 graceful degrade)
+    const diarize = job.diarizationEnabled && (process.env.WHISPER_DIARIZATION ?? 'true') !== 'false';
+    log.info({ model: modelName, device, diarize }, 'running whisper');
 
     const cues: Cue[] = [];
     let nextProgressTarget = 25;
@@ -103,6 +106,7 @@ export async function processTranscribe(jobId: string): Promise<{
       model: modelName,
       language: 'ko',
       device,
+      diarize,
       onInfo: (msg) => log.info({ whisper: msg }, 'whisper info'),
       onSegment: (seg) => {
         const words = seg.words?.map((w) => ({
@@ -116,6 +120,7 @@ export async function processTranscribe(jobId: string): Promise<{
           endMs: Math.round(seg.end * 1000),
           text: seg.text,
           ...(words && words.length > 0 ? { words } : {}),
+          ...(seg.speaker ? { speakerId: seg.speaker } : {}),
         });
         // 진행률은 5% 단위 throttle (Design §11.3 cue 처리 정책)
         const ratio = Math.min(1, seg.end / Math.max(1, durationSec));
@@ -141,6 +146,26 @@ export async function processTranscribe(jobId: string): Promise<{
 
     if (cues.length === 0) {
       throw new Error('Whisper가 음성을 인식하지 못했습니다 (cues = 0).');
+    }
+
+    // 3b. 화자 맵 생성·저장 (diarization 결과) — spk_0 → '화자 1' ... 편집기 표시명/이름변경용.
+    //     SRT 본문엔 라벨을 넣지 않음(번인 오염 방지). speaker 정보는 cue.speakerId(words.json)
+    //     + jobs.speaker_map에 보존. 화자 1명(또는 미분리)이면 맵 비움.
+    const speakerIds = [
+      ...new Set(cues.map((c) => c.speakerId).filter((s): s is string => !!s)),
+    ].sort();
+    if (speakerIds.length > 1) {
+      const speakerMap: SpeakerMap = Object.fromEntries(
+        speakerIds.map((id, i) => [id, `화자 ${i + 1}`]),
+      );
+      try {
+        await updateSpeakerMap(jobId, speakerMap);
+        log.info({ speakers: speakerIds.length }, 'speaker_map saved (화자 분리)');
+      } catch (err) {
+        log.warn({ err: (err as Error)?.message }, 'speaker_map 저장 실패 (비치명적)');
+      }
+    } else {
+      log.info({ speakers: speakerIds.length }, '단일/미분리 화자 — speaker_map 생략');
     }
 
     // 4. SRT 빌드 + 업로드

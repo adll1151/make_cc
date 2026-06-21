@@ -10,6 +10,8 @@ export {
   markFinished,
   markFailed,
   cancelJob,
+  updateSpeakerMap,
+  getSpeakerMap,
 } from './service';
 
 export { appendJobEvent } from './events';
