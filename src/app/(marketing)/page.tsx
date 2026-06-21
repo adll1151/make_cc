@@ -142,7 +142,7 @@ export default function LandingPage() {
                 <LockIcon />
                 <div>
                   <p className="font-semibold text-success">자동 삭제됨</p>
-                  <p className="text-xs text-muted-foreground">게스트 즉시 · 회원 30일</p>
+                  <p className="text-xs text-muted-foreground">게스트 1시간 · 회원 30일</p>
                 </div>
               </div>
             </div>

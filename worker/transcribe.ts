@@ -165,11 +165,14 @@ export async function processTranscribe(jobId: string): Promise<{
     }
 
     // 5. 잡 완료 + 자동 삭제 예약 (Plan FR-17)
-    //    게스트: 즉시 (finished_at 기준) → 다음 cleanup 사이클에서 영상 자산 삭제
+    //    게스트: 1시간 후 — 번인 영상 내보내기에 원본이 필요해서 즉시삭제하면 렌더가
+    //            영상을 못 찾음. 이 짧은 보존 동안 렌더 가능. (진행 중 렌더는 cleanup이 보존)
     //    회원: 30일 후
     const deleteAt = new Date();
     if (job.ownerType === 'user') {
       deleteAt.setUTCDate(deleteAt.getUTCDate() + 30);
+    } else {
+      deleteAt.setUTCHours(deleteAt.getUTCHours() + 1);
     }
     // transitionStatus로 video_delete_at도 함께 갱신
     await markFinished({ jobId, subtitleStorageKey: subtitleKey });
