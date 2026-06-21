@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { FloatingNav } from '@/components/ui/floating-nav';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { AdsenseScript } from '@/components/ads/AdsenseScript';
 
 export default function LandingPage() {
   return (
@@ -19,6 +20,7 @@ export default function LandingPage() {
       />
 
       <FloatingNav />
+      <AdsenseScript />
 
       {/* ============ HERO ============ */}
       <section className="relative mx-auto max-w-6xl px-6 pb-24 pt-40 sm:pt-48">

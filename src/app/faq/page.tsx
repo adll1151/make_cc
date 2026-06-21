@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { FloatingNav } from '@/components/ui/floating-nav';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { AdsenseScript } from '@/components/ads/AdsenseScript';
 
 export const metadata: Metadata = {
   title: '자주 묻는 질문(FAQ) — make_cc',
@@ -120,6 +121,7 @@ export default function FaqPage() {
       <div className="grain-overlay" aria-hidden />
 
       <FloatingNav />
+      <AdsenseScript />
 
       <article className="mx-auto max-w-3xl px-6 pb-24 pt-32 sm:pt-40">
         <p className="text-sm font-semibold uppercase tracking-widest text-primary">FAQ</p>

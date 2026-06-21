@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { FloatingNav } from '@/components/ui/floating-nav';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { AdsenseScript } from '@/components/ads/AdsenseScript';
 
 export const metadata: Metadata = {
   title: '사용법 가이드 — make_cc 한국어 자막 자동 생성',
@@ -16,6 +17,7 @@ export default function GuidePage() {
       <div className="grain-overlay" aria-hidden />
 
       <FloatingNav />
+      <AdsenseScript />
 
       <article className="mx-auto max-w-3xl px-6 pb-24 pt-32 sm:pt-40">
         <p className="text-sm font-semibold uppercase tracking-widest text-primary">Guide</p>
