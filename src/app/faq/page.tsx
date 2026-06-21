@@ -137,7 +137,7 @@ export default function FaqPage() {
           {FAQS.map((item, i) => (
             <details
               key={i}
-              className="group rounded-2xl border border-border/60 bg-card/30 p-5 [&_summary::-webkit-details-marker]:hidden"
+              className="scroll-fade group rounded-2xl border border-border/60 bg-card/30 p-5 [&_summary::-webkit-details-marker]:hidden"
             >
               <summary className="flex cursor-pointer items-center justify-between gap-4 text-lg font-semibold text-foreground">
                 {item.q}

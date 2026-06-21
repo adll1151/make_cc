@@ -129,7 +129,7 @@ export default function GuidePage() {
 
 function Step({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-12">
+    <section className="scroll-fade mt-12">
       <div className="flex items-baseline gap-3">
         <span className="text-display text-2xl text-aurora">{n}</span>
         <h2 className="text-2xl font-bold tracking-tight text-foreground">{title}</h2>

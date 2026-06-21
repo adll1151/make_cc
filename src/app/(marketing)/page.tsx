@@ -81,7 +81,7 @@ export default function LandingPage() {
 
       {/* ============ BENTO GRID ============ */}
       <section className="relative mx-auto max-w-6xl px-6 pb-24">
-        <div className="mb-12 text-center">
+        <div className="scroll-fade mb-12 text-center">
           <p className="text-sm font-semibold uppercase tracking-widest text-primary">
             How it works
           </p>
@@ -95,7 +95,7 @@ export default function LandingPage() {
         <div className="grid auto-rows-[minmax(180px,auto)] grid-cols-1 gap-4 md:grid-cols-3">
           {/* 큰 카드 (2x2) — Auto STT */}
           <BentoCard
-            className="md:col-span-2 md:row-span-2"
+            className="scroll-pop md:col-span-2 md:row-span-2"
             badge="01"
             title="자동 STT (Speech-to-Text)"
             description="Whisper(self-hosted) 기반 한국어 음성 인식. 5분 영상 평균 3분 안에 SRT 자막 완성."
@@ -121,13 +121,14 @@ export default function LandingPage() {
           </BentoCard>
 
           {/* 작은 카드 — Edit */}
-          <BentoCard badge="02" title="브라우저 편집기" description="미리보기 + 라인 단위 텍스트 수정.">
+          <BentoCard className="scroll-pop" badge="02" title="브라우저 편집기" description="미리보기 + 라인 단위 텍스트 수정.">
             <EditorDemo />
           </BentoCard>
 
           {/* 작은 카드 — Share */}
-          <BentoCard badge="03" title="공유 링크" description="회원은 영구 공유 링크로 다운로드 가능.">
-            <div className="absolute right-4 top-4 flex h-7 items-center gap-1.5 rounded-full border border-border/60 bg-background/40 px-2 font-mono text-[10px] text-muted-foreground/60">
+          <BentoCard className="scroll-pop" badge="03" title="공유 링크" description="회원은 영구 공유 링크로 다운로드 가능.">
+            <div className="absolute right-4 top-4 flex h-7 animate-float items-center gap-1.5 rounded-full border border-border/60 bg-background/40 px-2 font-mono text-[10px] text-muted-foreground/60">
+              <span className="size-1.5 animate-pulse-glow rounded-full bg-success" />
               <LinkIcon />
               /s/...
             </div>
@@ -135,13 +136,13 @@ export default function LandingPage() {
 
           {/* 와이드 카드 (1x3) — Privacy */}
           <BentoCard
-            className="md:col-span-3"
+            className="scroll-fade md:col-span-3"
             badge="04"
             title="프라이버시 우선"
             description="업로드된 영상은 학습에 사용되지 않으며, 처리 후 자동 삭제됩니다. RLS + 트리거로 DB 레벨에서 보호."
           >
             <div className="absolute right-6 top-1/2 -translate-y-1/2 hidden md:block">
-              <div className="flex items-center gap-3 rounded-2xl border border-success/30 bg-success/5 px-4 py-3 text-sm">
+              <div className="flex animate-pulse-glow items-center gap-3 rounded-2xl border border-success/30 bg-success/5 px-4 py-3 text-sm">
                 <LockIcon />
                 <div>
                   <p className="font-semibold text-success">자동 삭제됨</p>
@@ -155,7 +156,7 @@ export default function LandingPage() {
 
       {/* ============ STATS STRIP ============ */}
       <section className="relative mx-auto max-w-6xl px-6 pb-24">
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="scroll-fade grid grid-cols-2 gap-4 md:grid-cols-4">
           <Stat number="3분" label="5분 영상 평균 처리" />
           <Stat number="< 15%" label="WER (Word Error Rate)" />
           <Stat number="100+" label="지원 영상 포맷 (Whisper)" />
@@ -170,7 +171,7 @@ export default function LandingPage() {
 
       {/* ============ CTA ============ */}
       <section className="relative mx-auto max-w-6xl px-6 pb-32">
-        <div className="bento aurora-subtle relative overflow-hidden p-12 text-center md:p-16">
+        <div className="scroll-pop bento aurora-subtle relative overflow-hidden p-12 text-center md:p-16">
           <h2 className="text-display text-4xl sm:text-5xl md:text-6xl">
             <span className="text-aurora">지금 바로</span>
             <br />

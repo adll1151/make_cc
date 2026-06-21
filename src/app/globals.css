@@ -177,11 +177,56 @@
   .scroll-fade {
     animation: scroll-reveal linear both;
     animation-timeline: view();
-    animation-range: entry 10% cover 30%;
+    animation-range: entry 5% cover 28%;
   }
   @keyframes scroll-reveal {
     from { opacity: 0; transform: translateY(40px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 스크롤 reveal 변형 — 카드/섹션 다양성 */
+  .scroll-pop {
+    animation: scroll-pop linear both;
+    animation-timeline: view();
+    animation-range: entry 3% cover 26%;
+  }
+  @keyframes scroll-pop {
+    from { opacity: 0; transform: translateY(28px) scale(0.965); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .scroll-fade-left {
+    animation: scroll-reveal-left linear both;
+    animation-timeline: view();
+    animation-range: entry 5% cover 30%;
+  }
+  @keyframes scroll-reveal-left {
+    from { opacity: 0; transform: translateX(-36px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .scroll-fade-right {
+    animation: scroll-reveal-right linear both;
+    animation-timeline: view();
+    animation-range: entry 5% cover 30%;
+  }
+  @keyframes scroll-reveal-right {
+    from { opacity: 0; transform: translateX(36px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+}
+
+/* ===== 최신: 크로스 도큐먼트 View Transitions (Chrome 126+) — 페이지 전환을 부드러운 페이드로.
+   미지원 브라우저는 그냥 즉시 전환(무해). ===== */
+@view-transition {
+  navigation: auto;
+}
+
+/* 모션 민감 사용자 존중 — 스크롤/연속 애니메이션 비활성 */
+@media (prefers-reduced-motion: reduce) {
+  .scroll-fade, .scroll-pop, .scroll-fade-left, .scroll-fade-right,
+  .enter-fade-up, .animate-float, .animate-pulse-glow {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 
