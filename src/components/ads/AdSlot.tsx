@@ -2,6 +2,12 @@
 
 import { useEffect, useRef } from 'react';
 
+declare global {
+  interface Window {
+    adsbygoogle?: unknown[];
+  }
+}
+
 /**
  * Google AdSense 광고 유닛 (특정 위치에 디스플레이 광고 1개).
  * - `NEXT_PUBLIC_ADSENSE_CLIENT`(ca-pub-…) + `slot`(또는 `NEXT_PUBLIC_ADSENSE_SLOT`)이 있으면
