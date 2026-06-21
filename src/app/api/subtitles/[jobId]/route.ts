@@ -4,8 +4,9 @@ import { apiOk, AppError, getRequestId, handleApiError } from '@/lib/api';
 import { logger } from '@/lib/logger';
 import { getOwnerContext } from '@/services/auth/session';
 import { getJobAdmin } from '@/services/jobs';
-import { loadSubtitleText, saveSubtitle } from '@/services/storage';
+import { loadSubtitleText, saveSubtitle, getWordsJson } from '@/services/storage';
 import { buildSrt, parseSrt, validateCues, normalizeCues } from '@/lib/srt';
+import type { Cue } from '@/types/subtitle';
 
 /**
  * GET /api/subtitles/[jobId]
@@ -28,10 +29,24 @@ export async function GET(
     const srtText = await loadSubtitleText(jobId);
     const cues = parseSrt(srtText);
 
+    // 화자 정보: SRT는 깨끗(라벨 없음)하므로 speakerId는 words.json에서 index로 매칭해 부착.
+    // speaker_map(표시 이름)은 잡에 저장돼 있다. 둘 다 없으면 화자 미분리(평소 동작).
+    const words = await getWordsJson<{ index?: number; speakerId?: string }[]>(jobId).catch(
+      () => null,
+    );
+    if (Array.isArray(words)) {
+      const byIndex = new Map(words.filter((w) => w?.speakerId).map((w) => [w.index, w.speakerId]));
+      for (const c of cues as Cue[]) {
+        const sid = byIndex.get(c.index);
+        if (sid) c.speakerId = sid;
+      }
+    }
+
     return apiOk({
       jobId,
       language: job.language,
       cues,
+      speakerMap: job.speakerMap ?? {},
       updatedAt: (job.finishedAt ?? job.createdAt).toISOString(),
     });
   } catch (err) {

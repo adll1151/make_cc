@@ -10,6 +10,7 @@ import type { Cue } from '@/types/subtitle';
 import { VideoPlayer } from './VideoPlayer';
 import { CueList } from './CueList';
 import { SaveStatusBadge } from './SaveStatusBadge';
+import { SpeakerLegend } from './SpeakerLegend';
 import { CaptionPreview } from './CaptionPreview';
 import { CaptionStylePanel } from './CaptionStylePanel';
 import { ExportButton } from './ExportButton';
@@ -26,6 +27,7 @@ interface SubtitleResponse {
   jobId: string;
   language: string;
   cues: Cue[];
+  speakerMap?: Record<string, string>;
   updatedAt: string;
 }
 
@@ -86,7 +88,7 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
         const name = jobJson?.data?.videoOriginalName ?? '';
 
         if (cancelled) return;
-        setLoaded({ jobId, cues: subJson.data.cues });
+        setLoaded({ jobId, cues: subJson.data.cues, speakerMap: subJson.data.speakerMap });
         setFileName(name);
 
         if (urlRes.ok) {
@@ -228,6 +230,11 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
               <h2 className="text-sm font-semibold text-muted-foreground">자막</h2>
               <ManualSaveButton />
             </div>
+            {!loading && (
+              <div className="mb-2 px-1">
+                <SpeakerLegend />
+              </div>
+            )}
             <div className="custom-scroll flex-1 overflow-y-auto px-1 pb-1">
               {loading ? (
                 <div className="space-y-2 px-2 py-4">

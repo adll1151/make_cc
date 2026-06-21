@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import type { Cue } from '@/types/subtitle';
 import { shortTimecode } from '../lib/timecode-format';
 import { useSubtitleStore } from '../hooks/useSubtitleStore';
+import { speakerColor, speakerLabel } from '../lib/speaker-color';
 
 interface CueItemProps {
   cue: Cue;
@@ -14,6 +15,7 @@ interface CueItemProps {
 
 export function CueItem({ cue, isActive, onSeek }: CueItemProps) {
   const updateCueText = useSubtitleStore((s) => s.updateCueText);
+  const speakerMap = useSubtitleStore((s) => s.speakerMap);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(cue.text);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -68,7 +70,21 @@ export function CueItem({ cue, isActive, onSeek }: CueItemProps) {
             {shortTimecode(cue.endMs)}
           </span>
         </button>
-        <span className="font-mono text-[10px] text-muted-foreground/50">#{cue.index}</span>
+        <div className="flex items-center gap-2">
+          {cue.speakerId && (
+            <span
+              className="flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium"
+              style={{ color: speakerColor(cue.speakerId).text }}
+            >
+              <span
+                className="size-1.5 rounded-full"
+                style={{ background: speakerColor(cue.speakerId).dot }}
+              />
+              {speakerLabel(cue.speakerId, speakerMap)}
+            </span>
+          )}
+          <span className="font-mono text-[10px] text-muted-foreground/50">#{cue.index}</span>
+        </div>
       </div>
 
       <div className="mt-2">

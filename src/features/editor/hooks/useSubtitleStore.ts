@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import type { Cue } from '@/types/subtitle';
+import type { Cue, SpeakerMap } from '@/types/subtitle';
 
 /**
  * 편집기 클라이언트 상태.
@@ -16,6 +16,8 @@ export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 interface SubtitleStore {
   jobId: string | null;
   cues: Cue[];
+  /** 화자 표시 이름 맵 (spk_0 → '화자 1'/'김지훈'). 화자 미분리면 빈 객체. */
+  speakerMap: SpeakerMap;
   /** 최초 로드된 cues — 변경 비교용 */
   originalSignature: string;
   /** 현재 cues signature */
@@ -27,7 +29,9 @@ interface SubtitleStore {
   lastSavedAt: number | null;
 
   /** 최초 데이터 로드 */
-  setLoaded(params: { jobId: string; cues: Cue[] }): void;
+  setLoaded(params: { jobId: string; cues: Cue[]; speakerMap?: SpeakerMap }): void;
+  /** 화자 표시 이름 맵 갱신 (이름 변경 시) */
+  setSpeakerMap(map: SpeakerMap): void;
   /** cue 텍스트 수정 */
   updateCueText(index: number, text: string): void;
   /** 활성 cue idx 설정 (useVideoSync 호출) */
@@ -50,6 +54,7 @@ function computeSignature(cues: Cue[]): string {
 export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
   jobId: null,
   cues: [],
+  speakerMap: {},
   originalSignature: '',
   signature: '',
   dirty: false,
@@ -58,11 +63,12 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
   lastSaveError: null,
   lastSavedAt: null,
 
-  setLoaded({ jobId, cues }) {
+  setLoaded({ jobId, cues, speakerMap }) {
     const sig = computeSignature(cues);
     set({
       jobId,
       cues,
+      speakerMap: speakerMap ?? {},
       originalSignature: sig,
       signature: sig,
       dirty: false,
@@ -71,6 +77,10 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
       lastSaveError: null,
       lastSavedAt: null,
     });
+  },
+
+  setSpeakerMap(map) {
+    set({ speakerMap: map });
   },
 
   updateCueText(index, text) {
@@ -117,6 +127,7 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
     set({
       jobId: null,
       cues: [],
+      speakerMap: {},
       originalSignature: '',
       signature: '',
       dirty: false,
