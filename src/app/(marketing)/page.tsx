@@ -5,6 +5,7 @@ import { AdSlot } from '@/components/ads/AdSlot';
 import { AdsenseScript } from '@/components/ads/AdsenseScript';
 import { LiveCaptionDemo } from '@/components/LiveCaptionDemo';
 import { EditorDemo } from '@/components/EditorDemo';
+import { CountUp } from '@/components/CountUp';
 
 export default function LandingPage() {
   return (
@@ -262,7 +263,9 @@ function BentoCard({
 function Stat({ number, label }: { number: string; label: string }) {
   return (
     <div className="bento flex flex-col items-start justify-center p-6 transition hover:bento-hover">
-      <p className="text-display text-4xl text-aurora sm:text-5xl">{number}</p>
+      <p className="text-display text-4xl text-aurora sm:text-5xl">
+        <CountUp value={number} />
+      </p>
       <p className="mt-2 text-sm text-muted-foreground">{label}</p>
     </div>
   );

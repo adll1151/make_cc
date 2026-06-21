@@ -237,12 +237,22 @@
     radial-gradient(at 75% 15%, color-mix(in oklab, var(--aurora-magenta) 28%, transparent) 0px, transparent 50%),
     radial-gradient(at 20% 80%, color-mix(in oklab, var(--aurora-amber) 22%, transparent) 0px, transparent 45%),
     radial-gradient(at 80% 75%, color-mix(in oklab, var(--aurora-cyan) 20%, transparent) 0px, transparent 45%);
+  /* 천천히 숨쉬듯 드리프트 — 사이트 전체 배경이 살아있는 느낌 (GPU transform) */
+  animation: aurora-drift 24s ease-in-out infinite alternate;
+  will-change: transform;
 }
 
 @utility aurora-subtle {
   background-image:
     radial-gradient(at 30% 0%, color-mix(in oklab, var(--aurora-purple) 18%, transparent) 0px, transparent 50%),
     radial-gradient(at 70% 100%, color-mix(in oklab, var(--aurora-amber) 12%, transparent) 0px, transparent 50%);
+  animation: aurora-drift 30s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes aurora-drift {
+  from { transform: scale(1.05) translate3d(0, 0, 0); }
+  to { transform: scale(1.18) translate3d(-2.5%, 1.8%, 0); }
 }
 
 @utility grain {
@@ -287,12 +297,26 @@
   background-image: linear-gradient(
     135deg,
     var(--aurora-purple) 0%,
-    var(--aurora-magenta) 50%,
-    var(--aurora-amber) 100%
+    var(--aurora-magenta) 35%,
+    var(--aurora-amber) 65%,
+    var(--aurora-purple) 100%
   );
+  background-size: 220% 220%;
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  /* 그라데이션이 천천히 흐르며 살아있는 느낌 */
+  animation: text-flow 9s ease-in-out infinite;
+}
+
+@keyframes text-flow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 /* Bento card with hover spotlight */
