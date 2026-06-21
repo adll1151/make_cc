@@ -150,15 +150,18 @@ export async function presignRenderDownload(params: {
   expiresIn?: number;
 }): Promise<string> {
   const admin = createAdminClient();
+  // ⚠️ supabase-js의 `download` 옵션은 비ASCII(한글) 파일명을 이중 퍼센트인코딩해
+  // Content-Disposition에 `%EB%84%B7…`처럼 깨진 파일명으로 내려보낸다. 그래서 옵션을
+  // 쓰지 않고, 서명 후 `download` 쿼리를 직접 단일 인코딩으로 부착한다(서명 대상 아님).
   const { data, error } = await admin.storage
     .from(rendersBucket())
-    .createSignedUrl(
-      params.storageKey,
-      params.expiresIn ?? SIGN_DOWNLOAD_EXPIRES,
-      params.downloadName ? { download: params.downloadName } : undefined,
-    );
+    .createSignedUrl(params.storageKey, params.expiresIn ?? SIGN_DOWNLOAD_EXPIRES);
   if (error || !data) throw new Error(`render signed URL 실패: ${error?.message ?? 'unknown'}`);
-  return data.signedUrl;
+  let url = data.signedUrl;
+  if (params.downloadName) {
+    url += `${url.includes('?') ? '&' : '?'}download=${encodeURIComponent(params.downloadName)}`;
+  }
+  return url;
 }
 
 export async function deleteRender(storageKey: string): Promise<void> {
