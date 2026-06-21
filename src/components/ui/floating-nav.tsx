@@ -8,16 +8,16 @@ import { createBrowserSupabase } from '@/lib/supabase/browser';
 
 /**
  * 2026 트렌드 — 상단 중앙에 떠 있는 pill nav.
- * 로그인 상태를 반영해 "로그인" ↔ "계정" 전환 (로그아웃/로딩 시 기본 "로그인").
+ * 로그인 시 이메일+아바타 칩을 노출(상태 명확), 비로그인 시 "로그인" 버튼.
  */
 export function FloatingNav() {
-  const [authed, setAuthed] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createBrowserSupabase();
-    supabase.auth.getUser().then(({ data }) => setAuthed(!!data.user));
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) =>
-      setAuthed(!!session?.user),
+      setEmail(session?.user?.email ?? null),
     );
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -51,9 +51,24 @@ export function FloatingNav() {
         </Link>
         <DiscordInviteLink className="rounded-full px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-white/5 hover:text-foreground" />
 
-        <Button asChild variant="default" size="sm" className="ml-1 rounded-full">
-          {authed ? <Link href="/account">계정</Link> : <Link href="/login">로그인</Link>}
-        </Button>
+        {email ? (
+          <Link
+            href="/account"
+            title={`${email} · 계정`}
+            className="ml-1 flex items-center gap-2 rounded-full border border-border/60 bg-white/5 py-1 pl-1 pr-3 transition hover:bg-white/10"
+          >
+            <span className="flex size-6 items-center justify-center rounded-full bg-gradient-to-br from-[var(--aurora-purple)] to-[var(--aurora-magenta)] text-[11px] font-bold uppercase text-white">
+              {email[0]}
+            </span>
+            <span className="hidden max-w-[120px] truncate text-sm font-medium sm:inline">
+              {email}
+            </span>
+          </Link>
+        ) : (
+          <Button asChild variant="default" size="sm" className="ml-1 rounded-full">
+            <Link href="/login">로그인</Link>
+          </Button>
+        )}
       </div>
     </nav>
   );

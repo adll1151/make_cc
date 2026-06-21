@@ -67,7 +67,7 @@ export default function AccountPage() {
               <h3 className="font-semibold tracking-tight">자동 삭제 정책</h3>
               <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
                 <li>· 회원: 처리 완료 30일 후 영상 자동 삭제 (자막은 유지)</li>
-                <li>· 게스트: 처리 완료 즉시 영상 자동 삭제</li>
+                <li>· 게스트: 처리 완료 후 약 1시간 내 영상 자동 삭제</li>
                 <li>· 학습에 사용되지 않음</li>
               </ul>
             </div>
