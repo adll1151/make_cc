@@ -16,12 +16,23 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logger } from '@/lib/logger';
 import { cleanupExpiredJobs } from '@/services/jobs';
 import { fetchOldestPendingRender, cleanupExpiredRenders } from '@/services/render';
+import { putWorkerHeartbeat } from '@/services/storage';
 import { processTranscribe } from '../transcribe';
 import { processRender } from '../render';
 
 const POLL_INTERVAL_MS = 3_000;
+// 잡 처리(블로킹)와 무관하게 setInterval로 갱신 — 운영자 알림이 워커 생존을 판정.
+const HEARTBEAT_INTERVAL_MS = 15_000;
 
 const log = logger.child({ worker: 'poll-loop' });
+
+async function touchHeartbeat(): Promise<void> {
+  try {
+    await putWorkerHeartbeat();
+  } catch (err) {
+    log.warn({ err: (err as Error)?.message }, 'heartbeat 기록 실패 (계속)');
+  }
+}
 
 let isShuttingDown = false;
 
@@ -40,6 +51,10 @@ let tickCount = 0;
 
 (async function main() {
   log.info({ pollIntervalMs: POLL_INTERVAL_MS }, 'polling worker started');
+
+  // 하트비트: 시작 즉시 1회 + 주기적. 잡 처리로 메인 루프가 블록돼도 계속 갱신됨.
+  await touchHeartbeat();
+  const heartbeatTimer = setInterval(() => void touchHeartbeat(), HEARTBEAT_INTERVAL_MS);
 
   while (!isShuttingDown) {
     // cleanup (만료 자산 자동 삭제) — 잡 비디오 + 렌더 출력
@@ -93,6 +108,7 @@ let tickCount = 0;
     }
   }
 
+  clearInterval(heartbeatTimer);
   log.info('shutdown complete');
   process.exit(0);
 })().catch((err) => {

@@ -25,6 +25,7 @@ export {
   putWordsJson,
   getWordsJson,
   getSubtitleText,
+  putWorkerHeartbeat,
 } from '@/lib/storage';
 
 /**

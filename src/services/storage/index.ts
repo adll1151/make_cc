@@ -12,6 +12,7 @@ export {
   putWordsJson,
   getWordsJson,
   getSubtitleText,
+  putWorkerHeartbeat,
   deleteJobAssets,
   STORAGE_BUCKETS,
   type VideoUploadTicket,

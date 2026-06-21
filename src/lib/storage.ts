@@ -182,6 +182,41 @@ export async function putWordsJson(jobId: string, payload: unknown): Promise<voi
   if (error) throw new Error(`words.json 업로드 실패: ${error.message}`);
 }
 
+// =========================================
+// 워커 하트비트 (subtitles 버킷, _system/worker-heartbeat.json)
+//   셀프호스팅 폴링 워커의 생존을 운영자 알림에서 판정하는 용도. 단일 객체 upsert.
+// =========================================
+
+const WORKER_HEARTBEAT_KEY = '_system/worker-heartbeat.json';
+
+/** 워커가 살아있음을 표시 (현재 시각 기록). poll-loop가 주기적으로 호출. */
+export async function putWorkerHeartbeat(): Promise<void> {
+  const admin = createAdminClient();
+  const bytes = new TextEncoder().encode(JSON.stringify({ ts: Date.now() }));
+  const { error } = await admin.storage
+    .from(subtitlesBucket())
+    .upload(WORKER_HEARTBEAT_KEY, bytes, {
+      contentType: 'application/json; charset=utf-8',
+      upsert: true,
+    });
+  if (error) throw new Error(`worker heartbeat 기록 실패: ${error.message}`);
+}
+
+/** 마지막 하트비트 시각(ms). 없거나 파싱 실패 시 null → 워커 다운으로 간주. */
+export async function getWorkerHeartbeatTs(): Promise<number | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage
+    .from(subtitlesBucket())
+    .download(WORKER_HEARTBEAT_KEY);
+  if (error || !data) return null;
+  try {
+    const o = JSON.parse(await data.text()) as { ts?: unknown };
+    return typeof o.ts === 'number' ? o.ts : null;
+  } catch {
+    return null;
+  }
+}
+
 /** 단어 타이밍 JSON 로드. 없으면 null (whisperX 미적용 잡 → 평문 fallback). */
 export async function getWordsJson<T = unknown>(jobId: string): Promise<T | null> {
   const admin = createAdminClient();

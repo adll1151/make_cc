@@ -44,6 +44,9 @@ const envSchema = z.object({
   DISCORD_OAUTH_REDIRECT_URL: z.string().optional().default(''), // 미설정 시 코드가 APP_URL 기준 계산
   DISCORD_GUILD_ID: z.string().optional().default(''), // (옵션) 서버 참여 점검용
   NEXT_PUBLIC_DISCORD_INVITE_URL: z.string().optional().default(''), // 헤더/마이페이지 초대 링크
+  // 운영자 알림 웹훅 — 잡이 큐에 쌓였는데 워커가 꺼져 있을 때 1회 알림(켜라고).
+  //   미설정 시 알림 비활성. Discord 채널 → 통합 → 웹훅에서 발급한 URL.
+  DISCORD_WORKER_ALERT_WEBHOOK: z.string().optional().default(''),
 
   // Ads (Google AdSense) — 무료 티어 광고. client/slot 미설정 시 슬롯은 플레이스홀더로 표시
   NEXT_PUBLIC_ADSENSE_CLIENT: z.string().optional().default(''), // 퍼블리셔 ID (ca-pub-XXXXXXXXXXXXXXXX)

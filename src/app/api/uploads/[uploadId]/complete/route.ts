@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger';
 import { getOwnerContext } from '@/services/auth/session';
 import { getJobAdmin, markUploaded } from '@/services/jobs';
 import { enqueueTranscribe } from '@/services/queue';
+import { maybeAlertWorkerDown } from '@/services/notify';
 
 /**
  * POST /api/uploads/[uploadId]/complete
@@ -56,6 +57,10 @@ export async function POST(
       ownerType: updated.ownerType,
     });
     log.info({ enqueued }, 'enqueue attempted');
+
+    // 워커가 꺼져 있는 것 같으면 운영자에게 1회 알림(켜라고).
+    // serverless에서 응답 후 동결로 누락되지 않게 await(미설정 시 즉시 반환, throw 안 함).
+    await maybeAlertWorkerDown({ jobId, videoOriginalName: job.videoOriginalName });
 
     return apiOk({ jobId, status: 'queued', enqueued });
   } catch (err) {
