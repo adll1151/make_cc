@@ -1,6 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import Script from 'next/script';
-import { env } from '@/lib/env';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -26,16 +24,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
-        {/* Google AdSense 사이트 확인/서빙 스크립트 — client 설정 시에만 모든 페이지 head에 로드 */}
-        {env.NEXT_PUBLIC_ADSENSE_CLIENT && (
-          <Script
-            id="adsbygoogle-init"
-            async
-            strategy="afterInteractive"
-            crossOrigin="anonymous"
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${env.NEXT_PUBLIC_ADSENSE_CLIENT}`}
-          />
-        )}
+        {/*
+          ⚠️ AdSense 스크립트를 여기(전역)에 두지 않는다. 전역 로드 시 로그인·계정·이력·
+          편집기·업로드 같은 게시자 콘텐츠 없는 화면에도 광고 코드가 깔려 AdSense 정책
+          "콘텐츠 없는 화면의 광고" 위반으로 잡힌다. 대신 AdSlot 컴포넌트가 콘텐츠 페이지
+          (/ · /guide · /faq)에서만 loadAdsense()로 스크립트를 지연 로드한다.
+        */}
       </head>
       <body className="min-h-screen bg-background text-foreground">{children}</body>
     </html>
