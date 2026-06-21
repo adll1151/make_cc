@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { loadAdsense } from './adsense';
 
 /**
  * Google AdSense 광고 유닛 (특정 위치에 디스플레이 광고 1개).
@@ -27,13 +26,13 @@ export function AdSlot({
   useEffect(() => {
     if (!client || !slotId || ran.current) return;
     ran.current = true;
-    void loadAdsense(client).then(() => {
-      try {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-      } catch {
-        /* noop */
-      }
-    });
+    // 스크립트는 콘텐츠 페이지의 <AdsenseScript />가 로드한다. 여기선 push만 —
+    // 스크립트가 아직 안 떴어도 adsbygoogle 큐에 쌓였다가 로드 시 처리됨(AdSense 표준).
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch {
+      /* noop */
+    }
   }, [client, slotId]);
 
   if (!client || !slotId) {

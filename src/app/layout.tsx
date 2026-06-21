@@ -27,8 +27,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/*
           ⚠️ AdSense 스크립트를 여기(전역)에 두지 않는다. 전역 로드 시 로그인·계정·이력·
           편집기·업로드 같은 게시자 콘텐츠 없는 화면에도 광고 코드가 깔려 AdSense 정책
-          "콘텐츠 없는 화면의 광고" 위반으로 잡힌다. 대신 AdSlot 컴포넌트가 콘텐츠 페이지
-          (/ · /guide · /faq)에서만 loadAdsense()로 스크립트를 지연 로드한다.
+          "콘텐츠 없는 화면의 광고" 위반으로 잡힌다. 대신 콘텐츠 페이지(/ · /guide · /faq)에서만
+          <AdsenseScript />로 스크립트를 두고, 그 위에서 <AdSlot />이 광고를 push한다.
         */}
       </head>
       <body className="min-h-screen bg-background text-foreground">{children}</body>
