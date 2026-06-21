@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { FloatingNav } from '@/components/ui/floating-nav';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AdsenseScript } from '@/components/ads/AdsenseScript';
+import { LiveCaptionDemo } from '@/components/LiveCaptionDemo';
 
 export default function LandingPage() {
   return (
@@ -68,6 +69,11 @@ export default function LandingPage() {
             <Indicator>✓ 무료 체험</Indicator>
             <Indicator>✓ 카드 등록 불필요</Indicator>
             <Indicator>✓ 처리 후 자동 삭제</Indicator>
+          </div>
+
+          {/* 실시간 자막 생성 데모 (모션) */}
+          <div className="enter-fade-up mt-16" style={{ animationDelay: '0.5s' }}>
+            <LiveCaptionDemo />
           </div>
         </div>
       </section>
