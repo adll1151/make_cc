@@ -1,5 +1,7 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import fs from 'node:fs/promises';
+import { env } from '@/lib/env';
 import type { CaptionAspect } from '@/types/caption-style';
 
 /**
@@ -13,7 +15,7 @@ export async function extractAudio(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const ff = spawn(
-      'ffmpeg',
+      env.FFMPEG_PATH,
       [
         '-i',
         inputPath,
@@ -62,7 +64,7 @@ export interface VideoDimensions {
 export async function probeVideo(inputPath: string): Promise<VideoDimensions> {
   return new Promise((resolve, reject) => {
     const fp = spawn(
-      'ffprobe',
+      env.FFPROBE_PATH,
       [
         '-v',
         'error',
@@ -126,21 +128,27 @@ export interface BurnOptions {
   output: VideoDimensions;
 }
 
-/** 필터그래프 옵션 값 내 특수문자 이스케이프(콜론/백슬래시). */
-function escFilterPath(p: string): string {
-  return p.replace(/\\/g, '/').replace(/:/g, '\\:');
-}
-
 /**
  * ffmpeg로 자막(ASS)을 영상에 번인 + 비율 변환 + (무료)워터마크.
  *
  * 필터: [scale/crop 비율] → ass(fontsdir) → [drawtext 워터마크]
- * ass 파일은 basename으로 참조(cwd=assPath 디렉터리)해 경로 이스케이프 회피.
+ * 경로 이스케이프 회피: ass·fonts 모두 cwd(=assPath 디렉터리) 기준 **상대경로**로 참조한다.
+ * 절대경로 fontsdir는 Windows 드라이브 콜론(C:) 때문에 filtergraph 파싱이 깨짐 →
+ * 폰트를 cwd/fonts로 복사해 `fontsdir=fonts`로 쓴다(크로스플랫폼).
  */
 export async function burnSubtitles(opts: BurnOptions): Promise<void> {
   const { width: W, height: H } = opts.output;
   const assDir = path.dirname(opts.assPath);
   const assName = path.basename(opts.assPath);
+
+  // 폰트를 cwd/fonts로 복사 (상대경로 fontsdir + drawtext fontfile 용)
+  const localFonts = path.join(assDir, 'fonts');
+  await fs.mkdir(localFonts, { recursive: true });
+  for (const f of await fs.readdir(opts.fontsDir)) {
+    if (f.toLowerCase().endsWith('.ttf')) {
+      await fs.copyFile(path.join(opts.fontsDir, f), path.join(localFonts, f));
+    }
+  }
 
   const filters: string[] = [];
   if (opts.aspect === '9:16' || opts.aspect === '1:1') {
@@ -149,12 +157,13 @@ export async function burnSubtitles(opts: BurnOptions): Promise<void> {
   } else {
     filters.push(`scale=${W}:${H}`);
   }
-  filters.push(`ass=${assName}:fontsdir=${escFilterPath(opts.fontsDir)}`);
+  filters.push(`ass=${assName}:fontsdir=fonts`);
   if (opts.watermark) {
-    const fs = Math.max(14, Math.round(H / 28));
+    const wmSize = Math.max(14, Math.round(H / 28));
     const pad = Math.round(W * 0.03);
+    // fontfile 명시 — Windows는 fontconfig 기본 설정이 없어 font=Sans가 실패/경고.
     filters.push(
-      `drawtext=text='make_cc':font=Sans:fontcolor=white@0.75:fontsize=${fs}` +
+      `drawtext=text='make_cc':fontfile=fonts/Pretendard-Regular.ttf:fontcolor=white@0.75:fontsize=${wmSize}` +
         `:x=w-tw-${pad}:y=h-th-${pad}:box=1:boxcolor=black@0.35:boxborderw=6`,
     );
   }
@@ -162,7 +171,7 @@ export async function burnSubtitles(opts: BurnOptions): Promise<void> {
 
   return new Promise((resolve, reject) => {
     const ff = spawn(
-      'ffmpeg',
+      env.FFMPEG_PATH,
       [
         '-i',
         opts.inputPath,

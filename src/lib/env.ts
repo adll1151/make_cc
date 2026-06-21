@@ -52,6 +52,12 @@ const envSchema = z.object({
   NEXT_PUBLIC_ADSENSE_CLIENT: z.string().optional().default(''), // 퍼블리셔 ID (ca-pub-XXXXXXXXXXXXXXXX)
   NEXT_PUBLIC_ADSENSE_SLOT: z.string().optional().default(''), // 기본 광고 유닛 slot ID (AdSlot 고정 위치)
 
+  // ffmpeg/ffprobe 바이너리 경로 (워커 전용). 미설정 시 PATH의 'ffmpeg'/'ffprobe' 사용.
+  //   ⚠️ 번인 렌더는 ass 필터 fontsdir을 지원하는 최신 ffmpeg(≥4.x) 필요. 구버전이면
+  //   여기에 최신 ffmpeg.exe 경로를 지정. (Windows의 오래된 PATH ffmpeg 회피)
+  FFMPEG_PATH: z.string().default('ffmpeg'),
+  FFPROBE_PATH: z.string().default('ffprobe'),
+
   // Whisper (워커 전용 — 웹에서는 미사용)
   WHISPER_MODEL: z
     .enum(['tiny', 'base', 'small', 'medium', 'large-v2', 'large-v3'])
