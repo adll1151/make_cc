@@ -36,6 +36,7 @@ function mapRender(row: RenderRow): Render {
     resolution: row.resolution,
     watermark: row.watermark,
     style: row.style as unknown as CaptionStyle,
+    progressPercent: row.progress_percent ?? 0,
     outputStorageKey: row.output_storage_key,
     errorMessage: row.error_message,
     createdAt: new Date(row.created_at),
@@ -68,6 +69,21 @@ export async function markRenderRendering(renderId: string): Promise<boolean> {
   return (data?.length ?? 0) > 0;
 }
 
+/**
+ * 렌더 진행률(%) 갱신. rendering 상태일 때만 기록(종료 상태 클로버 방지).
+ * 워커가 ffmpeg 진행률로 자주 호출하므로 fire-and-forget(예외 무시)로 쓰는 게 안전.
+ */
+export async function updateRenderProgress(renderId: string, percent: number): Promise<void> {
+  const clamped = Math.max(0, Math.min(99, Math.round(percent)));
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('renders')
+    .update({ progress_percent: clamped })
+    .eq('id', renderId)
+    .eq('status', 'rendering');
+  if (error) throw new Error(`updateRenderProgress 실패: ${error.message}`);
+}
+
 /** rendering → done. 출력 키 + 자동삭제 예약 기록. */
 export async function markRenderDone(params: {
   renderId: string;
@@ -79,6 +95,7 @@ export async function markRenderDone(params: {
     .from('renders')
     .update({
       status: 'done',
+      progress_percent: 100,
       output_storage_key: params.outputStorageKey,
       output_delete_at: params.outputDeleteAt ? params.outputDeleteAt.toISOString() : null,
       finished_at: new Date().toISOString(),
@@ -181,6 +198,8 @@ export async function createRender(
 
 export interface RenderView {
   status: RenderStatus;
+  /** 0~100 (done이면 100) */
+  progressPercent: number;
   /** status==='done'일 때만 출력 MP4 signed URL */
   downloadUrl: string | null;
   errorMessage: string | null;
@@ -210,6 +229,31 @@ export async function getRender(renderId: string): Promise<RenderView> {
 
   return {
     status: render.status,
+    progressPercent: render.progressPercent,
+    downloadUrl,
+    errorMessage: render.errorMessage,
+  };
+}
+
+/**
+ * SSE 스트림용 렌더 스냅샷 (admin, RLS 우회). 소유 검증은 라우트에서 1회 수행 전제.
+ * done이면 출력 signed URL 동봉. 렌더가 없으면 null.
+ */
+export async function getRenderStreamSnapshot(renderId: string): Promise<RenderView | null> {
+  const render = await getRenderAdmin(renderId);
+  if (!render) return null;
+
+  let downloadUrl: string | null = null;
+  if (render.status === 'done' && render.outputStorageKey) {
+    const job = await getJobAdmin(render.jobId);
+    downloadUrl = await presignRenderDownload({
+      storageKey: render.outputStorageKey,
+      downloadName: buildOutputName(job?.videoOriginalName ?? 'video'),
+    });
+  }
+  return {
+    status: render.status,
+    progressPercent: render.progressPercent,
     downloadUrl,
     errorMessage: render.errorMessage,
   };

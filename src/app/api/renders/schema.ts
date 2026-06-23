@@ -42,6 +42,8 @@ export interface CreateRenderResponse {
 
 export interface RenderStatusResponse {
   status: RenderStatus;
+  /** 0~100 (done이면 100) */
+  progressPercent: number;
   /** status==='done'일 때만 signed URL */
   downloadUrl: string | null;
   errorMessage: string | null;

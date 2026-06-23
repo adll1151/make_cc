@@ -92,6 +92,32 @@ export async function probeVideo(inputPath: string): Promise<VideoDimensions> {
   });
 }
 
+/** ffprobe로 영상 길이(초) 조회. 진행률 % 산정용. 실패 시 0(=진행률 비활성). */
+export async function probeDuration(inputPath: string): Promise<number> {
+  return new Promise((resolve) => {
+    const fp = spawn(
+      env.FFPROBE_PATH,
+      [
+        '-v',
+        'error',
+        '-show_entries',
+        'format=duration',
+        '-of',
+        'default=noprint_wrappers=1:nokey=1',
+        inputPath,
+      ],
+      { stdio: ['ignore', 'pipe', 'ignore'] },
+    );
+    let out = '';
+    fp.stdout.on('data', (c: Buffer) => (out += c.toString()));
+    fp.on('error', () => resolve(0));
+    fp.on('exit', () => {
+      const sec = Number(out.trim());
+      resolve(Number.isFinite(sec) && sec > 0 ? sec : 0);
+    });
+  });
+}
+
 /** 짝수로 내림 (libx264 yuv420p는 짝수 치수 요구). */
 function even(n: number): number {
   return Math.max(2, Math.floor(n / 2) * 2);
@@ -126,6 +152,10 @@ export interface BurnOptions {
   fontsDir: string;
   /** computeOutputDimensions 결과 (ASS PlayRes와 동일하게 빌드돼 있어야 함) */
   output: VideoDimensions;
+  /** 영상 길이(초). 있으면 진행률 % 계산에 사용 (probeDuration 결과). */
+  durationSec?: number;
+  /** 진행률(0~99) 콜백. ffmpeg out_time/duration 기반, 변화 시에만 호출. */
+  onProgress?: (percent: number) => void;
 }
 
 /**
@@ -191,11 +221,40 @@ export async function burnSubtitles(opts: BurnOptions): Promise<void> {
         '128k',
         '-movflags',
         '+faststart',
+        // 진행률 머신리더블 출력 (stdout) — out_time_us 파싱용
+        '-progress',
+        'pipe:1',
+        '-nostats',
         '-y',
         opts.outputPath,
       ],
-      { stdio: ['ignore', 'ignore', 'pipe'], cwd: assDir },
+      { stdio: ['ignore', 'pipe', 'pipe'], cwd: assDir },
     );
+
+    // -progress 파싱: stdout에 key=value 라인. out_time_us(또는 out_time_ms) / 길이 → %.
+    const dur = opts.durationSec ?? 0;
+    let lastPct = -1;
+    let buf = '';
+    ff.stdout.on('data', (c: Buffer) => {
+      if (!opts.onProgress || dur <= 0) return;
+      buf += c.toString();
+      let nl: number;
+      while ((nl = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        let outSec = NaN;
+        if (line.startsWith('out_time_us=')) outSec = Number(line.slice(12)) / 1_000_000;
+        else if (line.startsWith('out_time_ms=')) outSec = Number(line.slice(12)) / 1_000_000; // ffmpeg ms 키도 실제 단위는 us
+        if (Number.isFinite(outSec) && outSec >= 0) {
+          const pct = Math.max(0, Math.min(99, Math.round((outSec / dur) * 100)));
+          if (pct !== lastPct) {
+            lastPct = pct;
+            opts.onProgress(pct);
+          }
+        }
+      }
+    });
+
     let stderr = '';
     ff.stderr.on('data', (c: Buffer) => (stderr += c.toString()));
     ff.on('error', (err) =>

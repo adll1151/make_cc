@@ -140,6 +140,7 @@ export type Database = {
           job_id: string
           output_delete_at: string | null
           output_storage_key: string | null
+          progress_percent: number
           resolution: number
           status: string
           style: Json
@@ -155,6 +156,7 @@ export type Database = {
           job_id: string
           output_delete_at?: string | null
           output_storage_key?: string | null
+          progress_percent?: number
           resolution?: number
           status?: string
           style: Json
@@ -170,6 +172,7 @@ export type Database = {
           job_id?: string
           output_delete_at?: string | null
           output_storage_key?: string | null
+          progress_percent?: number
           resolution?: number
           status?: string
           style?: Json

@@ -12,10 +12,11 @@ import {
   markRenderRendering,
   markRenderDone,
   markRenderFailed,
+  updateRenderProgress,
 } from '@/services/render';
 import { putRender, getWordsJson, getSubtitleText } from '@/services/storage';
 import { videosBucket } from '@/lib/storage';
-import { probeVideo, computeOutputDimensions, burnSubtitles } from './lib/ffmpeg';
+import { probeVideo, probeDuration, computeOutputDimensions, burnSubtitles } from './lib/ffmpeg';
 
 /** 번들 OFL 폰트 디렉터리 (Pretendard/NotoSansKR). */
 const FONTS_DIR = path.resolve(process.cwd(), 'worker/fonts');
@@ -135,14 +136,16 @@ export async function processRender(renderId: string): Promise<ProcessRenderResu
     const cues = await loadCues(render.jobId, log);
     if (cues.length === 0) throw new Error('자막 cue가 없습니다 (SRT/words 비어있음).');
 
-    // 3. 출력 치수 + ASS 빌드 (PlayRes = 출력 치수)
+    // 3. 출력 치수 + 길이 + ASS 빌드 (PlayRes = 출력 치수)
     const source = await probeVideo(videoPath);
+    const durationSec = await probeDuration(videoPath);
     const output = computeOutputDimensions(render.aspect, render.resolution, source);
     const ass = buildAss(cues, render.style, { playResX: output.width, playResY: output.height });
     await fs.writeFile(assPath, ass, 'utf-8');
-    log.info({ source, output, cues: cues.length }, 'ass built');
+    log.info({ source, output, durationSec, cues: cues.length }, 'ass built');
 
-    // 4. 번인 렌더
+    // 4. 번인 렌더 (진행률 % 갱신 — DB 쓰기 부하 줄이려 ≥2% 변화 시에만 fire-and-forget)
+    let lastWritten = 0;
     await burnSubtitles({
       inputPath: videoPath,
       assPath,
@@ -152,6 +155,14 @@ export async function processRender(renderId: string): Promise<ProcessRenderResu
       watermark: render.watermark,
       fontsDir: FONTS_DIR,
       output,
+      durationSec,
+      onProgress: (pct) => {
+        if (pct - lastWritten < 2) return;
+        lastWritten = pct;
+        void updateRenderProgress(renderId, pct).catch((e) =>
+          log.warn({ err: (e as Error)?.message, pct }, 'updateRenderProgress 실패(무시)'),
+        );
+      },
     });
     log.info('burn complete');
 

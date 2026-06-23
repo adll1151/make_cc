@@ -48,6 +48,8 @@ export interface Render {
   /** 무료=true(워터마크) */
   watermark: boolean;
   style: CaptionStyle;
+  /** 번인 렌더 진행률 0~100 (워커가 ffmpeg 진행률로 갱신) */
+  progressPercent: number;
   outputStorageKey: string | null;
   errorMessage: string | null;
   createdAt: Date;
