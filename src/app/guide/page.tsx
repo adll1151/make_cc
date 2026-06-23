@@ -13,14 +13,14 @@ export const metadata: Metadata = {
 export default function GuidePage() {
   return (
     <main className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none fixed inset-0 -z-10 aurora" aria-hidden />
+      <div className="pointer-events-none fixed inset-0 -z-10 aurora-subtle" aria-hidden />
       <div className="grain-overlay" aria-hidden />
 
       <FloatingNav />
       <AdsenseScript />
 
       <article className="mx-auto max-w-3xl px-6 pb-24 pt-32 sm:pt-40">
-        <p className="text-sm font-semibold uppercase tracking-widest text-primary">Guide</p>
+        <p className="text-sm font-semibold uppercase tracking-widest text-accent">Guide</p>
         <h1 className="text-display mt-3 text-4xl sm:text-5xl">
           <span className="text-gradient">make_cc</span> 사용법
         </h1>
@@ -129,12 +129,16 @@ export default function GuidePage() {
 
 function Step({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
   return (
-    <section className="scroll-fade mt-12">
-      <div className="flex items-baseline gap-3">
-        <span className="text-display text-2xl text-aurora">{n}</span>
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">{title}</h2>
+    <section className="scroll-fade mt-5">
+      <div className="bento p-6 transition hover:bento-hover sm:p-7">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent/15 font-mono text-base font-bold text-accent">
+            {n}
+          </span>
+          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{title}</h2>
+        </div>
+        <div className="mt-4 leading-relaxed text-muted-foreground">{children}</div>
       </div>
-      <div className="mt-3 leading-relaxed text-muted-foreground">{children}</div>
     </section>
   );
 }

@@ -84,6 +84,113 @@
   color-scheme: dark;
 }
 
+/* =====================================================
+   Light Editorial 테마 (마케팅/공개 페이지 스코프)
+   따뜻한 종이톤 + 잉크 텍스트 + 앰버 1색 강조.
+   .theme-light 안에서 --color-* 토큰을 라이트로 재선언 →
+   bento·button 등 기존 컴포넌트가 자동으로 라이트로 보임.
+   인앱 에디터는 다크 유지(이 클래스 미적용).
+   ===================================================== */
+.theme-light {
+  color-scheme: light;
+
+  --color-background: oklch(0.985 0.006 75);
+  --color-foreground: oklch(0.23 0.015 55);
+
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.23 0.015 55);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.23 0.015 55);
+
+  --color-muted: oklch(0.955 0.008 75);
+  --color-muted-foreground: oklch(0.52 0.02 60);
+  --color-subtle: oklch(0.965 0.008 75);
+
+  --color-border: oklch(0.9 0.012 75);
+  --color-border-strong: oklch(0.82 0.016 70);
+  --color-input: oklch(0.92 0.012 75);
+  --color-ring: oklch(0.7 0.15 55);
+
+  /* Primary = 잉크(에디토리얼 버튼은 솔리드 블랙 톤) */
+  --color-primary: oklch(0.26 0.02 55);
+  --color-primary-foreground: oklch(0.99 0.005 80);
+
+  /* Accent = 따뜻한 앰버 (유일한 강조색, CC 하이라이트) */
+  --color-accent: oklch(0.74 0.15 60);
+  --color-accent-foreground: oklch(0.24 0.02 55);
+
+  --color-secondary: oklch(0.955 0.008 75);
+  --color-secondary-foreground: oklch(0.23 0.015 55);
+
+  --color-destructive: oklch(0.58 0.2 27);
+  --color-destructive-foreground: oklch(0.99 0.005 80);
+  --color-success: oklch(0.62 0.15 150);
+  --color-success-foreground: oklch(0.99 0.005 80);
+
+  /* 라이트용 따뜻한 "aurora" — 앰버/코랄/골드 (텍스트 그라데이션·subtle 배경용) */
+  --aurora-purple: oklch(0.82 0.12 70);
+  --aurora-magenta: oklch(0.76 0.15 40);
+  --aurora-amber: oklch(0.85 0.13 80);
+  --aurora-cyan: oklch(0.84 0.07 120);
+
+  --shadow-glow: 0 0 70px -20px oklch(0.74 0.15 60 / 0.4);
+  --shadow-accent-glow: 0 0 50px -12px oklch(0.74 0.15 60 / 0.35);
+  --shadow-card:
+    0 1px 2px oklch(0.2 0.02 60 / 0.05), 0 10px 30px -14px oklch(0.2 0.02 60 / 0.14);
+  --shadow-card-hover:
+    0 2px 6px oklch(0.2 0.02 60 / 0.07), 0 18px 44px -12px oklch(0.2 0.02 60 / 0.2);
+}
+
+/* =====================================================
+   Dark Editorial 테마 (토글 다크 모드)
+   라이트와 동일한 앰버 1색 강조 체계의 따뜻한 다크 버전.
+   ===================================================== */
+.theme-dark {
+  color-scheme: dark;
+
+  --color-background: oklch(0.165 0.012 60);
+  --color-foreground: oklch(0.96 0.005 80);
+
+  --color-card: oklch(0.2 0.014 60);
+  --color-card-foreground: oklch(0.96 0.005 80);
+  --color-popover: oklch(0.22 0.016 60);
+  --color-popover-foreground: oklch(0.96 0.005 80);
+
+  --color-muted: oklch(0.26 0.014 60);
+  --color-muted-foreground: oklch(0.7 0.015 70);
+  --color-subtle: oklch(0.235 0.014 60);
+
+  --color-border: oklch(0.3 0.016 60);
+  --color-border-strong: oklch(0.4 0.02 60);
+  --color-input: oklch(0.26 0.014 60);
+  --color-ring: oklch(0.74 0.15 60);
+
+  /* Primary = 크림(다크 위 솔리드 버튼) */
+  --color-primary: oklch(0.95 0.01 80);
+  --color-primary-foreground: oklch(0.2 0.014 60);
+
+  --color-accent: oklch(0.78 0.15 65);
+  --color-accent-foreground: oklch(0.2 0.014 60);
+
+  --color-secondary: oklch(0.26 0.014 60);
+  --color-secondary-foreground: oklch(0.96 0.005 80);
+
+  --color-destructive: oklch(0.62 0.22 27);
+  --color-destructive-foreground: oklch(0.98 0.005 80);
+  --color-success: oklch(0.7 0.16 150);
+  --color-success-foreground: oklch(0.16 0.012 60);
+
+  --aurora-purple: oklch(0.6 0.16 60);
+  --aurora-magenta: oklch(0.62 0.18 40);
+  --aurora-amber: oklch(0.78 0.15 75);
+  --aurora-cyan: oklch(0.7 0.1 130);
+
+  --shadow-glow: 0 0 80px -16px oklch(0.78 0.15 65 / 0.4);
+  --shadow-accent-glow: 0 0 50px -12px oklch(0.78 0.15 65 / 0.4);
+  --shadow-card: 0 1px 0 0 oklch(1 0 0 / 0.04) inset, 0 10px 30px -14px oklch(0 0 0 / 0.5);
+  --shadow-card-hover: 0 1px 0 0 oklch(1 0 0 / 0.07) inset, 0 18px 44px -12px oklch(0 0 0 / 0.6);
+}
+
 /* ===== Base ===== */
 @layer base {
   * {
@@ -153,13 +260,20 @@
   ::-webkit-scrollbar-thumb:hover { background: oklch(0.4 0.015 264); }
 }
 
-/* ===== View Transitions ===== */
+/* ===== View Transitions — 페이지 전환을 부드러운 페이드+슬라이드로 (Chrome 126+) ===== */
 @view-transition { navigation: auto; }
 
-::view-transition-old(root),
+::view-transition-old(root) {
+  animation: vt-out 0.32s var(--ease-out-expo) both;
+}
 ::view-transition-new(root) {
-  animation-duration: 0.4s;
-  animation-timing-function: var(--ease-out-expo);
+  animation: vt-in 0.45s var(--ease-out-expo) both;
+}
+@keyframes vt-out {
+  to { opacity: 0; transform: translateY(-10px) scale(0.995); }
+}
+@keyframes vt-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.995); }
 }
 
 /* ===== Scroll-driven animations (CSS native — Chrome 115+) ===== */
@@ -214,20 +328,17 @@
   }
 }
 
-/* ===== 최신: 크로스 도큐먼트 View Transitions (Chrome 126+) — 페이지 전환을 부드러운 페이드로.
-   미지원 브라우저는 그냥 즉시 전환(무해). ===== */
-@view-transition {
-  navigation: auto;
-}
-
 /* 모션 민감 사용자 존중 — 스크롤/연속 애니메이션 비활성 */
 @media (prefers-reduced-motion: reduce) {
   .scroll-fade, .scroll-pop, .scroll-fade-left, .scroll-fade-right,
-  .enter-fade-up, .animate-float, .animate-pulse-glow {
+  .enter-fade-up, .animate-float, .animate-pulse-glow, .kinetic-word,
+  .prlx-1, .prlx-2, .prlx-3 {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+    filter: none !important;
   }
+  .kinetic-word:hover { transform: none !important; }
 }
 
 /* ===== Custom Utilities ===== */
@@ -372,6 +483,20 @@
   to { --beam-angle: 360deg; }
 }
 
+/* ===== 키네틱 타이포그래피 (2026) — 단어가 blur→sharp로 등장 + 호버 시 weight 모핑 ===== */
+@keyframes kinetic-in {
+  from {
+    opacity: 0;
+    filter: blur(16px);
+    transform: translateY(0.32em) scaleY(1.25);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scaleY(1);
+  }
+}
+
 /* ===== Custom keyframes ===== */
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-accent) 40%, transparent); }
@@ -393,6 +518,16 @@
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+/* 오디오 파형 바 — 계속 들썩이는 이퀄라이저 */
+@keyframes eqwave {
+  from { transform: scaleY(0.4); }
+  to { transform: scaleY(1.05); }
+}
+/* 자막 스캔 라인 — 파형 위를 계속 훑고 지나감(처리 중) */
+@keyframes caption-scan {
+  from { left: -5rem; }
+  to { left: 100%; }
+}
 
 @layer components {
   .enter-fade-up { animation: fade-up 0.6s var(--ease-out-expo) both; }
@@ -400,6 +535,88 @@
   .animate-float { animation: float 3s ease-in-out infinite; }
   .animate-shimmer { animation: shimmer 2s linear infinite; }
   .animate-marquee { animation: marquee 30s linear infinite; }
+  /* 이퀄라이저 파형 — 컨테이너(.eq-wrap)에 마우스 올리면 바가 들썩이고 스캔이 훑는다.
+     기간/딜레이는 인라인 CSS 변수(--eq-dur/--eq-delay)로 바마다 다르게.
+     !important — 모션감소 전역 규칙도 못 이기게(소유자 요청 인터랙션). */
+  .eq-bar {
+    transform-origin: center;
+  }
+  .eq-wrap:hover .eq-bar {
+    animation: eqwave var(--eq-dur, 1s) ease-in-out var(--eq-delay, 0s) infinite alternate !important;
+  }
+  .eq-scan {
+    opacity: 0;
+    transition: opacity 0.3s var(--ease-smooth);
+  }
+  .eq-wrap:hover .eq-scan {
+    opacity: 1;
+    animation: caption-scan 2.4s linear infinite !important;
+  }
+  /* 파이프라인 "음성 인식" 단계의 미니 파형 — 항상 들썩(살아있음) */
+  .pwave {
+    transform-origin: bottom;
+    animation: eqwave var(--eq-dur, 0.8s) ease-in-out var(--eq-delay, 0s) infinite alternate;
+  }
+
+  /* 포인터 패럴럭스 깊이 레이어 — Parallax 컨테이너의 --px/--py를 받아 서로 다른 깊이로 이동 */
+  .prlx-1 {
+    transform: translate3d(calc(var(--px, 0) * 5px), calc(var(--py, 0) * 5px), 0);
+    transition: transform 0.4s var(--ease-out-expo);
+    will-change: transform;
+  }
+  .prlx-2 {
+    transform: translate3d(calc(var(--px, 0) * 11px), calc(var(--py, 0) * 10px), 0);
+    transition: transform 0.4s var(--ease-out-expo);
+    will-change: transform;
+  }
+  .prlx-3 {
+    transform: translate3d(calc(var(--px, 0) * 20px), calc(var(--py, 0) * 17px), 0);
+    transition: transform 0.45s var(--ease-out-expo);
+    will-change: transform;
+  }
+
+  /* 글로우 보더 — 회전하는 conic 그라데이션을 border ring에만 마스킹(overflow-hidden 안전).
+     호버 시 나타남. @property --beam-angle + beam-rotate 재사용. */
+  .beam-border::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: conic-gradient(
+      from var(--beam-angle),
+      transparent 0deg,
+      var(--aurora-purple) 70deg,
+      var(--aurora-magenta) 150deg,
+      var(--aurora-cyan) 230deg,
+      transparent 320deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: beam-rotate 6s linear infinite;
+    opacity: 0;
+    transition: opacity 0.5s var(--ease-smooth);
+    pointer-events: none;
+  }
+  .beam-border:hover::after {
+    opacity: 0.9;
+  }
+
+  /* 키네틱 단어 — 등장 애니메이션(blur→sharp) + 호버 weight 모핑(variable font) */
+  .kinetic-word {
+    display: inline-block;
+    animation: kinetic-in 0.9s var(--ease-out-expo) both;
+    transition:
+      font-variation-settings 0.35s var(--ease-out-expo),
+      transform 0.35s var(--ease-bounce);
+  }
+  .kinetic-word:hover {
+    font-variation-settings: 'wght' 900;
+    transform: translateY(-0.03em) scale(1.05);
+  }
 
   /* Staggered enter */
   .enter-stagger > * { opacity: 0; animation: fade-up 0.6s var(--ease-out-expo) both; }

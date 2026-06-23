@@ -13,7 +13,7 @@ const CONTACT_EMAIL = 'shong7500@gmail.com';
 export default function PrivacyPage() {
   return (
     <main className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none fixed inset-0 -z-10 aurora" aria-hidden />
+      <div className="pointer-events-none fixed inset-0 -z-10 aurora-subtle" aria-hidden />
       <div className="grain-overlay" aria-hidden />
 
       <article className="mx-auto max-w-3xl px-6 py-24">

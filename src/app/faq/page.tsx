@@ -117,14 +117,14 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
 export default function FaqPage() {
   return (
     <main className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none fixed inset-0 -z-10 aurora" aria-hidden />
+      <div className="pointer-events-none fixed inset-0 -z-10 aurora-subtle" aria-hidden />
       <div className="grain-overlay" aria-hidden />
 
       <FloatingNav />
       <AdsenseScript />
 
       <article className="mx-auto max-w-3xl px-6 pb-24 pt-32 sm:pt-40">
-        <p className="text-sm font-semibold uppercase tracking-widest text-primary">FAQ</p>
+        <p className="text-sm font-semibold uppercase tracking-widest text-accent">FAQ</p>
         <h1 className="text-display mt-3 text-4xl sm:text-5xl">
           <span className="text-gradient">자주 묻는 질문</span>
         </h1>
