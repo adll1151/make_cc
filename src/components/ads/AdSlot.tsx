@@ -25,12 +25,14 @@ export function AdSlot({
   className?: string;
   note?: string;
 }) {
+  // 킬스위치: NEXT_PUBLIC_ADS_ENABLED='false'면 광고 전체 비활성(아무것도 렌더 안 함).
+  const enabled = process.env.NEXT_PUBLIC_ADS_ENABLED !== 'false';
   const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || '';
   const slotId = slot || process.env.NEXT_PUBLIC_ADSENSE_SLOT || '';
   const ran = useRef(false);
 
   useEffect(() => {
-    if (!client || !slotId || ran.current) return;
+    if (!enabled || !client || !slotId || ran.current) return;
     ran.current = true;
     // 스크립트는 콘텐츠 페이지의 <AdsenseScript />가 로드한다. 여기선 push만 —
     // 스크립트가 아직 안 떴어도 adsbygoogle 큐에 쌓였다가 로드 시 처리됨(AdSense 표준).
@@ -39,7 +41,10 @@ export function AdSlot({
     } catch {
       /* noop */
     }
-  }, [client, slotId]);
+  }, [enabled, client, slotId]);
+
+  // 킬스위치로 끈 경우: 플레이스홀더도 없이 완전히 숨김.
+  if (!enabled) return null;
 
   if (!client || !slotId) {
     return (
