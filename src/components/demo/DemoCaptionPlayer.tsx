@@ -19,8 +19,9 @@ export function DemoCaptionPlayer() {
     return () => clearInterval(id);
   }, [playing]);
 
-  const cue = DEMO_CUES[i];
+  const cue = DEMO_CUES[i] ?? DEMO_CUES[0];
   const progress = ((i + 1) / DEMO_CUES.length) * 100;
+  if (!cue) return null;
 
   return (
     <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-border bg-[oklch(0.16_0.02_264)] shadow-[var(--shadow-card)]">
