@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { FloatingNav } from '@/components/ui/floating-nav';
+import { PageBackground } from '@/components/PageBackground';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AdsenseScript } from '@/components/ads/AdsenseScript';
 
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 export default function GuidePage() {
   return (
     <main className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none fixed inset-0 -z-10 aurora-subtle" aria-hidden />
+      <PageBackground />
       <div className="grain-overlay" aria-hidden />
 
       <FloatingNav />

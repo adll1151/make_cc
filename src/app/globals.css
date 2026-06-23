@@ -94,30 +94,31 @@
 .theme-light {
   color-scheme: light;
 
-  --color-background: oklch(0.985 0.006 75);
-  --color-foreground: oklch(0.23 0.015 55);
+  /* 중립 흑백 베이스 (B&W 미니멀) */
+  --color-background: oklch(0.992 0.001 250);
+  --color-foreground: oklch(0.16 0.004 250);
 
   --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.23 0.015 55);
+  --color-card-foreground: oklch(0.16 0.004 250);
   --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.23 0.015 55);
+  --color-popover-foreground: oklch(0.16 0.004 250);
 
-  --color-muted: oklch(0.955 0.008 75);
-  --color-muted-foreground: oklch(0.52 0.02 60);
-  --color-subtle: oklch(0.965 0.008 75);
+  --color-muted: oklch(0.965 0.002 250);
+  --color-muted-foreground: oklch(0.47 0.006 250);
+  --color-subtle: oklch(0.975 0.0015 250);
 
-  --color-border: oklch(0.9 0.012 75);
-  --color-border-strong: oklch(0.82 0.016 70);
-  --color-input: oklch(0.92 0.012 75);
-  --color-ring: oklch(0.7 0.15 55);
+  --color-border: oklch(0.915 0.003 250);
+  --color-border-strong: oklch(0.82 0.005 250);
+  --color-input: oklch(0.93 0.003 250);
+  --color-ring: oklch(0.72 0.16 65);
 
-  /* Primary = 잉크(에디토리얼 버튼은 솔리드 블랙 톤) */
-  --color-primary: oklch(0.26 0.02 55);
-  --color-primary-foreground: oklch(0.99 0.005 80);
+  /* Primary = 잉크 블랙 (솔리드 흑백 버튼) */
+  --color-primary: oklch(0.16 0.004 250);
+  --color-primary-foreground: oklch(0.99 0.001 250);
 
-  /* Accent = 따뜻한 앰버 (유일한 강조색, CC 하이라이트) */
-  --color-accent: oklch(0.74 0.15 60);
-  --color-accent-foreground: oklch(0.24 0.02 55);
+  /* Accent = 앰버 (유일한 강조색) */
+  --color-accent: oklch(0.72 0.16 65);
+  --color-accent-foreground: oklch(0.16 0.004 250);
 
   --color-secondary: oklch(0.955 0.008 75);
   --color-secondary-foreground: oklch(0.23 0.015 55);
@@ -529,12 +530,105 @@
   to { left: 100%; }
 }
 
+/* ===== Magic UI / Aceternity 컴포넌트용 키프레임 ===== */
+@keyframes shimmer-slide {
+  to { transform: translate(calc(100cqw - 100%), 0); }
+}
+@keyframes spin-around {
+  0% { transform: translateZ(0) rotate(0); }
+  15%, 35% { transform: translateZ(0) rotate(90deg); }
+  65%, 85% { transform: translateZ(0) rotate(270deg); }
+  100% { transform: translateZ(0) rotate(360deg); }
+}
+@keyframes shiny-text {
+  0%, 90%, 100% { background-position: calc(-100% - var(--shiny-width)) 0; }
+  30%, 60% { background-position: calc(100% + var(--shiny-width)) 0; }
+}
+@keyframes magic-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-100% - var(--mq-gap, 1rem))); }
+}
+/* Aceternity Spotlight */
+@keyframes spotlight {
+  0% { opacity: 0; transform: translate(-72%, -62%) scale(0.5); }
+  100% { opacity: 1; transform: translate(-50%, -40%) scale(1); }
+}
+/* 헤드라인 강조어 밑줄 드로잉 */
+@keyframes underline-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+/* 은은한 상시 호흡 글로우 */
+@keyframes breathe {
+  0%, 100% { opacity: 0.45; transform: translate(-50%, 0) scale(1); }
+  50% { opacity: 0.85; transform: translate(-50%, 0) scale(1.08); }
+}
+/* 쇼케이스 씬 빛 드리프트 */
+@keyframes scene-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(10%, -8%) scale(1.18); }
+}
+/* React Bits — StarBorder / GradientText / ShinyText */
+@keyframes star-move-bottom {
+  0% { transform: translate(0, 0); opacity: 1; }
+  100% { transform: translate(-100%, 0); opacity: 0; }
+}
+@keyframes star-move-top {
+  0% { transform: translate(0, 0); opacity: 1; }
+  100% { transform: translate(100%, 0); opacity: 0; }
+}
+@keyframes gradient-move {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+@keyframes shine-move {
+  0% { background-position: 100%; }
+  100% { background-position: -100%; }
+}
+/* Aceternity — Background Gradient Animation */
+@keyframes moveVertical {
+  0% { transform: translateY(-50%); }
+  50% { transform: translateY(50%); }
+  100% { transform: translateY(-50%); }
+}
+@keyframes moveHorizontal {
+  0% { transform: translateX(-50%) translateY(-10%); }
+  50% { transform: translateX(50%) translateY(10%); }
+  100% { transform: translateX(-50%) translateY(-10%); }
+}
+@keyframes moveInCircle {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(180deg); }
+  100% { transform: rotate(360deg); }
+}
+
 @layer components {
   .enter-fade-up { animation: fade-up 0.6s var(--ease-out-expo) both; }
   .animate-pulse-glow { animation: pulse-glow 2s infinite; }
   .animate-float { animation: float 3s ease-in-out infinite; }
   .animate-shimmer { animation: shimmer 2s linear infinite; }
   .animate-marquee { animation: marquee 30s linear infinite; }
+  .animate-shiny-text { animation: shiny-text 8s infinite; }
+  .animate-marquee-h { animation: magic-marquee var(--mq-duration, 40s) linear infinite; }
+  .animate-spotlight { animation: spotlight 2s ease 0.6s 1 forwards; }
+  .animate-breathe { animation: breathe 6s ease-in-out infinite; }
+  .accent-underline { position: relative; white-space: nowrap; }
+  .accent-underline::after {
+    content: '';
+    position: absolute;
+    left: 0.02em;
+    right: 0.02em;
+    bottom: 0.04em;
+    height: 0.09em;
+    border-radius: 999px;
+    background: var(--color-accent);
+    transform-origin: left;
+    transform: scaleX(0);
+    animation: underline-grow 0.7s var(--ease-out-expo) 0.75s forwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .accent-underline::after { transform: scaleX(1); animation: none; }
+  }
   /* 이퀄라이저 파형 — 컨테이너(.eq-wrap)에 마우스 올리면 바가 들썩이고 스캔이 훑는다.
      기간/딜레이는 인라인 CSS 변수(--eq-dur/--eq-delay)로 바마다 다르게.
      !important — 모션감소 전역 규칙도 못 이기게(소유자 요청 인터랙션). */

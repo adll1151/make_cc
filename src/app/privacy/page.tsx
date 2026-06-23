@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { PageBackground } from '@/components/PageBackground';
 
 export const metadata: Metadata = {
   title: '개인정보처리방침 — make_cc',
@@ -13,7 +14,7 @@ const CONTACT_EMAIL = 'shong7500@gmail.com';
 export default function PrivacyPage() {
   return (
     <main className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none fixed inset-0 -z-10 aurora-subtle" aria-hidden />
+      <PageBackground />
       <div className="grain-overlay" aria-hidden />
 
       <article className="mx-auto max-w-3xl px-6 py-24">

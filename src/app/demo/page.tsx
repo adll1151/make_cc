@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { FloatingNav } from '@/components/ui/floating-nav';
+import { PageBackground } from '@/components/PageBackground';
 import { DemoCaptionPlayer } from '@/components/demo/DemoCaptionPlayer';
 import { DEMO_CUES } from '@/data/demo-cues';
 
@@ -15,7 +16,7 @@ const SAMPLE_SRT = '/samples/make_cc-korean-sample.srt';
 export default function DemoPage() {
   return (
     <main className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none fixed inset-0 -z-10 aurora-subtle" aria-hidden />
+      <PageBackground />
       <div className="grain-overlay" aria-hidden />
 
       <FloatingNav />

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { FloatingNav } from '@/components/ui/floating-nav';
+import { PageBackground } from '@/components/PageBackground';
 import { BlogContent } from '@/components/blog/BlogContent';
 import { POSTS, getPost } from '@/data/blog';
 
@@ -53,7 +54,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   return (
     <main className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none fixed inset-0 -z-10 aurora-subtle" aria-hidden />
+      <PageBackground />
       <div className="grain-overlay" aria-hidden />
 
       <FloatingNav />
