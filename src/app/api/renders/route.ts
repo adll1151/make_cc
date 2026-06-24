@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
       aspect: input.aspect,
       resolution: input.resolution,
       style: input.style,
+      subtitleLang: input.subtitleLang,
     });
 
     log.info({ jobId: input.jobId, renderId }, 'render created');

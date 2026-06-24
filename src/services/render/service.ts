@@ -36,6 +36,7 @@ function mapRender(row: RenderRow): Render {
     resolution: row.resolution,
     watermark: row.watermark,
     style: row.style as unknown as CaptionStyle,
+    subtitleLang: row.subtitle_lang ?? 'ko',
     progressPercent: row.progress_percent ?? 0,
     outputStorageKey: row.output_storage_key,
     errorMessage: row.error_message,
@@ -185,6 +186,7 @@ export async function createRender(
       resolution: gated.resolution,
       watermark: gated.watermark,
       style: opts.style as unknown as Json,
+      subtitle_lang: opts.subtitleLang ?? 'ko',
     })
     .select('id')
     .single();

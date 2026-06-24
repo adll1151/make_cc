@@ -144,6 +144,7 @@ export type Database = {
           resolution: number
           status: string
           style: Json
+          subtitle_lang: string
           user_id: string | null
           watermark: boolean
         }
@@ -160,6 +161,7 @@ export type Database = {
           resolution?: number
           status?: string
           style: Json
+          subtitle_lang?: string
           user_id?: string | null
           watermark?: boolean
         }
@@ -176,6 +178,7 @@ export type Database = {
           resolution?: number
           status?: string
           style?: Json
+          subtitle_lang?: string
           user_id?: string | null
           watermark?: boolean
         }

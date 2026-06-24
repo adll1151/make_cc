@@ -14,7 +14,7 @@ import {
   markRenderFailed,
   updateRenderProgress,
 } from '@/services/render';
-import { putRender, getWordsJson, getSubtitleText } from '@/services/storage';
+import { putRender, getWordsJson, getSubtitleText, getTranslatedSubtitleText } from '@/services/storage';
 import { videosBucket } from '@/lib/storage';
 import { probeVideo, probeDuration, computeOutputDimensions, burnSubtitles } from './lib/ffmpeg';
 
@@ -60,8 +60,18 @@ function normalizeWords(payload: unknown): Cue[] | null {
   return cues;
 }
 
-/** 렌더용 cues 로드: words.json 우선(카라오케 가능) → 없으면 SRT 평문 fallback. */
-async function loadCues(jobId: string, log: Logger): Promise<Cue[]> {
+/**
+ * 렌더용 cues 로드 (언어별).
+ *   - lang==='ko'(원본): words.json 우선(카라오케 가능) → 없으면 SRT 평문 fallback.
+ *   - 그 외(번역 트랙): 번역 SRT 평문 (단어 타이밍 없음 → 카라오케 비활성).
+ */
+async function loadCuesForLang(jobId: string, lang: string, log: Logger): Promise<Cue[]> {
+  if (lang && lang !== 'ko') {
+    const srt = await getTranslatedSubtitleText(jobId, lang);
+    const cues = parseSrt(srt);
+    log.info({ cues: cues.length, lang }, 'cues from translated SRT');
+    return cues;
+  }
   const wordsPayload = await getWordsJson(jobId);
   const fromWords = wordsPayload ? normalizeWords(wordsPayload) : null;
   if (fromWords) {
@@ -132,8 +142,8 @@ export async function processRender(renderId: string): Promise<ProcessRenderResu
     await fs.writeFile(videoPath, Buffer.from(await data.arrayBuffer()));
     log.info({ key: job.videoStorageKey }, 'video downloaded');
 
-    // 2. cues 로드
-    const cues = await loadCues(render.jobId, log);
+    // 2. cues 로드 (번인 언어 — ko=원본/카라오케, 그 외=번역 트랙)
+    const cues = await loadCuesForLang(render.jobId, render.subtitleLang, log);
     if (cues.length === 0) throw new Error('자막 cue가 없습니다 (SRT/words 비어있음).');
 
     // 3. 출력 치수 + 길이 + ASS 빌드 (PlayRes = 출력 치수)
