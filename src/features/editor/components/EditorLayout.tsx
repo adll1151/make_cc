@@ -47,6 +47,7 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
   const [fileName, setFileName] = useState<string>('');
   const [isMember, setIsMember] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'captions' | 'style'>('captions');
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -144,7 +145,7 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
 
   if (loadError) {
     return (
-      <main className="relative min-h-screen overflow-hidden">
+      <main className="theme-dark relative min-h-screen overflow-hidden bg-background text-foreground">
         <div className="pointer-events-none fixed inset-0 -z-10 aurora-subtle" aria-hidden />
         <FloatingNav />
         <section className="container mx-auto max-w-md px-6 pt-36">
@@ -163,7 +164,7 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden">
+    <main className="theme-dark relative min-h-screen overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none fixed inset-0 -z-10 aurora-subtle" aria-hidden />
       <FloatingNav />
 
@@ -210,10 +211,10 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
           </div>
         )}
 
-        {/* 그리드 — 좌:영상 / 우:자막 */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)]">
-          {/* 왼쪽: 영상 + 단축키 안내 */}
-          <div className="space-y-3">
+        {/* 그리드 — 좌:영상 / 우:자막 (모바일은 영상 고정 + 자막/스타일 탭) */}
+        <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)] lg:gap-4 lg:space-y-0">
+          {/* 왼쪽: 영상 (모바일은 상단 고정) */}
+          <div className="sticky top-[72px] z-20 -mx-4 space-y-3 bg-background/85 px-4 py-2 backdrop-blur-md lg:static lg:mx-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
             <VideoPlayer
               ref={videoRef}
               src={videoUrl}
@@ -221,11 +222,44 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
               error={videoError}
               overlay={<CaptionPreview />}
             />
-            <ActiveCueCard />
+            {/* 활성 자막 카드는 데스크톱만 (모바일은 영상 오버레이로 충분) */}
+            <div className="hidden lg:block">
+              <ActiveCueCard />
+            </div>
           </div>
 
-          {/* 오른쪽: cue 리스트 */}
-          <aside className="bento flex flex-col p-3 lg:max-h-[calc(100vh-200px)]">
+          {/* 모바일 전용 탭 바 */}
+          <div className="flex gap-1 rounded-xl border border-border bg-card/40 p-1 lg:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileTab('captions')}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                mobileTab === 'captions'
+                  ? 'bg-foreground text-background'
+                  : 'text-muted-foreground hover:bg-white/5'
+              }`}
+            >
+              자막
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('style')}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                mobileTab === 'style'
+                  ? 'bg-foreground text-background'
+                  : 'text-muted-foreground hover:bg-white/5'
+              }`}
+            >
+              번인 스타일
+            </button>
+          </div>
+
+          {/* 오른쪽: cue 리스트 (모바일은 '자막' 탭일 때만) */}
+          <aside
+            className={`bento flex-col p-3 lg:flex lg:max-h-[calc(100vh-200px)] ${
+              mobileTab === 'captions' ? 'flex' : 'hidden'
+            }`}
+          >
             <div className="mb-2 flex items-center justify-between px-2 pt-1">
               <h2 className="text-sm font-semibold text-muted-foreground">자막</h2>
               <ManualSaveButton />
@@ -252,8 +286,10 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
           </aside>
         </div>
 
-        {/* 번인 자막 스타일 + 내보내기 */}
-        <section className="mt-6">
+        {/* 번인 자막 스타일 + 내보내기 (모바일은 '번인 스타일' 탭일 때만) */}
+        <section
+          className={`mt-4 lg:mt-6 lg:block ${mobileTab === 'style' ? 'block' : 'hidden'}`}
+        >
           <div className="bento p-5 sm:p-6">
             <header className="mb-5 flex items-center gap-2">
               <h2 className="text-base font-semibold tracking-tight">번인 자막 영상 만들기</h2>

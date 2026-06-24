@@ -250,15 +250,25 @@ function SseProgressBlock({
             }}
           >
             <p className="flex items-center gap-1.5 font-semibold" style={{ color: 'var(--color-accent)' }}>
-              <WarnIcon /> 워커가 작동 중인지 확인해주세요
+              <WarnIcon />{' '}
+              {process.env.NODE_ENV === 'development'
+                ? '워커가 작동 중인지 확인해주세요'
+                : '처리가 조금 지연되고 있어요'}
             </p>
-            <p className="mt-1 leading-relaxed text-muted-foreground">
-              30초 이상 큐에서 대기 중입니다. 별도 터미널에서{' '}
-              <code className="rounded bg-background/50 px-1 py-0.5 font-mono text-[11px]">
-                npm run worker:poll
-              </code>
-              이 실행 중이어야 자막이 만들어져요.
-            </p>
+            {process.env.NODE_ENV === 'development' ? (
+              <p className="mt-1 leading-relaxed text-muted-foreground">
+                30초 이상 큐에서 대기 중입니다. 별도 터미널에서{' '}
+                <code className="rounded bg-background/50 px-1 py-0.5 font-mono text-[11px]">
+                  npm run worker:poll
+                </code>
+                이 실행 중이어야 자막이 만들어져요.
+              </p>
+            ) : (
+              <p className="mt-1 leading-relaxed text-muted-foreground">
+                대기열이 잠시 붐비고 있어요. 이 화면을 닫아도 처리는 계속되며, 완료되면
+                알림을 보내드려요. 잠시 후 ‘내 이력’에서 다시 확인할 수 있어요.
+              </p>
+            )}
           </div>
         )}
 

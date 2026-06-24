@@ -52,7 +52,7 @@ export function NotifyChannelToggle({
             className={`rounded-full px-3 py-1.5 text-sm transition disabled:opacity-60 ${
               current === o.value
                 ? 'bg-foreground text-background'
-                : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
+                : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'
             }`}
           >
             {o.label}

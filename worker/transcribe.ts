@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logger } from '@/lib/logger';
 import { buildSrt } from '@/lib/srt';
 import type { Cue, SpeakerMap } from '@/types/subtitle';
+import { splitCue } from './lib/cue-split';
 import {
   markStarted,
   updateProgress,
@@ -114,14 +115,17 @@ export async function processTranscribe(jobId: string): Promise<{
           startMs: Math.round(w.start * 1000),
           endMs: Math.round(w.end * 1000),
         }));
-        cues.push({
-          index: cues.length + 1,
+        // 긴 세그먼트는 문장/길이/시간 기준으로 여러 cue로 분할(가독성)
+        const parts = splitCue({
           startMs: Math.round(seg.start * 1000),
           endMs: Math.round(seg.end * 1000),
           text: seg.text,
           ...(words && words.length > 0 ? { words } : {}),
           ...(seg.speaker ? { speakerId: seg.speaker } : {}),
         });
+        for (const part of parts) {
+          cues.push({ index: cues.length + 1, ...part });
+        }
         // 진행률은 5% 단위 throttle (Design §11.3 cue 처리 정책)
         const ratio = Math.min(1, seg.end / Math.max(1, durationSec));
         const target = PROGRESS_FLOOR + Math.round(ratio * (PROGRESS_CEIL - PROGRESS_FLOOR));
