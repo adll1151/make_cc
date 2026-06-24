@@ -36,6 +36,8 @@ export interface RenderOptions {
   /** Pro만 1080 */
   resolution: 720 | 1080;
   style: CaptionStyle;
+  /** 번인할 자막 언어 내부 코드. 'ko'=원본(기본), 그 외=번역 트랙. */
+  subtitleLang?: string;
 }
 
 export interface Render {
@@ -48,6 +50,8 @@ export interface Render {
   /** 무료=true(워터마크) */
   watermark: boolean;
   style: CaptionStyle;
+  /** 번인된 자막 언어 내부 코드 ('ko'=원본) */
+  subtitleLang: string;
   /** 번인 렌더 진행률 0~100 (워커가 ffmpeg 진행률로 갱신) */
   progressPercent: number;
   outputStorageKey: string | null;

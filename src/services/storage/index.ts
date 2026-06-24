@@ -14,6 +14,11 @@ export {
   getSubtitleText,
   putWorkerHeartbeat,
   deleteJobAssets,
+  saveTranslatedSubtitle,
+  loadTranslatedSubtitleText,
+  getTranslatedSubtitleText,
+  createTranslationDownloadUrl,
+  deleteTranslatedSubtitleByKey,
   STORAGE_BUCKETS,
   type VideoUploadTicket,
 } from './service';

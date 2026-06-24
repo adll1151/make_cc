@@ -64,3 +64,44 @@ export function seekToCue(
   video.currentTime = Math.max(0, startMs / 1000);
   // 자동 재생까지 욕심내면 사용자가 거부할 수 있음 → 그대로 두기
 }
+
+/**
+ * 이 자막 구간만 재생: startMs로 이동 → 재생 → endMs 도달 시 자동 정지.
+ * 자막 검수("이 구간만 다시 들어보기")용. 다른 곳을 다시 누르거나 사용자가
+ * 직접 조작하면 기존 정지 핸들러는 스스로 해제된다.
+ */
+export function playCueSegment(
+  videoRef: React.RefObject<HTMLVideoElement | null>,
+  startMs: number,
+  endMs: number,
+) {
+  const video = videoRef.current;
+  if (!video) return;
+
+  // 이전 구간재생 정지 핸들러가 남아있으면 제거
+  const prev = (video as HTMLVideoElement & { __cueStop?: () => void }).__cueStop;
+  if (prev) prev();
+
+  const stopAt = Math.max(0, endMs / 1000);
+  const onTime = () => {
+    if (video.currentTime >= stopAt) {
+      video.pause();
+      cleanup();
+    }
+  };
+  const cleanup = () => {
+    video.removeEventListener('timeupdate', onTime);
+    video.removeEventListener('pause', onUserPause);
+    delete (video as HTMLVideoElement & { __cueStop?: () => void }).__cueStop;
+  };
+  // 사용자가 도중에 직접 일시정지하면 구간재생 모드 해제
+  const onUserPause = () => {
+    if (video.currentTime < stopAt - 0.05) cleanup();
+  };
+
+  video.currentTime = Math.max(0, startMs / 1000);
+  video.addEventListener('timeupdate', onTime);
+  video.addEventListener('pause', onUserPause);
+  (video as HTMLVideoElement & { __cueStop?: () => void }).__cueStop = cleanup;
+  void video.play().catch(() => cleanup());
+}

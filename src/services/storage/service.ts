@@ -3,6 +3,9 @@ import {
   putSubtitle,
   getSubtitleText,
   presignSubtitleDownload,
+  putTranslatedSubtitle,
+  getTranslatedSubtitleText,
+  presignTranslationDownload,
   deleteVideo,
   deleteSubtitle,
   videoStorageKey,
@@ -25,6 +28,8 @@ export {
   putWordsJson,
   getWordsJson,
   getSubtitleText,
+  getTranslatedSubtitleText,
+  deleteTranslatedSubtitleByKey,
   putWorkerHeartbeat,
 } from '@/lib/storage';
 
@@ -89,6 +94,31 @@ export async function createSubtitleDownloadUrl(params: {
   expiresIn?: number;
 }): Promise<string> {
   return presignSubtitleDownload(params);
+}
+
+// =========================================
+// 번역 자막 (subtitle-translation) — 워커 저장 + 다운로드
+// =========================================
+
+/** 워커가 번역 완료 후 호출. 번역 SRT를 {jobId}.{lang}.srt로 저장. */
+export async function saveTranslatedSubtitle(params: {
+  jobId: string;
+  lang: string;
+  srtText: string;
+}): Promise<{ bucket: string; path: string }> {
+  return putTranslatedSubtitle({ jobId: params.jobId, lang: params.lang, body: params.srtText });
+}
+
+export async function loadTranslatedSubtitleText(jobId: string, lang: string): Promise<string> {
+  return getTranslatedSubtitleText(jobId, lang);
+}
+
+export async function createTranslationDownloadUrl(params: {
+  jobId: string;
+  lang: string;
+  expiresIn?: number;
+}): Promise<string> {
+  return presignTranslationDownload(params);
 }
 
 // =========================================

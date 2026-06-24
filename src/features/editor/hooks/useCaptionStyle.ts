@@ -17,6 +17,8 @@ interface CaptionStyleStore {
   style: CaptionStyle;
   aspect: CaptionAspect;
   resolution: 720 | 1080;
+  /** 번인할 자막 언어 내부 코드. 'ko'=원본(기본), 그 외=완료된 번역 트랙. */
+  subtitleLang: string;
   renderId: string | null;
 
   /** 프리셋 적용 */
@@ -25,6 +27,7 @@ interface CaptionStyleStore {
   patchStyle(partial: Partial<CaptionStyle>): void;
   setAspect(aspect: CaptionAspect): void;
   setResolution(resolution: 720 | 1080): void;
+  setSubtitleLang(lang: string): void;
   setRenderId(renderId: string | null): void;
 }
 
@@ -32,6 +35,7 @@ export const useCaptionStyle = create<CaptionStyleStore>((set) => ({
   style: defaultCaptionStyle(),
   aspect: 'original',
   resolution: 720,
+  subtitleLang: 'ko',
   renderId: null,
 
   applyTemplate(key) {
@@ -48,6 +52,10 @@ export const useCaptionStyle = create<CaptionStyleStore>((set) => ({
 
   setResolution(resolution) {
     set({ resolution });
+  },
+
+  setSubtitleLang(lang) {
+    set({ subtitleLang: lang });
   },
 
   setRenderId(renderId) {

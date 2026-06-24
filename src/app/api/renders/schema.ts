@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { RenderStatus } from '@/types/caption-style';
+import { isSupportedLang } from '@/services/translation/languages';
 
 /**
  * POST /api/renders 요청 스키마 (번인 영상 내보내기).
@@ -32,6 +33,12 @@ export const createRenderSchema = z.object({
   // 무료 사용자는 1080을 보내도 서버에서 720으로 강등됨 (에러 아님)
   resolution: z.union([z.literal(720), z.literal(1080)]),
   style: captionStyleSchema,
+  // 번인 자막 언어. 'ko'=원본(기본), 그 외=완료된 번역 트랙 언어.
+  subtitleLang: z
+    .string()
+    .optional()
+    .default('ko')
+    .refine((v) => v === 'ko' || isSupportedLang(v), '지원하지 않는 자막 언어입니다.'),
 });
 
 export type CreateRenderInput = z.infer<typeof createRenderSchema>;

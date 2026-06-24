@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     'make_cc 서비스의 개인정보 수집·이용·보관·파기, 쿠키 및 Google AdSense 광고 쿠키 사용에 관한 안내입니다.',
 };
 
-const UPDATED = '2026년 6월 17일';
+const UPDATED = '2026년 6월 24일';
 const CONTACT_EMAIL = 'shong7500@gmail.com';
 
 export default function PrivacyPage() {
@@ -136,8 +136,9 @@ export default function PrivacyPage() {
           <p className="leading-relaxed">
             서비스는 운영을 위해 다음의 외부 서비스를 이용하며, 목적 달성에 필요한 범위 내에서만
             정보가 처리됩니다: 인증·데이터베이스·스토리지(Supabase), 호스팅(Vercel), 광고(Google
-            AdSense), 이메일 알림(Resend). 법령에 근거하거나 이용자 동의가 있는 경우를 제외하고
-            개인정보를 제3자에게 판매하지 않습니다.
+            AdSense), 이메일 알림(Resend), <strong className="text-foreground">자막 번역(DeepL)</strong>.
+            다국어 자막 번역 기능을 사용하면 해당 자막 텍스트가 번역을 위해 DeepL로 전송됩니다.
+            법령에 근거하거나 이용자 동의가 있는 경우를 제외하고 개인정보를 제3자에게 판매하지 않습니다.
           </p>
         </Section>
 

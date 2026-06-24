@@ -34,6 +34,13 @@ const envSchema = z.object({
   // Redis (BullMQ) — STT 잡 큐. Self-host Whisper 워커와 연결
   REDIS_URL: z.string().url(),
 
+  // DeepL (subtitle-translation) — 자막 다국어 번역. 서버/워커 전용(클라이언트 노출 금지).
+  //   무료 키(:fx)는 api-free.deepl.com. 미설정 시 번역 기능 비활성(키 검증은 워커/서비스에서).
+  DEEPL_API_KEY: z.string().optional().default(''),
+  DEEPL_API_URL: z.string().url().default('https://api-free.deepl.com'),
+  // 잡당 번역 문자 상한(무료 한도 보호). 초과 시 번역 잡 실패 처리.
+  TRANSLATION_MAX_CHARS_PER_JOB: stringToBigIntInRange(1, 5_000_000).default('50000'),
+
   // Email (Resend) — Supabase Auth 외 추가 알림(잡 완료 이메일)에 사용
   RESEND_API_KEY: z.string().optional().default(''),
   EMAIL_FROM: z.string().default('make-cc <no-reply@localhost>'),
