@@ -12,6 +12,7 @@ import {
   markTranslationFailed,
 } from '@/services/translation';
 import { toDeeplCode, SOURCE_DEEPL } from '@/services/translation/languages';
+import { fitTranslatedCues } from './lib/subtitle-fit';
 
 /**
  * 번역 잡 처리 (subtitle-translation) — 워커·CLI 양쪽이 호출.
@@ -106,9 +107,11 @@ export async function processTranslation(translationId: string): Promise<Process
       },
     });
 
-    // 4. cue.text만 교체 (index/startMs/endMs/words/speakerId 원본 보존)
+    // 4. cue.text만 교체 (index/startMs/words/speakerId 보존)
     const translatedCues = cues.map((c, i) => ({ ...c, text: translated[i] ?? c.text }));
-    const outSrt = buildSrt(translatedCues);
+    // 5. 가독성 후처리: 번역문이 길어지므로 줄바꿈(2줄) + CPS 높으면 종료시각 연장(간격 내)
+    const fitted = fitTranslatedCues(translatedCues, (job.videoDurationSec ?? 0) * 1000);
+    const outSrt = buildSrt(fitted);
 
     // 5. 저장
     const { path: key } = await saveTranslatedSubtitle({
