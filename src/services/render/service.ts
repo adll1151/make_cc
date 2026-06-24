@@ -10,6 +10,7 @@ import { readIsPro } from '@/services/auth/user-profile';
 import { getJobAdmin } from '@/services/jobs';
 import { enqueueRender } from '@/services/queue';
 import { presignRenderDownload, deleteRender } from '@/services/storage';
+import { hasDoneTranslation } from '@/services/translation';
 import { resolveRenderGating } from './gating';
 
 /**
@@ -170,6 +171,13 @@ export async function createRender(
       'INVALID_INPUT',
       '자막 생성이 완료된 잡만 번인 영상으로 내보낼 수 있습니다.',
     );
+  }
+
+  // 번인 언어 검증 — 'ko'(원본)가 아니면 해당 언어 번역이 완료(done) 상태여야 함.
+  // (클라가 보낸 subtitleLang을 신뢰하지 않음 — Design §13 게이팅 우회 방지)
+  const subtitleLang = opts.subtitleLang ?? 'ko';
+  if (subtitleLang !== 'ko' && !(await hasDoneTranslation(jobId, subtitleLang))) {
+    throw new AppError('INVALID_INPUT', '선택한 언어의 번역이 아직 완료되지 않았습니다.');
   }
 
   const isPro = owner.kind === 'user' ? await readIsPro(owner.userId) : false;

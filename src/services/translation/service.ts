@@ -127,6 +127,20 @@ export async function markTranslationFailed(params: {
   if (error) throw new Error(`markTranslationFailed 실패: ${error.message}`);
 }
 
+/** 해당 잡에 특정 언어의 완료(done) 번역 트랙이 존재하는지. 번인 언어 검증용. */
+export async function hasDoneTranslation(jobId: string, targetLang: string): Promise<boolean> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from('translations')
+    .select('id')
+    .eq('job_id', jobId)
+    .eq('target_lang', targetLang)
+    .eq('status', 'done')
+    .limit(1);
+  if (error) throw new Error(`hasDoneTranslation 실패: ${error.message}`);
+  return (data?.length ?? 0) > 0;
+}
+
 /** 가장 오래된 pending 번역 id (poll-loop 픽업용). 없으면 null. */
 export async function fetchOldestPendingTranslation(): Promise<string | null> {
   const admin = createAdminClient();

@@ -5,6 +5,7 @@ export {
   markTranslationDone,
   markTranslationFailed,
   fetchOldestPendingTranslation,
+  hasDoneTranslation,
   createTranslation,
   getTranslation,
   listTranslationsByJob,
