@@ -99,6 +99,60 @@ export async function getSubtitleText(jobId: string): Promise<string> {
   return data.text();
 }
 
+// =========================================
+// 번역 자막 (subtitles 버킷, {jobId}.{lang}.srt) — subtitle-translation
+// =========================================
+
+export async function putTranslatedSubtitle(params: {
+  jobId: string;
+  lang: string;
+  body: string; // SRT text
+}): Promise<{ bucket: string; path: string }> {
+  const admin = createAdminClient();
+  const bucket = subtitlesBucket();
+  const path = translatedSubtitleStorageKey(params.jobId, params.lang);
+  const utf8Bytes = new TextEncoder().encode(params.body);
+  const { error } = await admin.storage.from(bucket).upload(path, utf8Bytes, {
+    contentType: 'application/x-subrip; charset=utf-8',
+    upsert: true,
+  });
+  if (error) throw new Error(`번역 자막 업로드 실패: ${error.message}`);
+  return { bucket, path };
+}
+
+export async function getTranslatedSubtitleText(jobId: string, lang: string): Promise<string> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage
+    .from(subtitlesBucket())
+    .download(translatedSubtitleStorageKey(jobId, lang));
+  if (error || !data) throw new Error(`번역 자막 다운로드 실패: ${error?.message ?? 'not found'}`);
+  return data.text();
+}
+
+export async function presignTranslationDownload(params: {
+  jobId: string;
+  lang: string;
+  expiresIn?: number;
+}): Promise<string> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage
+    .from(subtitlesBucket())
+    .createSignedUrl(
+      translatedSubtitleStorageKey(params.jobId, params.lang),
+      params.expiresIn ?? SIGN_DOWNLOAD_EXPIRES,
+      { download: `${params.jobId}.${params.lang}.srt` },
+    );
+  if (error || !data) throw new Error(`번역 자막 signed URL 실패: ${error?.message ?? 'unknown'}`);
+  return data.signedUrl;
+}
+
+/** storageKey로 번역 자막 삭제 (cleanup용). */
+export async function deleteTranslatedSubtitleByKey(storageKey: string): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin.storage.from(subtitlesBucket()).remove([storageKey]);
+  if (error) throw new Error(`번역 자막 삭제 실패: ${error.message}`);
+}
+
 export async function presignVideoDownload(params: {
   storageKey: string;
   expiresIn?: number;
@@ -278,6 +332,14 @@ export function wordsStorageKey(jobId: string): string {
   const yyyy = now.getUTCFullYear();
   const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
   return `${yyyy}/${mm}/${jobId}/${jobId}.words.json`;
+}
+
+/** 번역 자막 path. 원본 subtitleStorageKey와 동일 yyyy/mm 규칙 + .{lang}.srt */
+export function translatedSubtitleStorageKey(jobId: string, lang: string): string {
+  const now = new Date();
+  const yyyy = now.getUTCFullYear();
+  const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${yyyy}/${mm}/${jobId}/${jobId}.${lang}.srt`;
 }
 
 /** renders 버킷 내부 path. renderId 기반(영상명 무관). */

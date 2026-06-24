@@ -16,9 +16,11 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logger } from '@/lib/logger';
 import { cleanupExpiredJobs } from '@/services/jobs';
 import { fetchOldestPendingRender, cleanupExpiredRenders } from '@/services/render';
+import { fetchOldestPendingTranslation, cleanupExpiredTranslations } from '@/services/translation';
 import { putWorkerHeartbeat } from '@/services/storage';
 import { processTranscribe } from '../transcribe';
 import { processRender } from '../render';
+import { processTranslation } from '../translate';
 
 const POLL_INTERVAL_MS = 3_000;
 // 잡 처리(블로킹)와 무관하게 setInterval로 갱신 — 운영자 알림이 워커 생존을 판정.
@@ -75,6 +77,14 @@ let tickCount = 0;
       } catch (err) {
         log.warn({ err: (err as Error)?.message }, 'render cleanup failed (계속)');
       }
+      try {
+        const tr = await cleanupExpiredTranslations();
+        if (tr.scanned > 0 || tr.errors > 0) {
+          log.info({ cleanup: tr }, 'translation cleanup tick');
+        }
+      } catch (err) {
+        log.warn({ err: (err as Error)?.message }, 'translation cleanup failed (계속)');
+      }
     }
     tickCount += 1;
 
@@ -92,7 +102,21 @@ let tickCount = 0;
       continue; // 다음 틱에서 다시 스캔
     }
 
-    // 2) STT 잡(queued)
+    // 2) 번역(pending) — DeepL REST, GPU 불필요. STT보다 빠르므로 우선.
+    const translationId = await fetchPendingTranslation();
+    if (translationId) {
+      log.info({ translationId }, 'picked up pending translation');
+      try {
+        const result = await processTranslation(translationId);
+        log.info({ translationId, result }, 'translation done');
+      } catch (err) {
+        log.error({ translationId, err: (err as Error)?.message }, 'translation failed');
+        // markTranslationFailed는 processTranslation 내부에서 수행됨 — 폴링 계속
+      }
+      continue; // 다음 틱에서 다시 스캔
+    }
+
+    // 3) STT 잡(queued)
     const jobId = await fetchOldestQueued();
     if (!jobId) {
       await sleep(POLL_INTERVAL_MS);
@@ -121,6 +145,15 @@ async function fetchPendingRender(): Promise<string | null> {
     return await fetchOldestPendingRender();
   } catch (err) {
     log.warn({ err: (err as Error)?.message }, 'fetch pending render failed');
+    return null;
+  }
+}
+
+async function fetchPendingTranslation(): Promise<string | null> {
+  try {
+    return await fetchOldestPendingTranslation();
+  } catch (err) {
+    log.warn({ err: (err as Error)?.message }, 'fetch pending translation failed');
     return null;
   }
 }

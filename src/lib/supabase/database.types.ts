@@ -189,6 +189,71 @@ export type Database = {
           },
         ]
       }
+      translations: {
+        Row: {
+          char_count: number | null
+          created_at: string
+          engine: string
+          error_code: string | null
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          output_delete_at: string | null
+          output_storage_key: string | null
+          progress_percent: number
+          source_lang: string
+          started_at: string | null
+          status: string
+          target_lang: string
+          user_id: string | null
+        }
+        Insert: {
+          char_count?: number | null
+          created_at?: string
+          engine?: string
+          error_code?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          output_delete_at?: string | null
+          output_storage_key?: string | null
+          progress_percent?: number
+          source_lang?: string
+          started_at?: string | null
+          status?: string
+          target_lang: string
+          user_id?: string | null
+        }
+        Update: {
+          char_count?: number | null
+          created_at?: string
+          engine?: string
+          error_code?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          output_delete_at?: string | null
+          output_storage_key?: string | null
+          progress_percent?: number
+          source_lang?: string
+          started_at?: string | null
+          status?: string
+          target_lang?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "translations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       share_links: {
         Row: {
           created_at: string
