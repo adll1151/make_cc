@@ -1,13 +1,50 @@
 # 변경 이력 (Changelog)
 
-make_cc의 날짜별·버전별 작업 기록입니다. 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/),
+make_cc의 버전별 작업 기록입니다. 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/),
 버전은 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
 라이브: **[makecc.vercel.app](https://makecc.vercel.app)** · 저장소: **[github.com/adll1151/make_cc](https://github.com/adll1151/make_cc)**
 
+<!-- 각 릴리스 날짜는 헤딩 아래 HTML 주석(<!-- date: YYYY-MM-DD --​>)으로만 기록하고 화면에는 표시하지 않습니다. -->
+
 ---
 
-## [0.3.0] — 2026-06-20 · 프로덕션 준비 + 실서비스 처리 검증
+## [Unreleased] · 자막 다국어 번역 (phase3)
+<!-- date: 2026-06-24 -->
+
+완성된 한국어 자막을 다른 언어로 번역하는 기능. 백엔드(엔진·도메인·워커·API)까지 구현·검증 완료, 편집기 UI는 진행 중.
+
+### Added
+- **자막 번역 백엔드** — DeepL API(무료 티어)로 한국어 SRT를 대상 언어로 번역. cue 텍스트만 교체하고 타임스탬프·인덱스는 원본 보존.
+- **번역 도메인** — `translations` 테이블(렌더 도메인 미러: pending→translating→done/failed) + 잡 큐(poll-loop) 비동기 처리 + SSE 진행률.
+- **게이팅** — 무료 영상당 1개 언어 / Pro 무제한.
+- **언어 설정(확장형)** — 초기 영어·일본어·중국어. 설정 배열에 추가만으로 확장.
+- **API** — `POST /api/translations`, `GET /api/translations/[id]`(+`/stream`), `GET /api/jobs/[id]/translations`.
+
+---
+
+## [0.4.0] · 흑백 미니멀 전면 재디자인 + 모션 (phase2)
+<!-- date: 2026-06-24 -->
+
+데스크톱 happy-path 위주였던 Phase 1을 "믿고 쓰는 제품"으로 끌어올린 릴리스. 비주얼 전면 개편 + 모바일 대응 + 콘텐츠 보강.
+
+### Added
+- **데모 페이지 `/demo`** — 브라우저에서 자막 생성·편집을 체험하는 인터랙티브 데모.
+- **블로그 `/blog`** — SRT 가이드·Whisper 소개·유튜브 자막 넣기 등 콘텐츠(SEO).
+- **React Bits / 모션 컴포넌트** — 스크롤 reveal, 그라데이션 텍스트, 통계 카운트업, 꾸민 배경 등.
+
+### Changed
+- **흑백 미니멀 전면 재디자인** — 랜딩·편집기 등 전반 비주얼 개편 + 라이트/다크 개편.
+- **모바일 에디터** — 좁은 화면에서 영상/자막/스타일 탭 전환으로 편집 가능.
+
+### Fixed
+- 번인 렌더 진행률 % + SSE 실시간 반영. CountUp 무한 재시작 버그 수정.
+- 랜딩 광고 제거 + 광고 킬스위치(AdSense "콘텐츠 없는 화면" 재심사 대응).
+
+---
+
+## [0.3.0] · 프로덕션 준비 + 실서비스 처리 검증
+<!-- date: 2026-06-20 -->
 
 배포 환경에서 실제로 자막이 생성되도록 만든 릴리스. 폰트·정책·콘텐츠를 채우고,
 업로드가 큐에서 멈추던 버그를 잡고, 로컬 폴링 워커로 end-to-end 처리를 검증했다.
@@ -31,7 +68,8 @@ make_cc의 날짜별·버전별 작업 기록입니다. 형식은 [Keep a Change
 
 ---
 
-## [0.2.0] — 2026-06-17 · 수익화 + 법적 고지
+## [0.2.0] · 수익화 + 법적 고지
+<!-- date: 2026-06-17 -->
 
 ### Added
 - **Google AdSense** 연동 (`ads.txt`, 광고 슬롯 컴포넌트).
@@ -42,7 +80,8 @@ make_cc의 날짜별·버전별 작업 기록입니다. 형식은 [Keep a Change
 
 ---
 
-## [0.1.0] — 2026-06-17 · 초기 릴리스
+## [0.1.0] · 초기 릴리스
+<!-- date: 2026-06-17 -->
 
 한국어 영상 자막 자동 생성 + 번인 자막 스튜디오 풀스택 베이스.
 
@@ -54,12 +93,15 @@ make_cc의 날짜별·버전별 작업 기록입니다. 형식은 [Keep a Change
 - **공유 · 게스트 지원 · 알림(Resend/Discord) · 자동 청소**.
 - **인프라** — Next.js 15(App Router) + Supabase(Auth/Postgres/Storage, RLS) + BullMQ/Redis 큐 + 별도 GPU 워커. Redis 미연결 시 DB 폴링 워커로 graceful degrade.
 
-### 초기 커밋 이전 작업 (2026-06-16)
+### 초기 커밋 이전 작업
+<!-- date: 2026-06-16 -->
 - **libass PoC** — WSL Ubuntu에서 한국어 번인+카라오케 렌더 검증. ASS Events `Format:`의 `Text` 필드 누락 버그 발견·수정.
 - **워커 렌더(module-3)** — ffmpeg probe/번인, render 서비스, poll-loop.
 
 ---
 
+[Unreleased]: https://github.com/adll1151/make_cc/tree/phase3
+[0.4.0]: https://github.com/adll1151/make_cc/releases/tag/v0.4.0
 [0.3.0]: https://github.com/adll1151/make_cc/releases/tag/v0.3.0
 [0.2.0]: https://github.com/adll1151/make_cc/releases/tag/v0.2.0
 [0.1.0]: https://github.com/adll1151/make_cc/releases/tag/v0.1.0
