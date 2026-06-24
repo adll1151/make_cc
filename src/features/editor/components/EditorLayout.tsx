@@ -18,7 +18,7 @@ import { RenderProgress } from './RenderProgress';
 import { TranslationsPanel } from './TranslationsPanel';
 import { useSubtitleStore } from '../hooks/useSubtitleStore';
 import { useAutoSave, saveNow } from '../hooks/useAutoSave';
-import { useVideoSync, seekToCue } from '../hooks/useVideoSync';
+import { useVideoSync, seekToCue, playCueSegment } from '../hooks/useVideoSync';
 
 interface EditorLayoutProps {
   jobId: string;
@@ -124,6 +124,12 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
   const onSeek = useCallback((startMs: number) => {
     seekToCue(videoRef, startMs);
   }, []);
+
+  const onPlayCue = useCallback((startMs: number, endMs: number) => {
+    playCueSegment(videoRef, startMs, endMs);
+  }, []);
+
+  const getCurrentMs = useCallback(() => (videoRef.current?.currentTime ?? 0) * 1000, []);
 
   // 키보드 단축키 (전역)
   useEffect(() => {
@@ -281,7 +287,7 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
                   ))}
                 </div>
               ) : (
-                <CueList onSeek={onSeek} />
+                <CueList onSeek={onSeek} onPlayCue={onPlayCue} getCurrentMs={getCurrentMs} />
               )}
             </div>
           </aside>
@@ -315,11 +321,13 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
 
         {/* 하단 단축키 안내 */}
         <footer className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
-          <Hint kbd="Space">재생/정지</Hint>
-          <Hint kbd="Click">cue 시각으로 이동</Hint>
-          <Hint kbd="Enter">편집 완료</Hint>
+          <Hint kbd="▶">이 구간 듣기</Hint>
+          <Hint kbd="Click">선택 + 그 시각으로 이동</Hint>
+          <Hint kbd="↑ ↓">자막 이동</Hint>
+          <Hint kbd="Enter">편집 (편집 중엔 다음 줄로)</Hint>
           <Hint kbd="Esc">편집 취소</Hint>
-          <span>자동 저장 5초 디바운스</span>
+          <Hint kbd="Space">재생/정지</Hint>
+          <span>자동 저장 5초</span>
         </footer>
       </div>
     </main>
