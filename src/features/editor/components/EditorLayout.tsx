@@ -15,6 +15,7 @@ import { CaptionPreview } from './CaptionPreview';
 import { CaptionStylePanel } from './CaptionStylePanel';
 import { ExportButton } from './ExportButton';
 import { RenderProgress } from './RenderProgress';
+import { TranslationsPanel } from './TranslationsPanel';
 import { useSubtitleStore } from '../hooks/useSubtitleStore';
 import { useAutoSave, saveNow } from '../hooks/useAutoSave';
 import { useVideoSync, seekToCue } from '../hooks/useVideoSync';
@@ -305,6 +306,11 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* 다국어 자막 (번역) — 메인 편집 store와 분리된 read-only 트랙 관리 */}
+        <section className="mt-4 lg:mt-6">
+          <TranslationsPanel jobId={jobId} />
         </section>
 
         {/* 하단 단축키 안내 */}
