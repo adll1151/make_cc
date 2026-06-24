@@ -329,6 +329,13 @@ export const createTranslationSchema = z.object({
 - 신규: `features/editor/components/LanguageTabs.tsx`, `AddLanguageModal.tsx`, `TranslationProgress.tsx`
 - 수정: `EditorLayout.tsx`(탭 바/로드), `hooks/useSubtitleStore.ts`(언어 상태)
 
+> **구현 노트(2026-06-24)**: m5는 설계의 "언어 탭 + 모달" 통합 대신 §10.2가 허용한
+> **read-only 분리 패널**(`TranslationsPanel` + `TranslationProgress`)로 구현됨. 메인 편집
+> store와 분리해 원본 자막 편집/자동저장에 영향 없음(번역본 편집은 P2). 다운로드는 전용
+> 라우트 대신 `getTranslation`의 signed `downloadUrl` 사용. 번역 가독성 후처리
+> (`worker/lib/subtitle-fit.ts`: 줄바꿈≤42자·2줄, CPS≤17·최소833ms·최대7s — Netflix/BBC 표준)는
+> 설계 이후 추가됨.
+
 ---
 
 ## 11. Implementation Guide
