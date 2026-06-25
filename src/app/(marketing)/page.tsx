@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { FloatingNav } from '@/components/ui/floating-nav';
 import { EditorShowcase } from '@/components/landing/EditorShowcase';
 import { CinematicHero } from '@/components/landing/CinematicHero';
+import { ReadingProgress } from '@/components/landing/ReadingProgress';
+import { BurnInStyles } from '@/components/landing/BurnInStyles';
+import { BeforeAfterSlider } from '@/components/landing/BeforeAfterSlider';
 import { BlurText } from '@/components/reactbits/BlurText';
 import { CountUp } from '@/components/reactbits/CountUp';
 import { ScrollVelocity } from '@/components/reactbits/ScrollVelocity';
@@ -16,6 +19,9 @@ import { BackgroundGradientAnimation } from '@/components/reactbits/BackgroundGr
 export default function LandingPage() {
   return (
     <main className="relative">
+      {/* 상단 읽기 진행 바 (자막 스크러버 톤) */}
+      <ReadingProgress />
+
       {/* 꾸민 배경 — Aceternity Background Gradient Animation (단일 레이어, 절제) */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-80" aria-hidden>
         <BackgroundGradientAnimation />
@@ -38,6 +44,15 @@ export default function LandingPage() {
           <HudCorners />
           <EditorShowcase />
         </div>
+      </section>
+
+      {/* ============ Before / After ============ */}
+      <section className="mx-auto max-w-5xl px-6 pb-28">
+        <SectionHead eyebrow="Before / After" title="자막 하나로, 이렇게." />
+        <BeforeAfterSlider />
+        <p className="scroll-fade mt-5 text-center text-sm text-muted-foreground">
+          손잡이를 끌어 비교해보세요 — 같은 영상, 자막 한 줄의 차이.
+        </p>
       </section>
 
       {/* ============ 어디서나 쓰는 자막 (ScrollVelocity) ============ */}
@@ -102,6 +117,7 @@ export default function LandingPage() {
               key={u.title}
               className="group rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]"
             >
+              <CardHud />
               <span className="grid size-11 place-items-center rounded-xl bg-accent/12 text-accent transition group-hover:bg-accent group-hover:text-accent-foreground">
                 {u.icon}
               </span>
@@ -121,6 +137,7 @@ export default function LandingPage() {
               key={f.title}
               className={`group rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)] ${f.span ?? ''} ${f.wide ? 'flex items-center justify-between gap-6' : ''}`}
             >
+              <CardHud />
               <div>
                 <span className="grid size-11 place-items-center rounded-xl bg-accent/12 text-accent transition group-hover:bg-accent group-hover:text-accent-foreground">
                   {f.icon}
@@ -155,25 +172,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ 번인 자막 스타일 ============ */}
+      {/* ============ 번인 자막 스타일 (라이브 프리뷰) ============ */}
       <section className="mx-auto max-w-5xl px-6 pb-28">
         <SectionHead eyebrow="Burn-in styles" title="자막 스타일, 골라서 박기" />
-        <div className="scroll-fade grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {STYLES.map((st) => (
-            <SpotlightCard
-              key={st.label}
-              className="rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]"
-            >
-              <div className="relative mb-3 grid aspect-video place-items-center overflow-hidden rounded-lg bg-[#0c0c11]">
-                <div className="absolute inset-0 opacity-40 aurora-subtle" aria-hidden />
-                <span className="absolute left-2 top-2 rounded bg-accent px-1 py-0.5 text-[8px] font-bold text-accent-foreground">CC</span>
-                <span className={`relative rounded px-2 py-1 text-xs font-extrabold ${st.cls}`}>가나다 자막</span>
-              </div>
-              <p className="text-sm font-bold tracking-tight">{st.label}</p>
-              <p className="text-xs text-muted-foreground">{st.sub}</p>
-            </SpotlightCard>
-          ))}
-        </div>
+        <BurnInStyles />
       </section>
 
       {/* 라이트 본문 → 다크 마무리 전환 브리지 (히어로 진입의 역방향, 수미상관) */}
@@ -300,12 +302,6 @@ const USECASES = [
   { title: '회의·인터뷰', desc: '말한 내용을 텍스트로 빠르게', icon: <IconEdit /> },
 ];
 
-const STYLES = [
-  { label: '깔끔', cls: 'bg-white text-black', sub: '흰 자막' },
-  { label: '볼드 옐로', cls: 'bg-black text-[#ffd34d]', sub: '쇼츠·릴스' },
-  { label: '박스', cls: 'bg-accent text-black', sub: '강조 박스' },
-  { label: '예능', cls: 'bg-black text-white ring-2 ring-[#ffd34d]', sub: '외곽선' },
-];
 
 const PLATFORMS = [
   'YouTube', 'Instagram 릴스', 'TikTok', 'Shorts', 'Premiere Pro',
@@ -344,6 +340,20 @@ function HudCorners({ color = 'border-border-strong' }: { color?: string }) {
       <span className={`${base} -right-1.5 -top-1.5 border-r border-t`} />
       <span className={`${base} -bottom-1.5 -left-1.5 border-b border-l`} />
       <span className={`${base} -bottom-1.5 -right-1.5 border-b border-r`} />
+    </span>
+  );
+}
+
+/** 카드 hover 시 나타나는 HUD 모서리(인셋 — overflow-hidden 카드 내부용). */
+function CardHud() {
+  const base =
+    'pointer-events-none absolute size-3 border-accent/70 opacity-0 transition-opacity duration-300 group-hover:opacity-100';
+  return (
+    <span aria-hidden>
+      <span className={`${base} left-2 top-2 border-l border-t`} />
+      <span className={`${base} right-2 top-2 border-r border-t`} />
+      <span className={`${base} bottom-2 left-2 border-b border-l`} />
+      <span className={`${base} bottom-2 right-2 border-b border-r`} />
     </span>
   );
 }
