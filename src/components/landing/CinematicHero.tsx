@@ -5,32 +5,33 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Magnet } from '@/components/reactbits/Magnet';
 import { StarBorder } from '@/components/reactbits/StarBorder';
+import { Squares } from '@/components/reactbits/Squares';
 
 /**
  * 시네마틱 HUD 히어로 — Stark/JARVIS 풍 "음성 HUD".
  *
- * Instagram 릴스(아이언맨 스크롤 시네마틱 포트폴리오)의 연출 기법을
- * make_cc 도메인으로 번역한다:
- *   - 릴스의 캐릭터 → 우리는 "목소리를 듣는" 아크리액터형 라이브 파형
- *   - 릴스의 스크롤 장면 전환(I am Iron Man → Build → Inevitable → 피날레)
- *     → 우리 워크플로 4씬(듣기 → 인식 → 편집 → 완성)을 스크롤로 스크럽
- *   - 화면을 감싸는 HUD 프레임(모서리 브래킷 + 모노스페이스 텔레메트리)
+ * Instagram 릴스(아이언맨 스크롤 시네마틱 포트폴리오)의 연출을 make_cc로 번역:
+ *   - 캐릭터 → "목소리를 듣는" 아크리액터 + 라디얼 스펙트럼(주인공)
+ *   - 장면 전환 → 워크플로 4씬(듣기→인식→편집→완성)을 스크롤로 스크럽
+ *   - 빽빽한 HUD(모서리 브래킷·텔레메트리·크로스헤어·우측 챕터 레일)
+ *   - 풀블리드 밀도: 격자 그리드 + 파티클 + 플로팅 텔레메트리 카드 + 자막 스트림
  *
- * 자체 다크 씬(페이지 라이트/다크 테마와 무관하게 시네마처럼 검정 무대).
- * prefers-reduced-motion이면 스크롤잭 없이 첫 씬을 정적으로 보여준다.
+ * 화려함을 "모션"이 아닌 "밀도"로 만든다 → 정적(reduced-motion)에서도 풍성.
+ * 움직임은 스크롤 진행도(progress)에 연동(JS inline transform)해
+ * reduced-motion에서도 스크롤하면 리액터 회전·레이어 시차가 살아난다.
  */
 
 type Scene = {
   id: string;
-  tag: string; // 좌상단 모노 라벨
-  stage: string; // 한글 단계명
-  head1: string; // 헤드라인 앞부분
-  accent: string; // 앰버 강조 단어
-  head2?: string; // 헤드라인 뒷부분(선택)
+  tag: string;
+  stage: string;
+  head1: string;
+  accent: string;
+  head2?: string;
   sub: string;
-  // 우하단 텔레메트리 (라벨/값)
   metricLabel: string;
   metricValue: string;
+  caption: string; // 배경 자막 스트림용
 };
 
 const SCENES: Scene[] = [
@@ -43,6 +44,7 @@ const SCENES: Scene[] = [
     sub: '한국어 음성을 실시간으로 포착합니다. 설치도, 로그인도 없이.',
     metricLabel: 'AUDIO LEVEL',
     metricValue: '−6 dB',
+    caption: '안녕하세요, make_cc입니다',
   },
   {
     id: 'transcribe',
@@ -53,6 +55,7 @@ const SCENES: Scene[] = [
     sub: 'Whisper가 한국어를 인식해 타임코드까지 자동으로 정렬합니다.',
     metricLabel: 'WER',
     metricValue: '< 15%',
+    caption: '영상의 한국어 음성을 자동으로',
   },
   {
     id: 'edit',
@@ -63,6 +66,7 @@ const SCENES: Scene[] = [
     sub: '브라우저에서 바로 수정하고, 영상 위에서 실시간 미리보기.',
     metricLabel: 'CPS',
     metricValue: '12.4',
+    caption: '한 줄씩 다듬어 완벽하게',
   },
   {
     id: 'done',
@@ -74,28 +78,95 @@ const SCENES: Scene[] = [
     sub: '표준 SRT 다운로드 · 번인 영상 · 공유 링크까지 한 번에.',
     metricLabel: 'OUTPUT',
     metricValue: '100%',
+    caption: 'SRT 다운로드 · 공유까지 한 번에',
   },
 ];
 
 const N = SCENES.length;
-// 중앙 파형 바 — 고정 시드(SSR/CSR 동일, Math.random 미사용)
-const BARS = Array.from({ length: 32 }, (_, i) => ({
-  dur: 0.7 + ((i * 7) % 9) * 0.06,
-  delay: (i % 11) * 0.07,
-  base: 24 + ((i * 13) % 64),
+
+// 결정적 의사난수(SSR/CSR 동일) — Math.random 미사용
+const rand = (i: number, s: number) => {
+  const x = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+// 파티클 별 (정적 위치 — 밀도용, reduced-motion에서도 보임)
+const DOTS = Array.from({ length: 52 }, (_, i) => ({
+  x: rand(i, 1) * 100,
+  y: rand(i, 2) * 100,
+  s: 0.5 + rand(i, 3) * 2,
+  o: 0.12 + rand(i, 4) * 0.5,
+  tw: 2 + rand(i, 5) * 4, // 트윙클 주기
+  dl: rand(i, 6) * 4,
+  px: 0.4 + rand(i, 7) * 1.6, // 시차 깊이
 }));
+
+// 중앙 선형 파형
+const CBARS = Array.from({ length: 30 }, (_, i) => ({
+  base: 22 + rand(i, 11) * 66,
+  dur: 0.7 + rand(i, 12) * 0.7,
+  delay: rand(i, 13) * 1.2,
+}));
+
+// 라디얼 스펙트럼 링 (코어 주위로 방사)
+const RADIAL = Array.from({ length: 64 }, (_, i) => ({
+  ang: (i / 64) * 360,
+  len: 8 + rand(i, 21) * 22,
+  dur: 0.8 + rand(i, 22) * 0.9,
+  delay: rand(i, 23) * 1.4,
+}));
+
+// 플로팅 텔레메트리 카드 (릴스의 풀쿼트 카드 → 우리 도메인)
+const FRAGMENTS = [
+  {
+    pos: 'left-[4%] top-[24%] sm:left-[7%]',
+    px: 1.4,
+    tag: 'TELEMETRY',
+    title: '「영상의 말을, 텍스트로」',
+    meta: 'SAMPLE 48.0kHz · MONO',
+    hideMobile: false,
+  },
+  {
+    pos: 'right-[4%] top-[30%] sm:right-[8%]',
+    px: 1.0,
+    tag: 'MODEL',
+    title: 'Whisper large-v3',
+    meta: 'WER 14.2% · ko-KR',
+    hideMobile: true,
+  },
+  {
+    pos: 'left-[6%] bottom-[20%] sm:left-[11%]',
+    px: 2.0,
+    tag: 'STREAM',
+    title: '자막 큐 정렬 완료',
+    meta: '00:00 → 00:09 · 3 CUES',
+    hideMobile: true,
+  },
+  {
+    pos: 'right-[5%] bottom-[24%] sm:right-[10%]',
+    px: 1.7,
+    tag: 'EXPORT',
+    title: 'SRT · VTT · BURN-IN',
+    meta: 'READY TO SHIP',
+    hideMobile: false,
+  },
+] as const;
+
+const fmtTC = (p: number) => {
+  const total = Math.floor(p * 89); // 0:00 → 1:29
+  return `0:${String(total % 60).padStart(2, '0')}`;
+};
 
 export function CinematicHero() {
   const sectionRef = useRef<HTMLElement>(null);
-  const [progress, setProgress] = useState(0); // 0..1 전체 스크롤 진행
+  const [progress, setProgress] = useState(0);
   const [reduce, setReduce] = useState(false);
 
   useEffect(() => {
     setReduce(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }, []);
 
-  // 스크롤 스크럽은 사용자가 직접 스크롤하는 동작이라 reduced-motion에서도 유지한다
-  // (그래야 모든 사용자가 4씬을 다 볼 수 있다). 장식성 애니메이션만 reduce로 끈다.
+  // 스크롤 스크럽 — 사용자 주도이므로 reduced-motion에서도 유지.
   useEffect(() => {
     let raf = 0;
     const onScroll = () => {
@@ -118,12 +189,11 @@ export function CinematicHero() {
     };
   }, []);
 
-  // 진행도 → 활성 씬. 마지막 0.001 구간은 피날레 정착용 버퍼.
   const fp = Math.min(progress, 0.999) * N;
   const active = Math.min(N - 1, Math.floor(fp));
   const scene = SCENES[active]!;
-  // 처리율: 히어로 전체에 걸쳐 1 → 100% 상승(텔레메트리 생동감)
   const engine = Math.round(progress * 99 + 1);
+  const spin = progress * 360; // 스크롤 연동 회전(기준)
 
   return (
     <section
@@ -132,39 +202,116 @@ export function CinematicHero() {
       className="relative"
       style={{ height: `${N * 100}vh` }}
     >
-      {/* 스티키 무대 — 항상 다크 시네마 */}
-      <div className="sticky top-0 flex h-screen min-h-[640px] items-center justify-center overflow-hidden bg-[#07070b] text-white">
-        {/* === 배경: 드리프트 글로우 + 그레인 === */}
+      <div className="sticky top-0 flex h-screen min-h-[640px] items-center justify-center overflow-hidden bg-[#05050a] text-white">
+        {/* ===================== 배경 밀도 레이어 ===================== */}
         <div className="pointer-events-none absolute inset-0" aria-hidden>
+          {/* 듀얼 컬러 글로우(앰버 + 레드) */}
           <div
-            className="absolute -inset-[20%] transition-[background] duration-700"
+            className="absolute -inset-[20%]"
             style={{
               background:
-                'radial-gradient(40% 40% at 50% 42%, color-mix(in oklab, var(--color-accent) 22%, transparent), transparent 70%)',
+                'radial-gradient(38% 38% at 50% 38%, color-mix(in oklab, var(--color-accent) 26%, transparent), transparent 70%)',
+              transform: `translateY(${progress * -30}px)`,
               animation: reduce ? undefined : 'scene-drift 16s ease-in-out infinite',
             }}
           />
           <div
             className="absolute -inset-[20%]"
             style={{
-              background:
-                'radial-gradient(36% 36% at 72% 74%, oklch(0.5 0.18 18 / 0.28), transparent 72%)',
+              background: 'radial-gradient(34% 34% at 74% 76%, oklch(0.52 0.2 18 / 0.3), transparent 72%)',
+              transform: `translateY(${progress * 24}px)`,
               animation: reduce ? undefined : 'scene-drift 22s ease-in-out infinite reverse',
             }}
           />
-          <div className="grain-overlay !absolute opacity-[0.06]" />
-          {/* 비네팅 */}
-          <div className="absolute inset-0 shadow-[inset_0_0_220px_60px_rgba(0,0,0,0.8)]" />
+
+          {/* 격자 그리드 (정적이어도 보임) — 라디얼 마스크로 가장자리만 */}
+          <div
+            className="absolute inset-0 opacity-[0.5]"
+            style={{
+              maskImage: 'radial-gradient(80% 70% at 50% 45%, transparent 30%, black 90%)',
+              WebkitMaskImage: 'radial-gradient(80% 70% at 50% 45%, transparent 30%, black 90%)',
+              transform: `translateY(${progress * 18}px)`,
+            }}
+          >
+            <Squares
+              direction="diagonal"
+              speed={0.3}
+              squareSize={48}
+              borderColor="rgba(140,140,160,0.10)"
+              hoverFillColor="rgba(224,168,90,0.06)"
+            />
+          </div>
+
+          {/* 파티클 별 */}
+          {DOTS.map((d, i) => (
+            <span
+              key={i}
+              className="absolute rounded-full bg-white"
+              style={
+                {
+                  left: `${d.x}%`,
+                  top: `${d.y}%`,
+                  width: d.s,
+                  height: d.s,
+                  opacity: d.o,
+                  boxShadow: '0 0 4px rgba(255,255,255,0.5)',
+                  transform: `translateY(${progress * -40 * d.px}px)`,
+                  animation: reduce ? undefined : `pulse-glow ${d.tw}s ${d.dl}s ease-in-out infinite`,
+                } as CSSProperties
+              }
+            />
+          ))}
+
+          {/* 스캔라인 */}
+          <div
+            className="absolute inset-0 opacity-[0.5] mix-blend-overlay"
+            style={{
+              backgroundImage:
+                'repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)',
+            }}
+          />
+
+          {/* 배경 거대 파형 실루엣 */}
+          <BackgroundWave progress={progress} />
+
+          {/* 중앙 텍스트 가독용 비네팅 */}
+          <div className="absolute inset-0 shadow-[inset_0_0_240px_70px_rgba(0,0,0,0.85)]" />
+          <div
+            className="absolute left-1/2 top-1/2 size-[42rem] max-w-[95vw] -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{ background: 'radial-gradient(closest-side, rgba(5,5,10,0.7), transparent 75%)' }}
+          />
+          <div className="grain-overlay !absolute opacity-[0.07]" />
         </div>
 
-        {/* === HUD 프레임 === */}
-        <HudFrame scene={scene} active={active} engine={engine} reduce={reduce} />
+        {/* ===================== 플로팅 텔레메트리 카드 ===================== */}
+        <div className="pointer-events-none absolute inset-0 z-[4]" aria-hidden>
+          {FRAGMENTS.map((f, i) => (
+            <div
+              key={i}
+              className={`absolute ${f.pos} ${f.hideMobile ? 'hidden lg:block' : ''}`}
+              style={{ transform: `translateY(${progress * -60 * f.px}px)` }}
+            >
+              <div className="glass rounded-xl border border-white/10 px-3.5 py-2.5 font-mono shadow-[0_8px_30px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md">
+                <div className="flex items-center gap-1.5 text-[9px] tracking-widest text-accent/90">
+                  <span className="size-1 rounded-full bg-accent" />
+                  {f.tag}
+                </div>
+                <div className="mt-1 max-w-[12rem] text-[13px] font-semibold tracking-tight text-white/90">
+                  {f.title}
+                </div>
+                <div className="mt-0.5 text-[10px] tracking-wider text-white/45">{f.meta}</div>
+              </div>
+            </div>
+          ))}
+        </div>
 
-        {/* === 중앙: 아크리액터 + 파형(주인공) === */}
+        {/* ===================== HUD 프레임 ===================== */}
+        <HudFrame scene={scene} active={active} engine={engine} reduce={reduce} progress={progress} />
+
+        {/* ===================== 중앙: 리액터 + 헤드라인 ===================== */}
         <div className="relative z-10 flex w-full max-w-4xl flex-col items-center px-6 text-center">
-          <Reactor reduce={reduce} accentHot={active >= 1} />
+          <Reactor reduce={reduce} spin={spin} progress={progress} active={active} />
 
-          {/* 단계 칩 */}
           <div
             key={`chip-${active}`}
             className="enter-fade-up mt-9 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs tracking-wider text-white/70 backdrop-blur-sm"
@@ -173,13 +320,12 @@ export function CinematicHero() {
             STEP {String(active + 1).padStart(2, '0')} / 0{N} · {scene.stage}
           </div>
 
-          {/* 헤드라인 (씬 전환마다 blur-in 재생) */}
           <h1
             key={`head-${active}`}
-            className="enter-fade-up mt-5 text-balance text-[clamp(2.5rem,8.5vw,6rem)] font-extrabold leading-[0.96] tracking-[-0.04em]"
+            className="enter-fade-up mt-5 text-balance text-[clamp(2.5rem,8.5vw,6rem)] font-extrabold leading-[0.96] tracking-[-0.04em] [text-shadow:0_2px_40px_rgba(0,0,0,0.5)]"
           >
             {scene.head1}{' '}
-            <span className="bg-gradient-to-b from-accent to-[color-mix(in_oklab,var(--color-accent)_60%,white)] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-b from-accent to-[color-mix(in_oklab,var(--color-accent)_55%,white)] bg-clip-text text-transparent">
               {scene.accent}
             </span>
             {scene.head2 ? <> {scene.head2}</> : '.'}
@@ -192,7 +338,6 @@ export function CinematicHero() {
             {scene.sub}
           </p>
 
-          {/* CTA — 항상 노출(액션 가능하게 유지) */}
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Magnet padding={70} magnetStrength={4}>
               <StarBorder>
@@ -214,7 +359,6 @@ export function CinematicHero() {
             </Button>
           </div>
 
-          {/* 씬 진행 도트 */}
           <div className="mt-10 flex items-center gap-2" aria-hidden>
             {SCENES.map((s, i) => (
               <span
@@ -222,17 +366,24 @@ export function CinematicHero() {
                 className="h-1 rounded-full transition-all duration-500"
                 style={{
                   width: i === active ? 28 : 10,
-                  background:
-                    i === active
-                      ? 'var(--color-accent)'
-                      : 'color-mix(in oklab, white 22%, transparent)',
+                  background: i === active ? 'var(--color-accent)' : 'color-mix(in oklab, white 22%, transparent)',
                 }}
               />
             ))}
           </div>
         </div>
 
-        {/* 스크롤 힌트 (마지막 씬 제외) — reduced-motion 사용자도 씬 존재를 알도록 항상 노출 */}
+        {/* 배경 자막 스트림 (하단) */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-24 z-[3] flex justify-center" aria-hidden>
+          <span
+            key={`cap-${active}`}
+            className="enter-fade-up rounded-md bg-black/40 px-3 py-1 font-mono text-[11px] tracking-wider text-white/40 backdrop-blur-sm"
+          >
+            ▸ {scene.caption}
+          </span>
+        </div>
+
+        {/* 스크롤 힌트 */}
         <div
           className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 transition-opacity duration-500"
           style={{ opacity: active >= N - 1 ? 0 : 0.6 }}
@@ -250,6 +401,26 @@ export function CinematicHero() {
   );
 }
 
+/* ===================== 배경 거대 파형 ===================== */
+
+function BackgroundWave({ progress }: { progress: number }) {
+  // 가로로 펼쳐진 파형 라인 — progress로 좌우 시프트(스크롤 연동)
+  const pts = Array.from({ length: 60 }, (_, i) => {
+    const y = 50 + Math.sin(i * 0.5 + progress * 6) * (10 + (i % 7)) * (i % 2 ? 1 : -1) * 0.6;
+    return `${(i / 59) * 100},${y}`;
+  }).join(' ');
+  return (
+    <svg
+      className="absolute inset-x-0 top-1/2 h-40 w-full -translate-y-1/2 opacity-[0.12]"
+      preserveAspectRatio="none"
+      viewBox="0 0 100 100"
+      aria-hidden
+    >
+      <polyline points={pts} fill="none" stroke="var(--color-accent)" strokeWidth="0.4" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
 /* ===================== HUD 프레임 ===================== */
 
 function HudFrame({
@@ -257,74 +428,103 @@ function HudFrame({
   active,
   engine,
   reduce,
+  progress,
 }: {
   scene: Scene;
   active: number;
   engine: number;
   reduce: boolean;
+  progress: number;
 }) {
   return (
     <div className="pointer-events-none absolute inset-0 z-[5]" aria-hidden>
-      {/* 모서리 브래킷 */}
       <Corner className="left-4 top-4 border-l-2 border-t-2 sm:left-7 sm:top-7" />
       <Corner className="right-4 top-4 border-r-2 border-t-2 sm:right-7 sm:top-7" />
       <Corner className="bottom-4 left-4 border-b-2 border-l-2 sm:bottom-7 sm:left-7" />
       <Corner className="bottom-4 right-4 border-b-2 border-r-2 sm:bottom-7 sm:right-7" />
 
-      {/* 스캔 라인 */}
+      {/* 중앙 크로스헤어 */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-25">
+        <div className="absolute left-1/2 top-0 h-3 w-px -translate-x-1/2 bg-white" />
+        <div className="absolute bottom-0 left-1/2 h-3 w-px -translate-x-1/2 bg-white" />
+        <div className="absolute left-0 top-1/2 h-px w-3 -translate-y-1/2 bg-white" />
+        <div className="absolute right-0 top-1/2 h-px w-3 -translate-y-1/2 bg-white" />
+      </div>
+
       {!reduce && (
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent hud-sweep" />
       )}
 
-      {/* 좌상단: 브랜드 + 텔레메트리 */}
+      {/* 좌상단 */}
       <div className="absolute left-4 top-4 font-mono text-[10px] leading-relaxed tracking-wider text-white/55 sm:left-9 sm:top-9 sm:text-[11px]">
         <div className="flex items-center gap-1.5 text-white/80">
           <span className="rounded bg-accent px-1 py-0.5 text-[9px] font-bold text-accent-foreground">CC</span>
           MAKE_CC <span className="text-white/35">/ ENGINE</span>
         </div>
         <div className="mt-1.5 hud-flicker">{scene.tag}</div>
-        <div className="mt-0.5 text-white/35">TELEMETRY · LIVE</div>
+        <div className="mt-0.5 flex items-center gap-1.5 text-white/35">
+          <span className="inline-flex items-center gap-1 text-[oklch(0.62_0.22_18)]">
+            <span className="size-1.5 animate-pulse-glow rounded-full bg-[oklch(0.62_0.22_18)]" /> REC
+          </span>
+          · {fmtTC(progress)}
+        </div>
       </div>
 
-      {/* 우상단: 엔진 게이지 */}
+      {/* 우상단 — 엔진 게이지 */}
       <div className="absolute right-4 top-4 text-right font-mono text-[10px] tracking-wider text-white/55 sm:right-9 sm:top-9 sm:text-[11px]">
         <div className="text-white/35">CC ENGINE</div>
         <div className="mt-1 text-2xl font-bold tabular-nums text-white/85 sm:text-3xl">
           {String(engine).padStart(2, '0')}
           <span className="text-sm text-accent">%</span>
         </div>
-        <div className="mt-1 ml-auto h-1 w-24 overflow-hidden rounded-full bg-white/10">
-          <div
-            className="h-full rounded-full bg-accent transition-[width] duration-300"
-            style={{ width: `${engine}%` }}
-          />
+        <div className="ml-auto mt-1 h-1 w-24 overflow-hidden rounded-full bg-white/10">
+          <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${engine}%` }} />
         </div>
       </div>
 
-      {/* 좌하단: VU 미터(텍스트) */}
+      {/* 좌하단 — VU 미터 */}
       <div className="absolute bottom-4 left-4 font-mono text-[10px] tracking-wider text-white/45 sm:bottom-9 sm:left-9 sm:text-[11px]">
         <div className="text-white/30">VOL · REL</div>
         <div className="mt-1 flex items-end gap-0.5">
-          {Array.from({ length: 14 }).map((_, i) => (
+          {Array.from({ length: 16 }).map((_, i) => (
             <span
               key={i}
               className="w-1 rounded-sm"
               style={{
                 height: `${6 + ((i * 5 + active * 7) % 18)}px`,
-                background:
-                  i < 9 ? 'color-mix(in oklab, var(--color-accent) 80%, transparent)' : 'rgba(255,255,255,0.25)',
+                background: i < 10 ? 'color-mix(in oklab, var(--color-accent) 80%, transparent)' : 'rgba(255,255,255,0.25)',
               }}
             />
           ))}
         </div>
       </div>
 
-      {/* 우하단: 씬 메트릭 */}
+      {/* 우하단 — 씬 메트릭 */}
       <div className="absolute bottom-4 right-4 text-right font-mono text-[10px] tracking-wider text-white/55 sm:bottom-9 sm:right-9 sm:text-[11px]">
         <div className="text-white/30">{scene.metricLabel}</div>
         <div key={`m-${active}`} className="enter-fade-up mt-1 text-xl font-bold tabular-nums text-accent sm:text-2xl">
           {scene.metricValue}
         </div>
+      </div>
+
+      {/* 우측 챕터 레일 */}
+      <div className="absolute right-4 top-1/2 hidden -translate-y-1/2 flex-col items-end gap-3 font-mono text-[10px] tracking-wider lg:flex">
+        {SCENES.map((s, i) => (
+          <div key={s.id} className="flex items-center gap-2">
+            <span className={i === active ? 'text-accent' : 'text-white/35'}>{s.stage}</span>
+            <span
+              className="h-px transition-all duration-300"
+              style={{
+                width: i === active ? 28 : 14,
+                background: i === active ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)',
+              }}
+            />
+            <span
+              className="size-1.5 rounded-full transition-all"
+              style={{ background: i <= active ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)' }}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -334,31 +534,73 @@ function Corner({ className }: { className: string }) {
   return <span className={`absolute size-6 border-white/25 sm:size-8 ${className}`} />;
 }
 
-/* ===================== 아크리액터 + 파형 ===================== */
+/* ===================== 아크리액터 + 스펙트럼 ===================== */
 
-function Reactor({ reduce, accentHot }: { reduce: boolean; accentHot: boolean }) {
+function Reactor({
+  reduce,
+  spin,
+  progress,
+  active,
+}: {
+  reduce: boolean;
+  spin: number;
+  progress: number;
+  active: number;
+}) {
   return (
-    <div className="relative grid size-56 place-items-center sm:size-72">
+    <div className="relative grid size-64 place-items-center sm:size-80">
       {/* 외곽 글로우 */}
       <div
         className="reactor-breathe absolute inset-0 rounded-full"
         style={{
           background:
-            'radial-gradient(closest-side, color-mix(in oklab, var(--color-accent) 30%, transparent), transparent 75%)',
+            'radial-gradient(closest-side, color-mix(in oklab, var(--color-accent) 32%, transparent), transparent 72%)',
         }}
       />
-      {/* 회전 점선 링 (텔레메트리) */}
-      <div className="reactor-spin absolute inset-2 rounded-full border border-dashed border-white/15" />
-      <div className="reactor-spin-rev absolute inset-6 rounded-full border border-white/10" />
-      {/* 눈금 링 */}
-      <div className="reactor-spin absolute inset-0 rounded-full">
-        {Array.from({ length: 48 }).map((_, i) => (
+
+      {/* 라디얼 스펙트럼 (방사형 파형) */}
+      <div className="absolute inset-0" style={{ transform: `rotate(${spin * 0.15}deg)` }}>
+        {RADIAL.map((b, i) => (
           <span
             key={i}
-            className="absolute left-1/2 top-0 h-2 w-px origin-[center_7rem] sm:origin-[center_9rem]"
+            className={reduce ? 'absolute left-1/2 top-1/2' : 'cwave absolute left-1/2 top-1/2'}
+            style={
+              {
+                width: 2,
+                height: b.len,
+                borderRadius: 999,
+                background: 'linear-gradient(to top, transparent, var(--color-accent))',
+                opacity: 0.5 + (active >= 1 ? 0.25 : 0),
+                transformOrigin: 'center -5.4rem',
+                transform: `translate(-50%, -50%) rotate(${b.ang}deg)`,
+                '--eq-dur': `${b.dur}s`,
+                '--eq-delay': `${b.delay}s`,
+              } as CSSProperties
+            }
+          />
+        ))}
+      </div>
+
+      {/* 회전 점선 링 (스크롤 연동) */}
+      <div className="absolute inset-4 rounded-full border border-dashed border-white/15" style={{ transform: `rotate(${spin * 0.6}deg)` }} />
+      <div className="absolute inset-10 rounded-full border border-white/10" style={{ transform: `rotate(${-spin * 0.9}deg)` }} />
+
+      {/* 회전 호(arc) — SVG */}
+      <svg className="absolute inset-2" viewBox="0 0 100 100" style={{ transform: `rotate(${spin}deg)` }} aria-hidden>
+        <circle cx="50" cy="50" r="46" fill="none" stroke="var(--color-accent)" strokeWidth="0.6" strokeDasharray="40 220" opacity="0.6" />
+        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="0.4" strokeDasharray="8 30" />
+      </svg>
+
+      {/* 눈금 링 */}
+      <div className="absolute inset-0" style={{ transform: `rotate(${spin * 0.3}deg)` }}>
+        {Array.from({ length: 60 }).map((_, i) => (
+          <span
+            key={i}
+            className="absolute left-1/2 top-0 w-px origin-[center_8rem] sm:origin-[center_10rem]"
             style={{
-              transform: `rotate(${i * 7.5}deg)`,
-              background: i % 4 === 0 ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)',
+              height: i % 5 === 0 ? 8 : 4,
+              transform: `rotate(${i * 6}deg)`,
+              background: i % 5 === 0 ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)',
             }}
           />
         ))}
@@ -369,23 +611,20 @@ function Reactor({ reduce, accentHot }: { reduce: boolean; accentHot: boolean })
         className="relative grid size-32 place-items-center rounded-full border border-white/10 bg-black/40 backdrop-blur-sm sm:size-40"
         style={{
           boxShadow:
-            '0 0 60px -8px color-mix(in oklab, var(--color-accent) 55%, transparent), inset 0 0 40px -10px color-mix(in oklab, var(--color-accent) 60%, transparent)',
+            '0 0 70px -6px color-mix(in oklab, var(--color-accent) 60%, transparent), inset 0 0 44px -8px color-mix(in oklab, var(--color-accent) 65%, transparent)',
         }}
       >
-        {/* 중앙 라이브 파형 */}
         <div className="flex h-14 items-center gap-[3px] sm:h-16" aria-hidden>
-          {BARS.map((b, i) => (
+          {CBARS.map((b, i) => (
             <span
               key={i}
               className={reduce ? '' : 'cwave'}
               style={
                 {
                   width: 3,
-                  height: `${b.base}%`,
+                  height: `${Math.max(14, b.base + Math.sin(progress * 10 + i) * 16)}%`,
                   borderRadius: 999,
-                  background:
-                    'linear-gradient(to top, var(--color-accent), color-mix(in oklab, var(--color-accent) 40%, white))',
-                  opacity: accentHot ? 1 : 0.85,
+                  background: 'linear-gradient(to top, var(--color-accent), color-mix(in oklab, var(--color-accent) 40%, white))',
                   '--eq-dur': `${b.dur}s`,
                   '--eq-delay': `${b.delay}s`,
                 } as CSSProperties
