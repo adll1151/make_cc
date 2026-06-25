@@ -10,15 +10,15 @@ import { Squares } from '@/components/reactbits/Squares';
 /**
  * 시네마틱 HUD 히어로 — Stark/JARVIS 풍 "음성 HUD".
  *
- * Instagram 릴스(아이언맨 스크롤 시네마틱 포트폴리오)의 연출을 make_cc로 번역:
- *   - 캐릭터 → "목소리를 듣는" 아크리액터 + 라디얼 스펙트럼(주인공)
- *   - 장면 전환 → 워크플로 4씬(듣기→인식→편집→완성)을 스크롤로 스크럽
- *   - 빽빽한 HUD(모서리 브래킷·텔레메트리·크로스헤어·우측 챕터 레일)
- *   - 풀블리드 밀도: 격자 그리드 + 파티클 + 플로팅 텔레메트리 카드 + 자막 스트림
+ * 성능: 연속 모션을 React state에서 분리한다. 스크롤 진행도 p는
+ * rAF 루프에서 이징(easing)으로 부드럽게 따라가며, CSS 변수 `--p`로
+ * 무대(stage)에 직접 주입한다. 장식 레이어들은 calc(var(--p) ...)로
+ * 변형되므로 스크롤마다 재렌더가 일어나지 않는다(버벅임 제거).
+ * 게이지/타임코드도 DOM ref로 직접 갱신한다.
+ * React 재렌더는 "씬 전환(active)" 4회뿐.
  *
- * 화려함을 "모션"이 아닌 "밀도"로 만든다 → 정적(reduced-motion)에서도 풍성.
- * 움직임은 스크롤 진행도(progress)에 연동(JS inline transform)해
- * reduced-motion에서도 스크롤하면 리액터 회전·레이어 시차가 살아난다.
+ * 이 방식은 JS 구동이라 reduced-motion에서도 스크롤 시 부드럽게 움직인다.
+ * CSS 키프레임 루프(파형 들썩·글로우 호흡)만 모션 설정을 존중해 멈춘다.
  */
 
 type Scene = {
@@ -31,7 +31,7 @@ type Scene = {
   sub: string;
   metricLabel: string;
   metricValue: string;
-  caption: string; // 배경 자막 스트림용
+  caption: string;
 };
 
 const SCENES: Scene[] = [
@@ -84,31 +84,27 @@ const SCENES: Scene[] = [
 
 const N = SCENES.length;
 
-// 결정적 의사난수(SSR/CSR 동일) — Math.random 미사용
 const rand = (i: number, s: number) => {
   const x = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453;
   return x - Math.floor(x);
 };
 
-// 파티클 별 (정적 위치 — 밀도용, reduced-motion에서도 보임)
-const DOTS = Array.from({ length: 52 }, (_, i) => ({
+const DOTS = Array.from({ length: 56 }, (_, i) => ({
   x: rand(i, 1) * 100,
   y: rand(i, 2) * 100,
-  s: 0.5 + rand(i, 3) * 2,
+  s: 0.5 + rand(i, 3) * 2.2,
   o: 0.12 + rand(i, 4) * 0.5,
-  tw: 2 + rand(i, 5) * 4, // 트윙클 주기
+  tw: 2 + rand(i, 5) * 4,
   dl: rand(i, 6) * 4,
-  px: 0.4 + rand(i, 7) * 1.6, // 시차 깊이
+  px: 0.4 + rand(i, 7) * 2.2, // 시차 깊이(강화)
 }));
 
-// 중앙 선형 파형
 const CBARS = Array.from({ length: 30 }, (_, i) => ({
   base: 22 + rand(i, 11) * 66,
   dur: 0.7 + rand(i, 12) * 0.7,
   delay: rand(i, 13) * 1.2,
 }));
 
-// 라디얼 스펙트럼 링 (코어 주위로 방사)
 const RADIAL = Array.from({ length: 64 }, (_, i) => ({
   ang: (i / 64) * 360,
   len: 8 + rand(i, 21) * 22,
@@ -116,133 +112,115 @@ const RADIAL = Array.from({ length: 64 }, (_, i) => ({
   delay: rand(i, 23) * 1.4,
 }));
 
-// 플로팅 텔레메트리 카드 (릴스의 풀쿼트 카드 → 우리 도메인)
 const FRAGMENTS = [
-  {
-    pos: 'left-[4%] top-[24%] sm:left-[7%]',
-    px: 1.4,
-    tag: 'TELEMETRY',
-    title: '「영상의 말을, 텍스트로」',
-    meta: 'SAMPLE 48.0kHz · MONO',
-    hideMobile: false,
-  },
-  {
-    pos: 'right-[4%] top-[30%] sm:right-[8%]',
-    px: 1.0,
-    tag: 'MODEL',
-    title: 'Whisper large-v3',
-    meta: 'WER 14.2% · ko-KR',
-    hideMobile: true,
-  },
-  {
-    pos: 'left-[6%] bottom-[20%] sm:left-[11%]',
-    px: 2.0,
-    tag: 'STREAM',
-    title: '자막 큐 정렬 완료',
-    meta: '00:00 → 00:09 · 3 CUES',
-    hideMobile: true,
-  },
-  {
-    pos: 'right-[5%] bottom-[24%] sm:right-[10%]',
-    px: 1.7,
-    tag: 'EXPORT',
-    title: 'SRT · VTT · BURN-IN',
-    meta: 'READY TO SHIP',
-    hideMobile: false,
-  },
+  { pos: 'left-[4%] top-[24%] sm:left-[7%]', px: 2.2, tag: 'TELEMETRY', title: '「영상의 말을, 텍스트로」', meta: 'SAMPLE 48.0kHz · MONO', hideMobile: false },
+  { pos: 'right-[4%] top-[30%] sm:right-[8%]', px: 1.4, tag: 'MODEL', title: 'Whisper large-v3', meta: 'WER 14.2% · ko-KR', hideMobile: true },
+  { pos: 'left-[6%] bottom-[20%] sm:left-[11%]', px: 3.0, tag: 'STREAM', title: '자막 큐 정렬 완료', meta: '00:00 → 00:09 · 3 CUES', hideMobile: true },
+  { pos: 'right-[5%] bottom-[24%] sm:right-[10%]', px: 2.6, tag: 'EXPORT', title: 'SRT · VTT · BURN-IN', meta: 'READY TO SHIP', hideMobile: false },
 ] as const;
 
 const fmtTC = (p: number) => {
-  const total = Math.floor(p * 89); // 0:00 → 1:29
+  const total = Math.floor(p * 89);
   return `0:${String(total % 60).padStart(2, '0')}`;
 };
 
 export function CinematicHero() {
   const sectionRef = useRef<HTMLElement>(null);
-  const [progress, setProgress] = useState(0);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const engNumRef = useRef<HTMLSpanElement>(null);
+  const engBarRef = useRef<HTMLDivElement>(null);
+  const tcRef = useRef<HTMLSpanElement>(null);
+  const [active, setActive] = useState(0);
   const [reduce, setReduce] = useState(false);
 
   useEffect(() => {
     setReduce(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }, []);
 
-  // 스크롤 스크럽 — 사용자 주도이므로 reduced-motion에서도 유지.
+  // rAF 이징 루프 — 스크롤 타깃을 부드럽게 추종. React 재렌더 없이 --p/게이지 갱신.
   useEffect(() => {
     let raf = 0;
-    const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const el = sectionRef.current;
-        if (!el) return;
-        const total = el.offsetHeight - window.innerHeight;
-        const scrolled = Math.min(Math.max(-el.getBoundingClientRect().top, 0), total);
-        setProgress(total > 0 ? scrolled / total : 0);
-      });
+    let running = true;
+    const cur = { p: 0 };
+    let target = 0;
+
+    const measure = () => {
+      const el = sectionRef.current;
+      if (!el) return;
+      const total = el.offsetHeight - window.innerHeight;
+      const scrolled = Math.min(Math.max(-el.getBoundingClientRect().top, 0), total);
+      target = total > 0 ? scrolled / total : 0;
     };
-    onScroll();
+
+    const tick = () => {
+      if (!running) return;
+      cur.p += (target - cur.p) * 0.1; // 이징
+      if (Math.abs(target - cur.p) < 0.0002) cur.p = target;
+      const p = cur.p;
+      stageRef.current?.style.setProperty('--p', p.toFixed(4));
+      const eng = Math.round(p * 99 + 1);
+      if (engNumRef.current) engNumRef.current.textContent = String(eng).padStart(2, '0');
+      if (engBarRef.current) engBarRef.current.style.width = `${eng}%`;
+      if (tcRef.current) tcRef.current.textContent = fmtTC(p);
+      const a = Math.min(N - 1, Math.floor(Math.min(p, 0.999) * N));
+      setActive((prev) => (prev === a ? prev : a));
+      raf = requestAnimationFrame(tick);
+    };
+
+    const onScroll = () => measure();
+    measure();
+    tick();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
     return () => {
+      running = false;
       cancelAnimationFrame(raf);
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
     };
   }, []);
 
-  const fp = Math.min(progress, 0.999) * N;
-  const active = Math.min(N - 1, Math.floor(fp));
   const scene = SCENES[active]!;
-  const engine = Math.round(progress * 99 + 1);
-  const spin = progress * 360; // 스크롤 연동 회전(기준)
 
   return (
-    <section
-      ref={sectionRef}
-      aria-label="make_cc 시네마틱 소개"
-      className="relative"
-      style={{ height: `${N * 100}vh` }}
-    >
-      <div className="sticky top-0 flex h-screen min-h-[640px] items-center justify-center overflow-hidden bg-[#05050a] text-white">
+    <section ref={sectionRef} aria-label="make_cc 시네마틱 소개" className="relative" style={{ height: `${N * 100}vh` }}>
+      <div
+        ref={stageRef}
+        className="sticky top-0 flex h-screen min-h-[640px] items-center justify-center overflow-hidden bg-[#05050a] text-white"
+        style={{ ['--p' as string]: 0 } as CSSProperties}
+      >
         {/* ===================== 배경 밀도 레이어 ===================== */}
         <div className="pointer-events-none absolute inset-0" aria-hidden>
-          {/* 듀얼 컬러 글로우(앰버 + 레드) */}
           <div
             className="absolute -inset-[20%]"
             style={{
-              background:
-                'radial-gradient(38% 38% at 50% 38%, color-mix(in oklab, var(--color-accent) 26%, transparent), transparent 70%)',
-              transform: `translateY(${progress * -30}px)`,
+              background: 'radial-gradient(38% 38% at 50% 38%, color-mix(in oklab, var(--color-accent) 26%, transparent), transparent 70%)',
+              transform: 'translateY(calc(var(--p) * -60px))',
               animation: reduce ? undefined : 'scene-drift 16s ease-in-out infinite',
             }}
           />
           <div
             className="absolute -inset-[20%]"
             style={{
-              background: 'radial-gradient(34% 34% at 74% 76%, oklch(0.52 0.2 18 / 0.3), transparent 72%)',
-              transform: `translateY(${progress * 24}px)`,
+              background: 'radial-gradient(34% 34% at 74% 76%, oklch(0.52 0.2 18 / 0.32), transparent 72%)',
+              transform: 'translateY(calc(var(--p) * 50px))',
               animation: reduce ? undefined : 'scene-drift 22s ease-in-out infinite reverse',
             }}
           />
 
-          {/* 격자 그리드 (정적이어도 보임) — 라디얼 마스크로 가장자리만 */}
+          {/* 격자 그리드 — 시차 */}
           <div
             className="absolute inset-0 opacity-[0.5]"
             style={{
-              maskImage: 'radial-gradient(80% 70% at 50% 45%, transparent 30%, black 90%)',
-              WebkitMaskImage: 'radial-gradient(80% 70% at 50% 45%, transparent 30%, black 90%)',
-              transform: `translateY(${progress * 18}px)`,
+              maskImage: 'radial-gradient(82% 72% at 50% 45%, transparent 28%, black 92%)',
+              WebkitMaskImage: 'radial-gradient(82% 72% at 50% 45%, transparent 28%, black 92%)',
+              transform: 'translateY(calc(var(--p) * 40px))',
             }}
           >
-            <Squares
-              direction="diagonal"
-              speed={0.3}
-              squareSize={48}
-              borderColor="rgba(140,140,160,0.10)"
-              hoverFillColor="rgba(224,168,90,0.06)"
-            />
+            <Squares direction="diagonal" speed={0.3} squareSize={48} borderColor="rgba(140,140,160,0.10)" hoverFillColor="rgba(224,168,90,0.06)" />
           </div>
 
-          {/* 파티클 별 */}
+          {/* 파티클 별 — 시차 강화 */}
           {DOTS.map((d, i) => (
             <span
               key={i}
@@ -255,7 +233,7 @@ export function CinematicHero() {
                   height: d.s,
                   opacity: d.o,
                   boxShadow: '0 0 4px rgba(255,255,255,0.5)',
-                  transform: `translateY(${progress * -40 * d.px}px)`,
+                  transform: `translateY(calc(var(--p) * ${(-90 * d.px).toFixed(1)}px))`,
                   animation: reduce ? undefined : `pulse-glow ${d.tw}s ${d.dl}s ease-in-out infinite`,
                 } as CSSProperties
               }
@@ -265,16 +243,11 @@ export function CinematicHero() {
           {/* 스캔라인 */}
           <div
             className="absolute inset-0 opacity-[0.5] mix-blend-overlay"
-            style={{
-              backgroundImage:
-                'repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)',
-            }}
+            style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)' }}
           />
 
-          {/* 배경 거대 파형 실루엣 */}
-          <BackgroundWave progress={progress} />
+          <BackgroundWave />
 
-          {/* 중앙 텍스트 가독용 비네팅 */}
           <div className="absolute inset-0 shadow-[inset_0_0_240px_70px_rgba(0,0,0,0.85)]" />
           <div
             className="absolute left-1/2 top-1/2 size-[42rem] max-w-[95vw] -translate-x-1/2 -translate-y-1/2 rounded-full"
@@ -286,19 +259,13 @@ export function CinematicHero() {
         {/* ===================== 플로팅 텔레메트리 카드 ===================== */}
         <div className="pointer-events-none absolute inset-0 z-[4]" aria-hidden>
           {FRAGMENTS.map((f, i) => (
-            <div
-              key={i}
-              className={`absolute ${f.pos} ${f.hideMobile ? 'hidden lg:block' : ''}`}
-              style={{ transform: `translateY(${progress * -60 * f.px}px)` }}
-            >
+            <div key={i} className={`absolute ${f.pos} ${f.hideMobile ? 'hidden lg:block' : ''}`} style={{ transform: `translateY(calc(var(--p) * ${(-90 * f.px).toFixed(0)}px))` }}>
               <div className="glass rounded-xl border border-white/10 px-3.5 py-2.5 font-mono shadow-[0_8px_30px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md">
                 <div className="flex items-center gap-1.5 text-[9px] tracking-widest text-accent/90">
                   <span className="size-1 rounded-full bg-accent" />
                   {f.tag}
                 </div>
-                <div className="mt-1 max-w-[12rem] text-[13px] font-semibold tracking-tight text-white/90">
-                  {f.title}
-                </div>
+                <div className="mt-1 max-w-[12rem] text-[13px] font-semibold tracking-tight text-white/90">{f.title}</div>
                 <div className="mt-0.5 text-[10px] tracking-wider text-white/45">{f.meta}</div>
               </div>
             </div>
@@ -306,35 +273,24 @@ export function CinematicHero() {
         </div>
 
         {/* ===================== HUD 프레임 ===================== */}
-        <HudFrame scene={scene} active={active} engine={engine} reduce={reduce} progress={progress} />
+        <HudFrame scene={scene} active={active} reduce={reduce} engNumRef={engNumRef} engBarRef={engBarRef} tcRef={tcRef} />
 
         {/* ===================== 중앙: 리액터 + 헤드라인 ===================== */}
         <div className="relative z-10 flex w-full max-w-4xl flex-col items-center px-6 text-center">
-          <Reactor reduce={reduce} spin={spin} progress={progress} active={active} />
+          <Reactor reduce={reduce} active={active} />
 
-          <div
-            key={`chip-${active}`}
-            className="enter-fade-up mt-9 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs tracking-wider text-white/70 backdrop-blur-sm"
-          >
+          <div key={`chip-${active}`} className="enter-fade-up mt-9 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs tracking-wider text-white/70 backdrop-blur-sm">
             <span className="size-1.5 animate-pulse-glow rounded-full bg-accent" />
             STEP {String(active + 1).padStart(2, '0')} / 0{N} · {scene.stage}
           </div>
 
-          <h1
-            key={`head-${active}`}
-            className="enter-fade-up mt-5 text-balance text-[clamp(2.5rem,8.5vw,6rem)] font-extrabold leading-[0.96] tracking-[-0.04em] [text-shadow:0_2px_40px_rgba(0,0,0,0.5)]"
-          >
+          <h1 key={`head-${active}`} className="enter-fade-up mt-5 text-balance text-[clamp(2.5rem,8.5vw,6rem)] font-extrabold leading-[0.96] tracking-[-0.04em] [text-shadow:0_2px_40px_rgba(0,0,0,0.5)]">
             {scene.head1}{' '}
-            <span className="bg-gradient-to-b from-accent to-[color-mix(in_oklab,var(--color-accent)_55%,white)] bg-clip-text text-transparent">
-              {scene.accent}
-            </span>
+            <span className="bg-gradient-to-b from-accent to-[color-mix(in_oklab,var(--color-accent)_55%,white)] bg-clip-text text-transparent">{scene.accent}</span>
             {scene.head2 ? <> {scene.head2}</> : '.'}
           </h1>
 
-          <p
-            key={`sub-${active}`}
-            className="enter-fade-up mx-auto mt-6 max-w-xl text-balance text-base leading-relaxed text-white/65 sm:text-lg"
-          >
+          <p key={`sub-${active}`} className="enter-fade-up mx-auto mt-6 max-w-xl text-balance text-base leading-relaxed text-white/65 sm:text-lg">
             {scene.sub}
           </p>
 
@@ -349,46 +305,25 @@ export function CinematicHero() {
                 </Button>
               </StarBorder>
             </Magnet>
-            <Button
-              asChild
-              variant="outline"
-              size="xl"
-              className="min-w-40 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-            >
+            <Button asChild variant="outline" size="xl" className="min-w-40 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white">
               <Link href="/demo">데모 보기</Link>
             </Button>
           </div>
 
           <div className="mt-10 flex items-center gap-2" aria-hidden>
             {SCENES.map((s, i) => (
-              <span
-                key={s.id}
-                className="h-1 rounded-full transition-all duration-500"
-                style={{
-                  width: i === active ? 28 : 10,
-                  background: i === active ? 'var(--color-accent)' : 'color-mix(in oklab, white 22%, transparent)',
-                }}
-              />
+              <span key={s.id} className="h-1 rounded-full transition-all duration-500" style={{ width: i === active ? 28 : 10, background: i === active ? 'var(--color-accent)' : 'color-mix(in oklab, white 22%, transparent)' }} />
             ))}
           </div>
         </div>
 
-        {/* 배경 자막 스트림 (하단) */}
+        {/* 배경 자막 스트림 */}
         <div className="pointer-events-none absolute inset-x-0 bottom-24 z-[3] flex justify-center" aria-hidden>
-          <span
-            key={`cap-${active}`}
-            className="enter-fade-up rounded-md bg-black/40 px-3 py-1 font-mono text-[11px] tracking-wider text-white/40 backdrop-blur-sm"
-          >
-            ▸ {scene.caption}
-          </span>
+          <span key={`cap-${active}`} className="enter-fade-up rounded-md bg-black/40 px-3 py-1 font-mono text-[11px] tracking-wider text-white/40 backdrop-blur-sm">▸ {scene.caption}</span>
         </div>
 
         {/* 스크롤 힌트 */}
-        <div
-          className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 transition-opacity duration-500"
-          style={{ opacity: active >= N - 1 ? 0 : 0.6 }}
-          aria-hidden
-        >
+        <div className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2" style={{ opacity: active >= N - 1 ? 0 : 0.6, transition: 'opacity 0.5s' }} aria-hidden>
           <div className="flex flex-col items-center gap-1.5 font-mono text-[10px] tracking-widest text-white/50">
             스크롤 ↓
             <span className="flex h-7 w-4 items-start justify-center rounded-full border border-white/30 p-1">
@@ -401,22 +336,16 @@ export function CinematicHero() {
   );
 }
 
-/* ===================== 배경 거대 파형 ===================== */
+/* ===================== 배경 거대 파형 (정적 + 가로 시프트) ===================== */
 
-function BackgroundWave({ progress }: { progress: number }) {
-  // 가로로 펼쳐진 파형 라인 — progress로 좌우 시프트(스크롤 연동)
-  const pts = Array.from({ length: 60 }, (_, i) => {
-    const y = 50 + Math.sin(i * 0.5 + progress * 6) * (10 + (i % 7)) * (i % 2 ? 1 : -1) * 0.6;
-    return `${(i / 59) * 100},${y}`;
+function BackgroundWave() {
+  const pts = Array.from({ length: 120 }, (_, i) => {
+    const y = 50 + Math.sin(i * 0.5) * (8 + (i % 9)) * (i % 2 ? 1 : -1) * 0.6;
+    return `${(i / 119) * 200 - 50},${y}`;
   }).join(' ');
   return (
-    <svg
-      className="absolute inset-x-0 top-1/2 h-40 w-full -translate-y-1/2 opacity-[0.12]"
-      preserveAspectRatio="none"
-      viewBox="0 0 100 100"
-      aria-hidden
-    >
-      <polyline points={pts} fill="none" stroke="var(--color-accent)" strokeWidth="0.4" vectorEffect="non-scaling-stroke" />
+    <svg className="absolute inset-x-0 top-1/2 h-40 w-full -translate-y-1/2 opacity-[0.12]" preserveAspectRatio="none" viewBox="0 0 100 100" aria-hidden>
+      <polyline points={pts} fill="none" stroke="var(--color-accent)" strokeWidth="0.4" vectorEffect="non-scaling-stroke" style={{ transform: 'translateX(calc(var(--p) * -25px))' }} />
     </svg>
   );
 }
@@ -426,15 +355,17 @@ function BackgroundWave({ progress }: { progress: number }) {
 function HudFrame({
   scene,
   active,
-  engine,
   reduce,
-  progress,
+  engNumRef,
+  engBarRef,
+  tcRef,
 }: {
   scene: Scene;
   active: number;
-  engine: number;
   reduce: boolean;
-  progress: number;
+  engNumRef: React.RefObject<HTMLSpanElement>;
+  engBarRef: React.RefObject<HTMLDivElement>;
+  tcRef: React.RefObject<HTMLSpanElement>;
 }) {
   return (
     <div className="pointer-events-none absolute inset-0 z-[5]" aria-hidden>
@@ -443,7 +374,6 @@ function HudFrame({
       <Corner className="bottom-4 left-4 border-b-2 border-l-2 sm:bottom-7 sm:left-7" />
       <Corner className="bottom-4 right-4 border-b-2 border-r-2 sm:bottom-7 sm:right-7" />
 
-      {/* 중앙 크로스헤어 */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-25">
         <div className="absolute left-1/2 top-0 h-3 w-px -translate-x-1/2 bg-white" />
         <div className="absolute bottom-0 left-1/2 h-3 w-px -translate-x-1/2 bg-white" />
@@ -451,11 +381,8 @@ function HudFrame({
         <div className="absolute right-0 top-1/2 h-px w-3 -translate-y-1/2 bg-white" />
       </div>
 
-      {!reduce && (
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent hud-sweep" />
-      )}
+      {!reduce && <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent hud-sweep" />}
 
-      {/* 좌상단 */}
       <div className="absolute left-4 top-4 font-mono text-[10px] leading-relaxed tracking-wider text-white/55 sm:left-9 sm:top-9 sm:text-[11px]">
         <div className="flex items-center gap-1.5 text-white/80">
           <span className="rounded bg-accent px-1 py-0.5 text-[9px] font-bold text-accent-foreground">CC</span>
@@ -466,63 +393,41 @@ function HudFrame({
           <span className="inline-flex items-center gap-1 text-[oklch(0.62_0.22_18)]">
             <span className="size-1.5 animate-pulse-glow rounded-full bg-[oklch(0.62_0.22_18)]" /> REC
           </span>
-          · {fmtTC(progress)}
+          · <span ref={tcRef}>0:00</span>
         </div>
       </div>
 
-      {/* 우상단 — 엔진 게이지 */}
       <div className="absolute right-4 top-4 text-right font-mono text-[10px] tracking-wider text-white/55 sm:right-9 sm:top-9 sm:text-[11px]">
         <div className="text-white/35">CC ENGINE</div>
         <div className="mt-1 text-2xl font-bold tabular-nums text-white/85 sm:text-3xl">
-          {String(engine).padStart(2, '0')}
+          <span ref={engNumRef}>01</span>
           <span className="text-sm text-accent">%</span>
         </div>
         <div className="ml-auto mt-1 h-1 w-24 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${engine}%` }} />
+          <div ref={engBarRef} className="h-full rounded-full bg-accent" style={{ width: '1%' }} />
         </div>
       </div>
 
-      {/* 좌하단 — VU 미터 */}
       <div className="absolute bottom-4 left-4 font-mono text-[10px] tracking-wider text-white/45 sm:bottom-9 sm:left-9 sm:text-[11px]">
         <div className="text-white/30">VOL · REL</div>
         <div className="mt-1 flex items-end gap-0.5">
           {Array.from({ length: 16 }).map((_, i) => (
-            <span
-              key={i}
-              className="w-1 rounded-sm"
-              style={{
-                height: `${6 + ((i * 5 + active * 7) % 18)}px`,
-                background: i < 10 ? 'color-mix(in oklab, var(--color-accent) 80%, transparent)' : 'rgba(255,255,255,0.25)',
-              }}
-            />
+            <span key={i} className="w-1 rounded-sm" style={{ height: `${6 + ((i * 5 + active * 7) % 18)}px`, background: i < 10 ? 'color-mix(in oklab, var(--color-accent) 80%, transparent)' : 'rgba(255,255,255,0.25)' }} />
           ))}
         </div>
       </div>
 
-      {/* 우하단 — 씬 메트릭 */}
       <div className="absolute bottom-4 right-4 text-right font-mono text-[10px] tracking-wider text-white/55 sm:bottom-9 sm:right-9 sm:text-[11px]">
         <div className="text-white/30">{scene.metricLabel}</div>
-        <div key={`m-${active}`} className="enter-fade-up mt-1 text-xl font-bold tabular-nums text-accent sm:text-2xl">
-          {scene.metricValue}
-        </div>
+        <div key={`m-${active}`} className="enter-fade-up mt-1 text-xl font-bold tabular-nums text-accent sm:text-2xl">{scene.metricValue}</div>
       </div>
 
-      {/* 우측 챕터 레일 */}
       <div className="absolute right-4 top-1/2 hidden -translate-y-1/2 flex-col items-end gap-3 font-mono text-[10px] tracking-wider lg:flex">
         {SCENES.map((s, i) => (
           <div key={s.id} className="flex items-center gap-2">
             <span className={i === active ? 'text-accent' : 'text-white/35'}>{s.stage}</span>
-            <span
-              className="h-px transition-all duration-300"
-              style={{
-                width: i === active ? 28 : 14,
-                background: i === active ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)',
-              }}
-            />
-            <span
-              className="size-1.5 rounded-full transition-all"
-              style={{ background: i <= active ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)' }}
-            />
+            <span className="h-px transition-all duration-300" style={{ width: i === active ? 28 : 14, background: i === active ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)' }} />
+            <span className="size-1.5 rounded-full transition-all" style={{ background: i <= active ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)' }} />
           </div>
         ))}
       </div>
@@ -536,30 +441,30 @@ function Corner({ className }: { className: string }) {
 
 /* ===================== 아크리액터 + 스펙트럼 ===================== */
 
-function Reactor({
-  reduce,
-  spin,
-  progress,
-  active,
-}: {
-  reduce: boolean;
-  spin: number;
-  progress: number;
-  active: number;
-}) {
+function Reactor({ reduce, active }: { reduce: boolean; active: number }) {
   return (
-    <div className="relative grid size-64 place-items-center sm:size-80">
-      {/* 외곽 글로우 */}
-      <div
-        className="reactor-breathe absolute inset-0 rounded-full"
-        style={{
-          background:
-            'radial-gradient(closest-side, color-mix(in oklab, var(--color-accent) 32%, transparent), transparent 72%)',
-        }}
-      />
+    <div className="relative grid size-64 place-items-center sm:size-80" style={{ transform: 'scale(calc(1 + var(--p) * 0.14))' }}>
+      <div className="reactor-breathe absolute inset-0 rounded-full" style={{ background: 'radial-gradient(closest-side, color-mix(in oklab, var(--color-accent) 32%, transparent), transparent 72%)' }} />
 
-      {/* 라디얼 스펙트럼 (방사형 파형) */}
-      <div className="absolute inset-0" style={{ transform: `rotate(${spin * 0.15}deg)` }}>
+      {/* 진행 링 — 스크롤 0→100% 차오름(가장 또렷한 변화 신호) */}
+      <svg className="absolute inset-0 -rotate-90" viewBox="0 0 100 100" aria-hidden>
+        <circle cx="50" cy="50" r="47" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.8" />
+        <circle
+          cx="50"
+          cy="50"
+          r="47"
+          fill="none"
+          stroke="var(--color-accent)"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+          pathLength={1}
+          strokeDasharray={1}
+          style={{ strokeDashoffset: 'calc(1 - var(--p))', filter: 'drop-shadow(0 0 4px color-mix(in oklab, var(--color-accent) 70%, transparent))' }}
+        />
+      </svg>
+
+      {/* 라디얼 스펙트럼 — 스크롤 연동 회전(강화) */}
+      <div className="absolute inset-0" style={{ transform: 'rotate(calc(var(--p) * 140deg))' }}>
         {RADIAL.map((b, i) => (
           <span
             key={i}
@@ -571,7 +476,7 @@ function Reactor({
                 borderRadius: 999,
                 background: 'linear-gradient(to top, transparent, var(--color-accent))',
                 opacity: 0.5 + (active >= 1 ? 0.25 : 0),
-                transformOrigin: 'center -5.4rem',
+                transformOrigin: 'center -5.6rem',
                 transform: `translate(-50%, -50%) rotate(${b.ang}deg)`,
                 '--eq-dur': `${b.dur}s`,
                 '--eq-delay': `${b.delay}s`,
@@ -581,39 +486,21 @@ function Reactor({
         ))}
       </div>
 
-      {/* 회전 점선 링 (스크롤 연동) */}
-      <div className="absolute inset-4 rounded-full border border-dashed border-white/15" style={{ transform: `rotate(${spin * 0.6}deg)` }} />
-      <div className="absolute inset-10 rounded-full border border-white/10" style={{ transform: `rotate(${-spin * 0.9}deg)` }} />
+      <div className="absolute inset-4 rounded-full border border-dashed border-white/15" style={{ transform: 'rotate(calc(var(--p) * 300deg))' }} />
+      <div className="absolute inset-10 rounded-full border border-white/10" style={{ transform: 'rotate(calc(var(--p) * -420deg))' }} />
 
-      {/* 회전 호(arc) — SVG */}
-      <svg className="absolute inset-2" viewBox="0 0 100 100" style={{ transform: `rotate(${spin}deg)` }} aria-hidden>
-        <circle cx="50" cy="50" r="46" fill="none" stroke="var(--color-accent)" strokeWidth="0.6" strokeDasharray="40 220" opacity="0.6" />
-        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="0.4" strokeDasharray="8 30" />
+      <svg className="absolute inset-2" viewBox="0 0 100 100" style={{ transform: 'rotate(calc(var(--p) * 540deg))' }} aria-hidden>
+        <circle cx="50" cy="50" r="44" fill="none" stroke="var(--color-accent)" strokeWidth="0.6" strokeDasharray="40 220" opacity="0.6" />
+        <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="0.4" strokeDasharray="8 30" />
       </svg>
 
-      {/* 눈금 링 */}
-      <div className="absolute inset-0" style={{ transform: `rotate(${spin * 0.3}deg)` }}>
+      <div className="absolute inset-0" style={{ transform: 'rotate(calc(var(--p) * 220deg))' }}>
         {Array.from({ length: 60 }).map((_, i) => (
-          <span
-            key={i}
-            className="absolute left-1/2 top-0 w-px origin-[center_8rem] sm:origin-[center_10rem]"
-            style={{
-              height: i % 5 === 0 ? 8 : 4,
-              transform: `rotate(${i * 6}deg)`,
-              background: i % 5 === 0 ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)',
-            }}
-          />
+          <span key={i} className="absolute left-1/2 top-0 w-px origin-[center_8rem] sm:origin-[center_10rem]" style={{ height: i % 5 === 0 ? 8 : 4, transform: `rotate(${i * 6}deg)`, background: i % 5 === 0 ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)' }} />
         ))}
       </div>
 
-      {/* 코어 디스크 */}
-      <div
-        className="relative grid size-32 place-items-center rounded-full border border-white/10 bg-black/40 backdrop-blur-sm sm:size-40"
-        style={{
-          boxShadow:
-            '0 0 70px -6px color-mix(in oklab, var(--color-accent) 60%, transparent), inset 0 0 44px -8px color-mix(in oklab, var(--color-accent) 65%, transparent)',
-        }}
-      >
+      <div className="relative grid size-32 place-items-center rounded-full border border-white/10 bg-black/40 backdrop-blur-sm sm:size-40" style={{ boxShadow: '0 0 70px -6px color-mix(in oklab, var(--color-accent) 60%, transparent), inset 0 0 44px -8px color-mix(in oklab, var(--color-accent) 65%, transparent)' }}>
         <div className="flex h-14 items-center gap-[3px] sm:h-16" aria-hidden>
           {CBARS.map((b, i) => (
             <span
@@ -622,7 +509,7 @@ function Reactor({
               style={
                 {
                   width: 3,
-                  height: `${Math.max(14, b.base + Math.sin(progress * 10 + i) * 16)}%`,
+                  height: `${b.base}%`,
                   borderRadius: 999,
                   background: 'linear-gradient(to top, var(--color-accent), color-mix(in oklab, var(--color-accent) 40%, white))',
                   '--eq-dur': `${b.dur}s`,
