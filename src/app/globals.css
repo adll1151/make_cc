@@ -568,6 +568,30 @@
   0%, 100% { transform: translate(0, 0) scale(1); }
   50% { transform: translate(10%, -8%) scale(1.18); }
 }
+/* ===== HUD 시네마틱 히어로 (Stark/JARVIS 풍 — 음성 HUD) ===== */
+/* 아크리액터 코어 — 천천히 숨쉬는 글로우 */
+@keyframes reactor-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+/* 리액터 외곽 링 — 느리게 회전(점선 텔레메트리 링) */
+@keyframes reactor-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes reactor-spin-rev {
+  to { transform: rotate(-360deg); }
+}
+/* HUD 스캔 라인 — 위→아래로 화면을 훑음 */
+@keyframes hud-sweep {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10%, 90% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+/* HUD 라벨 깜빡임(아주 미세) */
+@keyframes hud-flicker {
+  0%, 97%, 100% { opacity: 0.85; }
+  98% { opacity: 0.4; }
+}
 /* React Bits — StarBorder / GradientText / ShinyText */
 @keyframes star-move-bottom {
   0% { transform: translate(0, 0); opacity: 1; }
@@ -650,6 +674,23 @@
   .pwave {
     transform-origin: bottom;
     animation: eqwave var(--eq-dur, 0.8s) ease-in-out var(--eq-delay, 0s) infinite alternate;
+  }
+  /* HUD 히어로 유틸 */
+  .reactor-breathe { animation: reactor-breathe 4.5s ease-in-out infinite; }
+  .reactor-spin { animation: reactor-spin 22s linear infinite; }
+  .reactor-spin-rev { animation: reactor-spin-rev 32s linear infinite; }
+  .hud-sweep { animation: hud-sweep 6s var(--ease-smooth) infinite; }
+  .hud-flicker { animation: hud-flicker 5s steps(1) infinite; }
+  /* 중앙 파형 바 — 항상 살아있는 오디오 코어(컨테이너 hover 불필요) */
+  .cwave {
+    transform-origin: center;
+    animation: eqwave var(--eq-dur, 0.9s) ease-in-out var(--eq-delay, 0s) infinite alternate;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reactor-breathe, .reactor-spin, .reactor-spin-rev, .hud-sweep,
+    .hud-flicker, .cwave {
+      animation: none !important;
+    }
   }
 
   /* 포인터 패럴럭스 깊이 레이어 — Parallax 컨테이너의 --px/--py를 받아 서로 다른 깊이로 이동 */

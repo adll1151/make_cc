@@ -3,13 +3,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { FloatingNav } from '@/components/ui/floating-nav';
 import { EditorShowcase } from '@/components/landing/EditorShowcase';
+import { CinematicHero } from '@/components/landing/CinematicHero';
 import { BlurText } from '@/components/reactbits/BlurText';
 import { CountUp } from '@/components/reactbits/CountUp';
 import { ScrollVelocity } from '@/components/reactbits/ScrollVelocity';
 import { Magnet } from '@/components/reactbits/Magnet';
 import { ShinyText } from '@/components/reactbits/ShinyText';
-import { GradientText } from '@/components/reactbits/GradientText';
-import { StarBorder } from '@/components/reactbits/StarBorder';
 import { SpotlightCard } from '@/components/reactbits/SpotlightCard';
 import { BackgroundGradientAnimation } from '@/components/reactbits/BackgroundGradientAnimation';
 
@@ -23,64 +22,14 @@ export default function LandingPage() {
 
       <FloatingNav />
 
-      {/* ============ HERO ============ */}
-      <section className="relative isolate mx-auto max-w-5xl px-6 pt-36 pb-16 text-center sm:pt-44">
-        <div
-          className="animate-breathe pointer-events-none absolute left-1/2 top-28 -z-10 size-[34rem] max-w-[90vw] rounded-full"
-          aria-hidden
-          style={{
-            background:
-              'radial-gradient(closest-side, color-mix(in oklab, var(--color-accent) 13%, transparent), transparent)',
-          }}
-        />
-        <div className="enter-stagger">
-          <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-sm text-muted-foreground">
-            <span className="size-1.5 animate-pulse-glow rounded-full bg-accent" />
-            한국어 음성 → SRT 자막, 5분 안에
-          </div>
-
-          <h1 className="text-[clamp(3rem,11vw,8rem)] font-extrabold leading-[0.95] tracking-[-0.04em]">
-            <span className="flex flex-wrap justify-center">
-              <BlurText text="영상의 말을," />
-            </span>
-            <span className="flex flex-wrap items-baseline justify-center">
-              <GradientText className="accent-underline" speed={5}>자막</GradientText>
-              <BlurText text="으로." delayStart={260} />
-            </span>
-          </h1>
-
-          <p className="mx-auto mt-7 max-w-xl text-balance text-lg leading-relaxed text-muted-foreground sm:text-xl">
-            한국어 음성을 인식해 켜고 끌 수 있는{' '}
-            <strong className="font-semibold text-foreground">SRT 자막</strong>을 자동으로. 설치·로그인
-            없이 브라우저에서 편집·다운로드·공유까지.
-          </p>
-
-          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Magnet padding={70} magnetStrength={4}>
-              <StarBorder>
-                <Button asChild size="xl" className="group min-w-48 rounded-full">
-                  <Link href="/upload">
-                    무료로 시작하기
-                    <ArrowIcon className="transition-transform group-hover:translate-x-0.5" />
-                  </Link>
-                </Button>
-              </StarBorder>
-            </Magnet>
-            <Magnet padding={70} magnetStrength={4}>
-              <Button asChild variant="outline" size="xl" className="min-w-40 rounded-full">
-                <Link href="/demo">데모 보기</Link>
-              </Button>
-            </Magnet>
-          </div>
-
-          <p className="mt-5 text-sm text-muted-foreground">
-            무료 체험 · 카드 등록 불필요 · 처리 후 자동 삭제
-          </p>
-        </div>
-      </section>
+      {/* ============ HERO — 시네마틱 HUD (스크롤 시네마틱) ============ */}
+      <CinematicHero />
 
       {/* ============ 제품 쇼케이스 ============ */}
-      <section className="mx-auto max-w-5xl px-6 pb-16">
+      <section className="mx-auto max-w-5xl px-6 pt-16 pb-16">
+        <p className="mb-5 text-center text-sm text-muted-foreground">
+          무료 체험 · 카드 등록 불필요 · 처리 후 자동 삭제
+        </p>
         <div className="scroll-pop">
           <EditorShowcase />
         </div>
