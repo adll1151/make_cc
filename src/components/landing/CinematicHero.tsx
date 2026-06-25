@@ -84,6 +84,10 @@ const SCENES: Scene[] = [
 
 const N = SCENES.length;
 
+// 씬별 강조 색조(OKLCH hue) — 듣기=앰버, 인식=시안, 편집=바이올렛, 완성=그린.
+// rAF에서 보간되어 화면 전체(글로우·리액터·헤드라인)가 씬마다 다른 색으로 전환.
+const HUES = [62, 205, 288, 152];
+
 const rand = (i: number, s: number) => {
   const x = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453;
   return x - Math.floor(x);
@@ -157,7 +161,21 @@ export function CinematicHero() {
       cur.p += (target - cur.p) * 0.1; // 이징
       if (Math.abs(target - cur.p) < 0.0002) cur.p = target;
       const p = cur.p;
-      stageRef.current?.style.setProperty('--p', p.toFixed(4));
+      const st = stageRef.current;
+      if (st) {
+        st.style.setProperty('--p', p.toFixed(4));
+        const fp = Math.min(p, 0.999) * N;
+        // 씬별 강조 색조(hue) 보간 → 화면 전체가 씬마다 다른 색으로
+        const seg = Math.min(N - 1, Math.floor(fp));
+        const frac = Math.min(1, Math.max(0, fp - seg));
+        const h = HUES[seg]! + (HUES[Math.min(N - 1, seg + 1)]! - HUES[seg]!) * frac;
+        st.style.setProperty('--sa-h', h.toFixed(1));
+        // 코어 모티프 크로스페이드 가중치(삼각 피크) → 씬마다 코어 비주얼 자체가 변신
+        const mfp = Math.min(fp, N - 1);
+        for (let i = 0; i < N; i++) {
+          st.style.setProperty(`--m${i}`, Math.max(0, 1 - Math.abs(mfp - i)).toFixed(3));
+        }
+      }
       const eng = Math.round(p * 99 + 1);
       if (engNumRef.current) engNumRef.current.textContent = String(eng).padStart(2, '0');
       if (engBarRef.current) engBarRef.current.style.width = `${eng}%`;
@@ -187,14 +205,24 @@ export function CinematicHero() {
       <div
         ref={stageRef}
         className="sticky top-0 flex h-screen min-h-[640px] items-center justify-center overflow-hidden bg-[#05050a] text-white"
-        style={{ ['--p' as string]: 0 } as CSSProperties}
+        style={
+          {
+            ['--p']: 0,
+            ['--sa-h']: 62,
+            ['--sa']: 'oklch(0.78 0.15 var(--sa-h))',
+            ['--m0']: 1,
+            ['--m1']: 0,
+            ['--m2']: 0,
+            ['--m3']: 0,
+          } as CSSProperties
+        }
       >
         {/* ===================== 배경 밀도 레이어 ===================== */}
         <div className="pointer-events-none absolute inset-0" aria-hidden>
           <div
             className="absolute -inset-[20%]"
             style={{
-              background: 'radial-gradient(38% 38% at 50% 38%, color-mix(in oklab, var(--color-accent) 26%, transparent), transparent 70%)',
+              background: 'radial-gradient(38% 38% at 50% 38%, color-mix(in oklab, var(--sa) 28%, transparent), transparent 70%)',
               transform: 'translateY(calc(var(--p) * -60px))',
               animation: reduce ? undefined : 'scene-drift 16s ease-in-out infinite',
             }}
@@ -280,13 +308,13 @@ export function CinematicHero() {
           <Reactor reduce={reduce} active={active} />
 
           <div key={`chip-${active}`} className="enter-fade-up mt-9 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs tracking-wider text-white/70 backdrop-blur-sm">
-            <span className="size-1.5 animate-pulse-glow rounded-full bg-accent" />
+            <span className="size-1.5 animate-pulse-glow rounded-full" style={{ background: 'var(--sa)' }} />
             STEP {String(active + 1).padStart(2, '0')} / 0{N} · {scene.stage}
           </div>
 
           <h1 key={`head-${active}`} className="enter-fade-up mt-5 text-balance text-[clamp(2.5rem,8.5vw,6rem)] font-extrabold leading-[0.96] tracking-[-0.04em] [text-shadow:0_2px_40px_rgba(0,0,0,0.5)]">
             {scene.head1}{' '}
-            <span className="bg-gradient-to-b from-accent to-[color-mix(in_oklab,var(--color-accent)_55%,white)] bg-clip-text text-transparent">{scene.accent}</span>
+            <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(to bottom, var(--sa), color-mix(in oklab, var(--sa) 55%, white))' }}>{scene.accent}</span>
             {scene.head2 ? <> {scene.head2}</> : '.'}
           </h1>
 
@@ -312,7 +340,7 @@ export function CinematicHero() {
 
           <div className="mt-10 flex items-center gap-2" aria-hidden>
             {SCENES.map((s, i) => (
-              <span key={s.id} className="h-1 rounded-full transition-all duration-500" style={{ width: i === active ? 28 : 10, background: i === active ? 'var(--color-accent)' : 'color-mix(in oklab, white 22%, transparent)' }} />
+              <span key={s.id} className="h-1 rounded-full transition-all duration-500" style={{ width: i === active ? 28 : 10, background: i === active ? 'var(--sa)' : 'color-mix(in oklab, white 22%, transparent)' }} />
             ))}
           </div>
         </div>
@@ -345,7 +373,7 @@ function BackgroundWave() {
   }).join(' ');
   return (
     <svg className="absolute inset-x-0 top-1/2 h-40 w-full -translate-y-1/2 opacity-[0.12]" preserveAspectRatio="none" viewBox="0 0 100 100" aria-hidden>
-      <polyline points={pts} fill="none" stroke="var(--color-accent)" strokeWidth="0.4" vectorEffect="non-scaling-stroke" style={{ transform: 'translateX(calc(var(--p) * -25px))' }} />
+      <polyline points={pts} fill="none" stroke="var(--sa)" strokeWidth="0.4" vectorEffect="non-scaling-stroke" style={{ transform: 'translateX(calc(var(--p) * -25px))' }} />
     </svg>
   );
 }
@@ -401,10 +429,10 @@ function HudFrame({
         <div className="text-white/35">CC ENGINE</div>
         <div className="mt-1 text-2xl font-bold tabular-nums text-white/85 sm:text-3xl">
           <span ref={engNumRef}>01</span>
-          <span className="text-sm text-accent">%</span>
+          <span className="text-sm" style={{ color: 'var(--sa)' }}>%</span>
         </div>
         <div className="ml-auto mt-1 h-1 w-24 overflow-hidden rounded-full bg-white/10">
-          <div ref={engBarRef} className="h-full rounded-full bg-accent" style={{ width: '1%' }} />
+          <div ref={engBarRef} className="h-full rounded-full" style={{ width: '1%', background: 'var(--sa)' }} />
         </div>
       </div>
 
@@ -412,22 +440,22 @@ function HudFrame({
         <div className="text-white/30">VOL · REL</div>
         <div className="mt-1 flex items-end gap-0.5">
           {Array.from({ length: 16 }).map((_, i) => (
-            <span key={i} className="w-1 rounded-sm" style={{ height: `${6 + ((i * 5 + active * 7) % 18)}px`, background: i < 10 ? 'color-mix(in oklab, var(--color-accent) 80%, transparent)' : 'rgba(255,255,255,0.25)' }} />
+            <span key={i} className="w-1 rounded-sm" style={{ height: `${6 + ((i * 5 + active * 7) % 18)}px`, background: i < 10 ? 'color-mix(in oklab, var(--sa) 80%, transparent)' : 'rgba(255,255,255,0.25)' }} />
           ))}
         </div>
       </div>
 
       <div className="absolute bottom-4 right-4 text-right font-mono text-[10px] tracking-wider text-white/55 sm:bottom-9 sm:right-9 sm:text-[11px]">
         <div className="text-white/30">{scene.metricLabel}</div>
-        <div key={`m-${active}`} className="enter-fade-up mt-1 text-xl font-bold tabular-nums text-accent sm:text-2xl">{scene.metricValue}</div>
+        <div key={`m-${active}`} className="enter-fade-up mt-1 text-xl font-bold tabular-nums sm:text-2xl" style={{ color: 'var(--sa)' }}>{scene.metricValue}</div>
       </div>
 
       <div className="absolute right-4 top-1/2 hidden -translate-y-1/2 flex-col items-end gap-3 font-mono text-[10px] tracking-wider lg:flex">
         {SCENES.map((s, i) => (
           <div key={s.id} className="flex items-center gap-2">
-            <span className={i === active ? 'text-accent' : 'text-white/35'}>{s.stage}</span>
-            <span className="h-px transition-all duration-300" style={{ width: i === active ? 28 : 14, background: i === active ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)' }} />
-            <span className="size-1.5 rounded-full transition-all" style={{ background: i <= active ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)' }} />
+            <span className={i === active ? '' : 'text-white/35'} style={i === active ? { color: 'var(--sa)' } : undefined}>{s.stage}</span>
+            <span className="h-px transition-all duration-300" style={{ width: i === active ? 28 : 14, background: i === active ? 'var(--sa)' : 'rgba(255,255,255,0.2)' }} />
+            <span className="size-1.5 rounded-full transition-all" style={{ background: i <= active ? 'var(--sa)' : 'rgba(255,255,255,0.2)' }} />
           </div>
         ))}
       </div>
@@ -444,7 +472,7 @@ function Corner({ className }: { className: string }) {
 function Reactor({ reduce, active }: { reduce: boolean; active: number }) {
   return (
     <div className="relative grid size-64 place-items-center sm:size-80" style={{ transform: 'scale(calc(1 + var(--p) * 0.14))' }}>
-      <div className="reactor-breathe absolute inset-0 rounded-full" style={{ background: 'radial-gradient(closest-side, color-mix(in oklab, var(--color-accent) 32%, transparent), transparent 72%)' }} />
+      <div className="reactor-breathe absolute inset-0 rounded-full" style={{ background: 'radial-gradient(closest-side, color-mix(in oklab, var(--sa) 34%, transparent), transparent 72%)' }} />
 
       {/* 진행 링 — 스크롤 0→100% 차오름(가장 또렷한 변화 신호) */}
       <svg className="absolute inset-0 -rotate-90" viewBox="0 0 100 100" aria-hidden>
@@ -454,12 +482,12 @@ function Reactor({ reduce, active }: { reduce: boolean; active: number }) {
           cy="50"
           r="47"
           fill="none"
-          stroke="var(--color-accent)"
+          stroke="var(--sa)"
           strokeWidth="1.2"
           strokeLinecap="round"
           pathLength={1}
           strokeDasharray={1}
-          style={{ strokeDashoffset: 'calc(1 - var(--p))', filter: 'drop-shadow(0 0 4px color-mix(in oklab, var(--color-accent) 70%, transparent))' }}
+          style={{ strokeDashoffset: 'calc(1 - var(--p))', filter: 'drop-shadow(0 0 4px color-mix(in oklab, var(--sa) 70%, transparent))' }}
         />
       </svg>
 
@@ -474,7 +502,7 @@ function Reactor({ reduce, active }: { reduce: boolean; active: number }) {
                 width: 2,
                 height: b.len,
                 borderRadius: 999,
-                background: 'linear-gradient(to top, transparent, var(--color-accent))',
+                background: 'linear-gradient(to top, transparent, var(--sa))',
                 opacity: 0.5 + (active >= 1 ? 0.25 : 0),
                 transformOrigin: 'center -5.6rem',
                 transform: `translate(-50%, -50%) rotate(${b.ang}deg)`,
@@ -490,7 +518,7 @@ function Reactor({ reduce, active }: { reduce: boolean; active: number }) {
       <div className="absolute inset-10 rounded-full border border-white/10" style={{ transform: 'rotate(calc(var(--p) * -420deg))' }} />
 
       <svg className="absolute inset-2" viewBox="0 0 100 100" style={{ transform: 'rotate(calc(var(--p) * 540deg))' }} aria-hidden>
-        <circle cx="50" cy="50" r="44" fill="none" stroke="var(--color-accent)" strokeWidth="0.6" strokeDasharray="40 220" opacity="0.6" />
+        <circle cx="50" cy="50" r="44" fill="none" stroke="var(--sa)" strokeWidth="0.6" strokeDasharray="40 220" opacity="0.6" />
         <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="0.4" strokeDasharray="8 30" />
       </svg>
 
@@ -500,26 +528,88 @@ function Reactor({ reduce, active }: { reduce: boolean; active: number }) {
         ))}
       </div>
 
-      <div className="relative grid size-32 place-items-center rounded-full border border-white/10 bg-black/40 backdrop-blur-sm sm:size-40" style={{ boxShadow: '0 0 70px -6px color-mix(in oklab, var(--color-accent) 60%, transparent), inset 0 0 44px -8px color-mix(in oklab, var(--color-accent) 65%, transparent)' }}>
-        <div className="flex h-14 items-center gap-[3px] sm:h-16" aria-hidden>
-          {CBARS.map((b, i) => (
-            <span
-              key={i}
-              className={reduce ? '' : 'cwave'}
-              style={
-                {
-                  width: 3,
-                  height: `${b.base}%`,
-                  borderRadius: 999,
-                  background: 'linear-gradient(to top, var(--color-accent), color-mix(in oklab, var(--color-accent) 40%, white))',
-                  '--eq-dur': `${b.dur}s`,
-                  '--eq-delay': `${b.delay}s`,
-                } as CSSProperties
-              }
-            />
-          ))}
-        </div>
+      {/* 코어 — 씬마다 비주얼 자체가 변신(파형 → 자막생성 → 큐편집 → SRT완성). --m0..3로 크로스페이드 */}
+      <div
+        className="relative grid size-32 place-items-center overflow-hidden rounded-full border border-white/10 bg-black/40 backdrop-blur-sm sm:size-40"
+        style={{ boxShadow: '0 0 70px -6px color-mix(in oklab, var(--sa) 60%, transparent), inset 0 0 44px -8px color-mix(in oklab, var(--sa) 65%, transparent)' }}
+      >
+        {/* M0 듣기 — 라이브 파형 */}
+        <Motif idx={0}>
+          <div className="flex h-14 items-center gap-[3px] sm:h-16">
+            {CBARS.map((b, i) => (
+              <span
+                key={i}
+                className={reduce ? '' : 'cwave'}
+                style={
+                  {
+                    width: 3,
+                    height: `${b.base}%`,
+                    borderRadius: 999,
+                    background: 'linear-gradient(to top, var(--sa), color-mix(in oklab, var(--sa) 40%, white))',
+                    '--eq-dur': `${b.dur}s`,
+                    '--eq-delay': `${b.delay}s`,
+                  } as CSSProperties
+                }
+              />
+            ))}
+          </div>
+        </Motif>
+
+        {/* M1 인식 — 자막 텍스트 생성 */}
+        <Motif idx={1}>
+          <div className="flex flex-col items-center gap-1 px-2 text-center font-mono text-[8px] leading-tight sm:text-[10px]">
+            <span className="text-white/40">안녕하세요</span>
+            <span className="font-semibold" style={{ color: 'var(--sa)' }}>영상의 목소리를</span>
+            <span className="inline-flex items-center gap-1 text-white/40">
+              자막으로<span className="inline-block h-2.5 w-px animate-pulse-glow" style={{ background: 'var(--sa)' }} />
+            </span>
+          </div>
+        </Motif>
+
+        {/* M2 편집 — 큐 행 편집 */}
+        <Motif idx={2}>
+          <div className="flex w-[82%] flex-col gap-1">
+            {[
+              { t: '00:00', x: '안녕하세요', on: false },
+              { t: '00:03', x: '영상의 음성을', on: true },
+              { t: '00:06', x: '자막으로', on: false },
+            ].map((r) => (
+              <div
+                key={r.t}
+                className="flex items-center gap-1 rounded border px-1.5 py-1"
+                style={{
+                  borderColor: r.on ? 'color-mix(in oklab, var(--sa) 55%, transparent)' : 'rgba(255,255,255,0.1)',
+                  background: r.on ? 'color-mix(in oklab, var(--sa) 14%, transparent)' : 'rgba(255,255,255,0.04)',
+                }}
+              >
+                <span className="font-mono text-[7px] text-white/40 sm:text-[8px]">{r.t}</span>
+                <span className="truncate text-[8px] text-white/80 sm:text-[9px]">{r.x}</span>
+              </div>
+            ))}
+          </div>
+        </Motif>
+
+        {/* M3 완성 — SRT 완료 */}
+        <Motif idx={3}>
+          <div className="flex flex-col items-center gap-2">
+            <span className="grid size-9 place-items-center rounded-full sm:size-10" style={{ background: 'var(--sa)' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#05050a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+            </span>
+            <span className="font-mono text-[10px] font-bold tracking-[0.2em]" style={{ color: 'var(--sa)' }}>SRT</span>
+          </div>
+        </Motif>
       </div>
+    </div>
+  );
+}
+
+/** 코어 모티프 레이어 — rAF가 설정한 --m{idx} 가중치로 크로스페이드(reduced-motion에서도 부드럽게). */
+function Motif({ idx, children }: { idx: number; children: React.ReactNode }) {
+  return (
+    <div className="absolute inset-0 grid place-items-center" style={{ opacity: `var(--m${idx})` }} aria-hidden>
+      {children}
     </div>
   );
 }

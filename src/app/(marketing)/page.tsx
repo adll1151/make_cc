@@ -9,6 +9,7 @@ import { CountUp } from '@/components/reactbits/CountUp';
 import { ScrollVelocity } from '@/components/reactbits/ScrollVelocity';
 import { Magnet } from '@/components/reactbits/Magnet';
 import { ShinyText } from '@/components/reactbits/ShinyText';
+import { StarBorder } from '@/components/reactbits/StarBorder';
 import { SpotlightCard } from '@/components/reactbits/SpotlightCard';
 import { BackgroundGradientAnimation } from '@/components/reactbits/BackgroundGradientAnimation';
 
@@ -175,43 +176,99 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ CTA ============ */}
-      <section className="mx-auto max-w-5xl px-6 pb-32">
-        <div className="scroll-pop rounded-3xl border border-border bg-card px-6 py-16 text-center sm:py-20">
-          <h2 className="text-4xl font-extrabold tracking-[-0.03em] sm:text-6xl">
-            지금 <span className="text-accent">자막</span> 만들기
-          </h2>
-          <p className="mx-auto mt-4 max-w-md text-muted-foreground">
-            영상 하나면 됩니다. 5분 안에 결과를 받아보세요.
-          </p>
-          <div className="mt-8 flex justify-center">
-            <Magnet padding={70} magnetStrength={4}>
-              <Button asChild size="xl" className="group">
-                <Link href="/upload">
-                  영상 업로드 시작
-                  <ArrowIcon className="transition-transform group-hover:translate-x-0.5" />
-                </Link>
+      {/* 라이트 본문 → 다크 마무리 전환 브리지 (히어로 진입의 역방향, 수미상관) */}
+      <div aria-hidden className="h-20 bg-gradient-to-b from-transparent to-[#05050a] sm:h-28" />
+
+      {/* ============ CTA — 다크 시네마틱 마무리 ============ */}
+      <section className="bg-[#05050a] text-white">
+        <div className="mx-auto max-w-5xl px-6 pb-20 sm:pb-28">
+          <div className="scroll-pop relative overflow-hidden rounded-3xl border border-white/10 bg-[#07070b] px-6 py-16 text-center shadow-[0_30px_90px_-30px_rgba(0,0,0,0.85)] sm:py-20">
+            {/* 배경 밀도 — 히어로 결 */}
+            <div className="pointer-events-none absolute inset-0" aria-hidden>
+              <div
+                className="animate-breathe absolute left-1/2 top-1/4 size-[32rem] max-w-[88%] -translate-x-1/2 rounded-full"
+                style={{ background: 'radial-gradient(closest-side, color-mix(in oklab, var(--color-accent) 20%, transparent), transparent 70%)' }}
+              />
+              <div
+                className="absolute inset-0 opacity-40 mix-blend-overlay"
+                style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)' }}
+              />
+              <div className="grain-overlay !absolute opacity-[0.06]" />
+            </div>
+            <HudCorners color="border-white/25" />
+
+            <p className="relative flex items-center justify-center gap-2 font-mono text-xs uppercase tracking-[0.25em] text-white/50">
+              <span className="size-1.5 animate-pulse-glow rounded-full bg-accent" />
+              {'// MAKE_CC ENGINE · READY'}
+            </p>
+
+            {/* 미니 라이브 파형 */}
+            <div className="relative mx-auto mt-6 flex h-8 w-fit items-center gap-1" aria-hidden>
+              {CTA_BARS.map((b, i) => (
+                <span
+                  key={i}
+                  className="pwave w-1 rounded-full bg-gradient-to-t from-[var(--color-accent)] to-[color-mix(in_oklab,var(--color-accent)_40%,white)]"
+                  style={{ height: `${b.h}%`, '--eq-dur': `${b.d}s`, '--eq-delay': `${b.dl}s` } as CSSProperties}
+                />
+              ))}
+            </div>
+
+            <h2 className="relative mt-6 text-4xl font-extrabold tracking-[-0.03em] sm:text-6xl">
+              지금{' '}
+              <span className="bg-gradient-to-b from-accent to-[color-mix(in_oklab,var(--color-accent)_55%,white)] bg-clip-text text-transparent">
+                자막
+              </span>{' '}
+              만들기
+            </h2>
+            <p className="relative mx-auto mt-4 max-w-md text-white/60">
+              영상 하나면 됩니다. 5분 안에 결과를 받아보세요.
+            </p>
+
+            <div className="relative mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Magnet padding={70} magnetStrength={4}>
+                <StarBorder>
+                  <Button asChild size="xl" className="group min-w-48 rounded-full">
+                    <Link href="/upload">
+                      영상 업로드 시작
+                      <ArrowIcon className="transition-transform group-hover:translate-x-0.5" />
+                    </Link>
+                  </Button>
+                </StarBorder>
+              </Magnet>
+              <Button
+                asChild
+                variant="outline"
+                size="xl"
+                className="min-w-40 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+              >
+                <Link href="/demo">데모 보기</Link>
               </Button>
-            </Magnet>
+            </div>
+
+            <p className="relative mt-7 font-mono text-[11px] tracking-wider text-white/40">
+              무료 · 카드 등록 불필요 · 처리 후 자동 삭제
+            </p>
           </div>
         </div>
       </section>
 
-      {/* ============ FOOTER ============ */}
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-4 px-6 py-10 text-sm text-muted-foreground sm:flex-row sm:items-center">
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-foreground px-1.5 py-0.5 text-[10px] font-bold text-background">cc</span>
-            <span className="font-semibold text-foreground">make_cc</span>
-            <span>· 한국어 음성→자막 자동화</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-4 text-xs">
-            <Link href="/demo" className="transition hover:text-foreground">데모</Link>
-            <Link href="/blog" className="transition hover:text-foreground">블로그</Link>
-            <Link href="/guide" className="transition hover:text-foreground">가이드</Link>
-            <Link href="/faq" className="transition hover:text-foreground">FAQ</Link>
-            <Link href="/privacy" className="transition hover:text-foreground">개인정보</Link>
-            <span>© 2026 make_cc</span>
+      {/* ============ FOOTER — 다크 마무리 ============ */}
+      <footer className="bg-[#05050a] text-white/60">
+        <div className="border-t border-white/10">
+          <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-4 px-6 py-10 text-sm sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2">
+              <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-bold text-[#05050a]">cc</span>
+              <span className="font-semibold text-white">make_cc</span>
+              <span className="text-white/45">· 한국어 음성→자막 자동화</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-xs text-white/50">
+              <Link href="/demo" className="transition hover:text-white">데모</Link>
+              <Link href="/blog" className="transition hover:text-white">블로그</Link>
+              <Link href="/guide" className="transition hover:text-white">가이드</Link>
+              <Link href="/faq" className="transition hover:text-white">FAQ</Link>
+              <Link href="/privacy" className="transition hover:text-white">개인정보</Link>
+              <span className="text-white/35">© 2026 make_cc</span>
+            </div>
           </div>
         </div>
       </footer>
@@ -255,6 +312,13 @@ const PLATFORMS = [
   'Final Cut', 'DaVinci Resolve', 'VLC', '곰플레이어', 'Vrew',
 ];
 
+// CTA 미니 파형 바 (결정적 — 항상 들썩이는 오디오 코어)
+const CTA_BARS = Array.from({ length: 28 }, (_, i) => ({
+  h: 28 + ((i * 23) % 60),
+  d: 0.7 + (i % 5) * 0.12,
+  dl: (i % 7) * 0.08,
+}));
+
 /* ===================== 컴포넌트 ===================== */
 
 function SectionHead({ eyebrow, title }: { eyebrow: string; title: string }) {
@@ -271,9 +335,9 @@ function SectionHead({ eyebrow, title }: { eyebrow: string; title: string }) {
   );
 }
 
-/** 라이트 본문용 HUD 모서리 브래킷 — 시네마틱 히어로의 HUD 결을 본문으로 연결. */
-function HudCorners() {
-  const base = 'pointer-events-none absolute size-3 border-border-strong';
+/** HUD 모서리 브래킷 — 시네마틱 히어로의 HUD 결을 본문으로 연결. 다크 패널은 color로 흰색 지정. */
+function HudCorners({ color = 'border-border-strong' }: { color?: string }) {
+  const base = `pointer-events-none absolute size-3 ${color}`;
   return (
     <span aria-hidden>
       <span className={`${base} -left-1.5 -top-1.5 border-l border-t`} />
