@@ -72,6 +72,8 @@ function Footage({ children, muted = false }: { children?: React.ReactNode; mute
             : 'radial-gradient(48% 60% at 38% 26%, color-mix(in oklab, var(--color-accent) 26%, transparent), transparent 68%), radial-gradient(52% 60% at 78% 82%, oklch(0.5 0.14 30 / 0.32), transparent 70%)',
         }}
       />
+      {/* 스튜디오 장면(헤드폰 크리에이터 + 마이크) — "영상"을 명확히 */}
+      <StudioScene muted={muted} />
       <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/55" />
       <div
         className="absolute inset-0 opacity-25 mix-blend-overlay"
@@ -80,5 +82,60 @@ function Footage({ children, muted = false }: { children?: React.ReactNode; mute
       <div className="grain-overlay !absolute opacity-[0.06]" />
       {children}
     </div>
+  );
+}
+
+/** 녹화 스튜디오 장면 일러스트(SVG) — 헤드폰 쓴 크리에이터가 마이크 앞에서 말하는 모습. */
+function StudioScene({ muted = false }: { muted?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 320 180"
+      preserveAspectRatio="xMidYMid slice"
+      className="absolute inset-0 size-full"
+      style={{ filter: muted ? 'grayscale(0.7) brightness(0.82)' : 'none' }}
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id="ba-body" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#3c3c48" />
+          <stop offset="1" stopColor="#15151c" />
+        </linearGradient>
+        <radialGradient id="ba-back" cx="50%" cy="42%" r="52%">
+          <stop offset="0" stopColor="var(--color-accent)" stopOpacity="0.5" />
+          <stop offset="1" stopColor="var(--color-accent)" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      {/* 백라이트 + 보케 */}
+      <ellipse cx="160" cy="84" rx="66" ry="60" fill="url(#ba-back)" />
+      <circle cx="42" cy="34" r="11" fill="#ffffff" opacity="0.06" />
+      <circle cx="286" cy="46" r="15" fill="var(--color-accent)" opacity="0.1" />
+
+      {/* 어깨 */}
+      <path d="M94 180 C94 141 121 125 160 125 C199 125 226 141 226 180 Z" fill="url(#ba-body)" />
+      {/* 목 */}
+      <rect x="150" y="108" width="20" height="24" rx="8" fill="#2a2a33" />
+      {/* 머리 */}
+      <circle cx="160" cy="92" r="27" fill="url(#ba-body)" />
+      {/* 머리카락 */}
+      <path d="M133 90 C133 71 147 61 160 61 C173 61 187 71 187 90 C187 77 174 71 160 71 C146 71 133 77 133 90 Z" fill="#20202a" />
+      {/* 헤드폰 밴드 */}
+      <path d="M131 95 C131 67 149 55 160 55 C171 55 189 67 189 95" fill="none" stroke="#4c4c5a" strokeWidth="5.5" strokeLinecap="round" />
+      {/* 이어컵 */}
+      <rect x="124" y="88" width="12" height="20" rx="6" fill="#56566a" />
+      <rect x="184" y="88" width="12" height="20" rx="6" fill="#56566a" />
+      {/* 액센트 림라이트 */}
+      <path d="M135 76 C128 90 128 110 135 124" fill="none" stroke="var(--color-accent)" strokeWidth="2.6" strokeLinecap="round" opacity="0.85" />
+      <path d="M99 176 C99 150 111 134 132 127" fill="none" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+
+      {/* 마이크(전경) */}
+      <g transform="rotate(-16 72 150)">
+        <rect x="62" y="118" width="20" height="46" rx="10" fill="#2c2c38" stroke="#545464" strokeOpacity="0.4" strokeWidth="1.5" />
+        <line x1="66" y1="126" x2="78" y2="126" stroke="#6c6c7c" strokeWidth="1.3" />
+        <line x1="66" y1="132" x2="78" y2="132" stroke="#6c6c7c" strokeWidth="1.3" />
+        <line x1="66" y1="138" x2="78" y2="138" stroke="#6c6c7c" strokeWidth="1.3" />
+        <rect x="70" y="164" width="4" height="18" fill="#3a3a46" />
+      </g>
+    </svg>
   );
 }
