@@ -592,6 +592,16 @@
   0%, 97%, 100% { opacity: 0.85; }
   98% { opacity: 0.4; }
 }
+/* 터미널 커서 깜빡임 */
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.12; }
+}
+/* 재생 버튼 펄스 링 — "눌러보세요" 신호 */
+@keyframes ring-pulse {
+  0% { transform: scale(0.72); opacity: 0.7; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
 /* React Bits — StarBorder / GradientText / ShinyText */
 @keyframes star-move-bottom {
   0% { transform: translate(0, 0); opacity: 1; }
@@ -676,6 +686,8 @@
     animation: eqwave var(--eq-dur, 0.8s) ease-in-out var(--eq-delay, 0s) infinite alternate;
   }
   /* HUD 히어로 유틸 */
+  .blink { animation: blink 1.05s steps(1) infinite; }
+  .ring-pulse { animation: ring-pulse 1.8s cubic-bezier(0, 0, 0.2, 1) infinite; }
   .reactor-breathe { animation: reactor-breathe 4.5s ease-in-out infinite; }
   .reactor-spin { animation: reactor-spin 22s linear infinite; }
   .reactor-spin-rev { animation: reactor-spin-rev 32s linear infinite; }

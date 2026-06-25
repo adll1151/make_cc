@@ -368,18 +368,11 @@ export function CinematicHero() {
           <div className="grain-overlay !absolute opacity-[0.07]" />
         </div>
 
-        {/* ===================== 플로팅 텔레메트리 카드 ===================== */}
+        {/* ===================== 플로팅 터미널 로그(타자 치는 느낌) ===================== */}
         <div className="pointer-events-none absolute inset-0 z-[4]" aria-hidden>
           {FRAGMENTS.map((f, i) => (
-            <div key={i} className={`absolute ${f.pos} ${f.hideMobile ? 'hidden lg:block' : ''}`} style={{ transform: `translateY(calc(var(--p) * ${(-90 * f.px).toFixed(0)}px))` }}>
-              <div className="glass rounded-xl border border-white/10 px-3.5 py-2.5 font-mono shadow-[0_8px_30px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md">
-                <div className="flex items-center gap-1.5 text-[9px] tracking-widest text-accent/90">
-                  <span className="size-1 rounded-full bg-accent" />
-                  {f.tag}
-                </div>
-                <div className="mt-1 max-w-[12rem] text-[13px] font-semibold tracking-tight text-white/90">{f.title}</div>
-                <div className="mt-0.5 text-[10px] tracking-wider text-white/45">{f.meta}</div>
-              </div>
+            <div key={i} className={`absolute ${f.pos} ${f.hideMobile ? 'hidden lg:block' : ''}`} style={{ transform: `translateY(calc(var(--p) * ${(-55 * f.px).toFixed(0)}px))` }}>
+              <TermFragment tag={f.tag} title={f.title} meta={f.meta} idx={i} />
             </div>
           ))}
         </div>
@@ -636,24 +629,40 @@ function CaptionStage({
           ))}
         </div>
 
-        {/* 재생 버튼 (영상 위) — 클릭 시 자막 자동 타이핑 데모 */}
+        {/* 재생 버튼 (영상 위) — 강조: 솔리드 액센트 디스크 + 펄스 링 + 라벨 */}
         <div
-          className="absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 transition-opacity duration-300"
+          className="group/play absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2.5 transition-opacity duration-300"
           style={{ opacity: playing ? 0 : 1, pointerEvents: playing ? 'none' : 'auto' }}
         >
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-label="자막 생성 데모 재생"
-            className="grid size-16 place-items-center rounded-full border bg-black/55 text-white backdrop-blur-md transition-transform duration-300 hover:scale-110 sm:size-[72px]"
-            style={{ borderColor: 'color-mix(in oklab, var(--sa) 55%, white)', boxShadow: '0 0 50px -6px color-mix(in oklab, var(--sa) 80%, transparent)' }}
+          <div className="relative grid place-items-center">
+            {/* 펄스 링 — "눌러보세요" 신호 */}
+            {!reduce && (
+              <>
+                <span className="ring-pulse absolute size-20 rounded-full sm:size-24" style={{ border: '2px solid var(--sa)' }} />
+                <span className="ring-pulse absolute size-20 rounded-full sm:size-24" style={{ border: '2px solid var(--sa)', animationDelay: '0.9s' }} />
+              </>
+            )}
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-label="자막 생성 데모 재생"
+              className="relative grid size-[68px] place-items-center rounded-full transition-transform duration-300 hover:scale-110 sm:size-20"
+              style={{
+                background: 'radial-gradient(circle at 50% 35%, color-mix(in oklab, var(--sa) 92%, white), var(--sa))',
+                color: '#06060c',
+                boxShadow: '0 0 60px -4px color-mix(in oklab, var(--sa) 85%, transparent), 0 8px 24px -6px rgba(0,0,0,0.6)',
+              }}
+            >
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" className="translate-x-0.5">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+          </div>
+          <span
+            className="rounded-full border px-3 py-1.5 text-[11px] font-bold tracking-wide text-white backdrop-blur-md"
+            style={{ borderColor: 'color-mix(in oklab, var(--sa) 50%, transparent)', background: 'color-mix(in oklab, var(--sa) 16%, rgba(0,0,0,0.5))' }}
           >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" className="translate-x-0.5">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </button>
-          <span className="rounded-full bg-black/55 px-2.5 py-1 font-mono text-[10px] tracking-wider text-white/85 backdrop-blur-sm">
-            ▶ 자막 생성 데모
+            ▶ 눌러서 자막 생성 보기
           </span>
         </div>
         {/* 재생 중 일시정지(전체 프레임 클릭) */}
@@ -707,6 +716,65 @@ function FrameCorners() {
       <span className={`${base} bottom-2 left-2 border-b border-l`} />
       <span className={`${base} bottom-2 right-2 border-b border-r`} />
     </span>
+  );
+}
+
+/**
+ * 플로팅 터미널 로그 — 제목이 타자 치듯 입력되고, 잠깐 멈췄다 다시 입력(루프).
+ * 기존 "동그라미 + 글래스 카드"의 밋밋함을 라이브 콘솔 느낌으로 대체.
+ * setTimeout 기반(JS)이라 reduced-motion에서도 타이핑됨(요청 사항).
+ */
+function TermFragment({ tag, title, meta, idx }: { tag: string; title: string; meta: string; idx: number }) {
+  const [n, setN] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const typeOnce = (done: () => void) => {
+      let i = 0;
+      setN(0);
+      const step = () => {
+        if (!alive) return;
+        i += 1;
+        setN(i);
+        if (i >= title.length) timer = setTimeout(done, 5200);
+        else timer = setTimeout(step, 52);
+      };
+      timer = setTimeout(step, 60);
+    };
+    const loop = () => typeOnce(() => alive && loop());
+    timer = setTimeout(loop, 350 + idx * 650); // 카드별 스태거
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [title, idx]);
+
+  const typed = title.slice(0, n);
+  const done = n >= title.length;
+
+  return (
+    <div className="w-[13.5rem] overflow-hidden rounded-lg border border-white/12 bg-black/55 font-mono shadow-[0_10px_34px_-14px_rgba(0,0,0,0.7)] backdrop-blur-md">
+      {/* 터미널 헤더 */}
+      <div className="flex items-center gap-1.5 border-b border-white/8 px-2.5 py-1 text-[8px] tracking-[0.2em] text-white/40">
+        <span style={{ color: 'var(--sa)' }}>›</span>
+        {tag}
+        <span className="ml-auto h-1 w-1 rounded-full bg-white/25" />
+        <span className="h-1 w-1 rounded-full bg-white/25" />
+      </div>
+      {/* 본문 — 타이핑 */}
+      <div className="px-2.5 py-2">
+        <div className="text-[12px] font-semibold leading-snug text-white/90">
+          <span className="text-white/30">$ </span>
+          {typed}
+          <span
+            className="blink ml-px inline-block h-[1.05em] w-[6px] translate-y-[2px] align-baseline"
+            style={{ background: 'var(--sa)', opacity: done ? 0.55 : 1 }}
+          />
+        </div>
+        <div className="mt-1 text-[9.5px] tracking-wider text-white/40">› {meta}</div>
+      </div>
+    </div>
   );
 }
 
