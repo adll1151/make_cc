@@ -93,6 +93,9 @@ const N = SCENES.length;
 // rAF에서 보간되어 화면 전체(글로우·리액터·헤드라인)가 씬마다 다른 색으로 전환.
 const HUES = [62, 205, 288, 152];
 
+// 재생 데모 길이(ms). 재생은 페이지를 함께 auto-scroll해 끝나면 본문으로 자연스럽게 이어짐.
+const PLAY_MS = 11000;
+
 const rand = (i: number, s: number) => {
   const x = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453;
   return x - Math.floor(x);
@@ -137,6 +140,7 @@ export function CinematicHero() {
   const playRef = useRef(false); // 재생 중(스크롤과 무관한 자동 데모)
   const playStartRef = useRef(0);
   const lastScrollRef = useRef(0);
+  const dispRef = useRef(0); // 현재 표시 진행도(재생 시작 지점 계산용)
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [reduce, setReduce] = useState(false);
@@ -145,13 +149,14 @@ export function CinematicHero() {
     setReduce(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }, []);
 
-  // 재생 토글 — 클릭 시 스크롤 위치와 무관하게 4씬 데모를 자동 재생(자막 타이핑).
+  // 재생 토글 — 현재 위치에서 시작해 페이지를 함께 내리며 4씬 데모를 자동 재생.
   const togglePlay = () => {
     if (playRef.current) {
       playRef.current = false;
       setPlaying(false);
     } else {
-      playStartRef.current = performance.now();
+      const startFrac = dispRef.current > 0.92 ? 0 : dispRef.current; // 끝이면 처음부터 다시
+      playStartRef.current = performance.now() - startFrac * PLAY_MS;
       playRef.current = true;
       setPlaying(true);
     }
@@ -160,7 +165,6 @@ export function CinematicHero() {
   // rAF 이징 루프 — 스크롤/재생을 부드럽게 추종. React 재렌더 없이 --p·게이지·자막 갱신.
   // IntersectionObserver로 히어로가 뷰포트 근처일 때만 루프 가동(배터리/CPU 절약).
   useEffect(() => {
-    const PLAY_MS = 11000;
     const reduceMM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let raf = 0;
     let inView = true;
@@ -183,7 +187,7 @@ export function CinematicHero() {
       const dt = Math.min(64, now - lastFrame);
       lastFrame = now;
 
-      // 진행 소스: 재생 중이면 시간 기반, 아니면 스크롤
+      // 진행 소스: 재생 중이면 시간 기반(+페이지 함께 auto-scroll), 아니면 스크롤
       let src: number;
       if (playRef.current) {
         let t = (now - playStartRef.current) / PLAY_MS;
@@ -192,12 +196,20 @@ export function CinematicHero() {
           playRef.current = false;
           setPlaying(false);
         }
+        // 재생이 실제 페이지 스크롤을 함께 내림 → 100%면 이미 히어로 끝(본문 바로 위)
+        const el = sectionRef.current;
+        if (el) {
+          const totalScroll = el.offsetHeight - window.innerHeight;
+          const absTop = window.scrollY + el.getBoundingClientRect().top;
+          window.scrollTo({ top: Math.round(absTop + t * totalScroll), left: 0, behavior: 'instant' as ScrollBehavior });
+        }
         src = t;
       } else {
         src = target;
       }
       disp += (src - disp) * 0.12;
       if (Math.abs(src - disp) < 0.0004) disp = src;
+      dispRef.current = disp;
       const p = disp;
       const fp = Math.min(p, 0.999) * N;
       const a = Math.min(N - 1, Math.floor(fp));
@@ -255,13 +267,22 @@ export function CinematicHero() {
       }
     };
 
+    // 스크롤 이벤트는 측정만(재생의 auto-scroll도 여기로 들어옴 → 재생을 끊지 않음)
     const onScroll = () => {
+      lastScrollRef.current = performance.now();
+      measure();
+    };
+
+    // 사용자 직접 입력(휠/터치/스크롤 키)은 재생을 취소하고 제어권을 넘김
+    const cancelPlay = () => {
       lastScrollRef.current = performance.now();
       if (playRef.current) {
         playRef.current = false;
         setPlaying(false);
       }
-      measure();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if ([' ', 'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End'].includes(e.key)) cancelPlay();
     };
 
     const io = new IntersectionObserver(
@@ -277,12 +298,18 @@ export function CinematicHero() {
     start();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
+    window.addEventListener('wheel', cancelPlay, { passive: true });
+    window.addEventListener('touchstart', cancelPlay, { passive: true });
+    window.addEventListener('keydown', onKey);
     return () => {
       inView = false;
       cancelAnimationFrame(raf);
       io.disconnect();
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
+      window.removeEventListener('wheel', cancelPlay);
+      window.removeEventListener('touchstart', cancelPlay);
+      window.removeEventListener('keydown', onKey);
     };
   }, []);
 
