@@ -94,8 +94,9 @@ export function CinematicHero() {
     setReduce(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }, []);
 
+  // 스크롤 스크럽은 사용자가 직접 스크롤하는 동작이라 reduced-motion에서도 유지한다
+  // (그래야 모든 사용자가 4씬을 다 볼 수 있다). 장식성 애니메이션만 reduce로 끈다.
   useEffect(() => {
-    if (reduce) return;
     let raf = 0;
     const onScroll = () => {
       cancelAnimationFrame(raf);
@@ -115,21 +116,21 @@ export function CinematicHero() {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
     };
-  }, [reduce]);
+  }, []);
 
-  // 진행도 → 활성 씬. 마지막 0.06 구간은 피날레 정착용 버퍼.
+  // 진행도 → 활성 씬. 마지막 0.001 구간은 피날레 정착용 버퍼.
   const fp = Math.min(progress, 0.999) * N;
-  const active = reduce ? 0 : Math.min(N - 1, Math.floor(fp));
+  const active = Math.min(N - 1, Math.floor(fp));
   const scene = SCENES[active]!;
-  // 처리율: 히어로 전체에 걸쳐 0 → 100% 상승(텔레메트리 생동감)
-  const engine = reduce ? 6 : Math.round(progress * 99 + 1);
+  // 처리율: 히어로 전체에 걸쳐 1 → 100% 상승(텔레메트리 생동감)
+  const engine = Math.round(progress * 99 + 1);
 
   return (
     <section
       ref={sectionRef}
       aria-label="make_cc 시네마틱 소개"
       className="relative"
-      style={{ height: reduce ? 'auto' : `${N * 100}vh` }}
+      style={{ height: `${N * 100}vh` }}
     >
       {/* 스티키 무대 — 항상 다크 시네마 */}
       <div className="sticky top-0 flex h-screen min-h-[640px] items-center justify-center overflow-hidden bg-[#07070b] text-white">
@@ -231,21 +232,19 @@ export function CinematicHero() {
           </div>
         </div>
 
-        {/* 스크롤 힌트 (마지막 씬 제외) */}
-        {!reduce && (
-          <div
-            className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 transition-opacity duration-500"
-            style={{ opacity: active >= N - 1 ? 0 : 0.6 }}
-            aria-hidden
-          >
-            <div className="flex flex-col items-center gap-1.5 font-mono text-[10px] tracking-widest text-white/50">
-              SCROLL
-              <span className="flex h-7 w-4 items-start justify-center rounded-full border border-white/30 p-1">
-                <span className="size-1 animate-float rounded-full bg-white/70" />
-              </span>
-            </div>
+        {/* 스크롤 힌트 (마지막 씬 제외) — reduced-motion 사용자도 씬 존재를 알도록 항상 노출 */}
+        <div
+          className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 transition-opacity duration-500"
+          style={{ opacity: active >= N - 1 ? 0 : 0.6 }}
+          aria-hidden
+        >
+          <div className="flex flex-col items-center gap-1.5 font-mono text-[10px] tracking-widest text-white/50">
+            스크롤 ↓
+            <span className="flex h-7 w-4 items-start justify-center rounded-full border border-white/30 p-1">
+              <span className="size-1 animate-float rounded-full bg-white/70" />
+            </span>
           </div>
-        )}
+        </div>
       </div>
     </section>
   );
