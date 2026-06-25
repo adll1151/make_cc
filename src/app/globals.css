@@ -686,6 +686,11 @@
     transform-origin: center;
     animation: eqwave var(--eq-dur, 0.9s) ease-in-out var(--eq-delay, 0s) infinite alternate;
   }
+  /* 재생 중(.cap-play) 파형 활성화 — 사용자가 명시적으로 누른 인터랙션이므로
+     모션감소 전역 규칙도 이기게 !important (eq-wrap hover와 동일 정책). */
+  .cap-play .cwave {
+    animation: eqwave var(--eq-dur, 0.9s) ease-in-out var(--eq-delay, 0s) infinite alternate !important;
+  }
   @media (prefers-reduced-motion: reduce) {
     .reactor-breathe, .reactor-spin, .reactor-spin-rev, .hud-sweep,
     .hud-flicker, .cwave {

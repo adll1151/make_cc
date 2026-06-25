@@ -32,6 +32,7 @@ type Scene = {
   metricLabel: string;
   metricValue: string;
   caption: string;
+  en: string; // 번역 자막(한국어 자막이 쳐진 뒤 따라 뜸)
 };
 
 const SCENES: Scene[] = [
@@ -45,6 +46,7 @@ const SCENES: Scene[] = [
     metricLabel: 'AUDIO LEVEL',
     metricValue: '−6 dB',
     caption: '안녕하세요, make_cc입니다',
+    en: 'Hello, this is make_cc',
   },
   {
     id: 'transcribe',
@@ -56,6 +58,7 @@ const SCENES: Scene[] = [
     metricLabel: 'WER',
     metricValue: '< 15%',
     caption: '영상의 한국어 음성을 자동으로',
+    en: 'Korean speech, transcribed automatically',
   },
   {
     id: 'edit',
@@ -67,6 +70,7 @@ const SCENES: Scene[] = [
     metricLabel: 'CPS',
     metricValue: '12.4',
     caption: '한 줄씩 다듬어 완벽하게',
+    en: 'Refined line by line',
   },
   {
     id: 'done',
@@ -79,6 +83,7 @@ const SCENES: Scene[] = [
     metricLabel: 'OUTPUT',
     metricValue: '100%',
     caption: 'SRT 다운로드 · 공유까지 한 번에',
+    en: 'Download SRT & share — in one go',
   },
 ];
 
@@ -128,19 +133,42 @@ export function CinematicHero() {
   const engBarRef = useRef<HTMLDivElement>(null);
   const tcRef = useRef<HTMLSpanElement>(null);
   const capRef = useRef<HTMLSpanElement>(null);
+  const transRef = useRef<HTMLSpanElement>(null);
+  const playRef = useRef(false); // 재생 중(스크롤과 무관한 자동 데모)
+  const playStartRef = useRef(0);
+  const lastScrollRef = useRef(0);
   const [active, setActive] = useState(0);
+  const [playing, setPlaying] = useState(false);
   const [reduce, setReduce] = useState(false);
 
   useEffect(() => {
     setReduce(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }, []);
 
-  // rAF 이징 루프 — 스크롤 타깃을 부드럽게 추종. React 재렌더 없이 --p/게이지 갱신.
+  // 재생 토글 — 클릭 시 스크롤 위치와 무관하게 4씬 데모를 자동 재생(자막 타이핑).
+  const togglePlay = () => {
+    if (playRef.current) {
+      playRef.current = false;
+      setPlaying(false);
+    } else {
+      playStartRef.current = performance.now();
+      playRef.current = true;
+      setPlaying(true);
+    }
+  };
+
+  // rAF 이징 루프 — 스크롤/재생을 부드럽게 추종. React 재렌더 없이 --p·게이지·자막 갱신.
+  // IntersectionObserver로 히어로가 뷰포트 근처일 때만 루프 가동(배터리/CPU 절약).
   useEffect(() => {
+    const PLAY_MS = 11000;
+    const reduceMM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let raf = 0;
-    let running = true;
-    const cur = { p: 0 };
-    let target = 0;
+    let inView = true;
+    let target = 0; // 스크롤 진행(0..1, raw)
+    let disp = 0; // 표시 진행(eased) — 스크롤/재생 공통
+    let autoLocal = 0; // 유휴 자동 타이핑
+    let prevA = -1;
+    let lastFrame = performance.now();
 
     const measure = () => {
       const el = sectionRef.current;
@@ -151,15 +179,47 @@ export function CinematicHero() {
     };
 
     const tick = () => {
-      if (!running) return;
-      cur.p += (target - cur.p) * 0.1; // 이징
-      if (Math.abs(target - cur.p) < 0.0002) cur.p = target;
-      const p = cur.p;
+      const now = performance.now();
+      const dt = Math.min(64, now - lastFrame);
+      lastFrame = now;
+
+      // 진행 소스: 재생 중이면 시간 기반, 아니면 스크롤
+      let src: number;
+      if (playRef.current) {
+        let t = (now - playStartRef.current) / PLAY_MS;
+        if (t >= 1) {
+          t = 1;
+          playRef.current = false;
+          setPlaying(false);
+        }
+        src = t;
+      } else {
+        src = target;
+      }
+      disp += (src - disp) * 0.12;
+      if (Math.abs(src - disp) < 0.0004) disp = src;
+      const p = disp;
+      const fp = Math.min(p, 0.999) * N;
+      const a = Math.min(N - 1, Math.floor(fp));
+      const local = Math.min(1, Math.max(0, fp - a));
+
+      // 자막 진행(prog): 재생 중엔 빠르게, 스크롤 중엔 스크롤, 유휴 시 자동 완성
+      let prog: number;
+      if (playRef.current) {
+        prog = Math.min(1, local * 1.6);
+      } else {
+        const idle = now - lastScrollRef.current > 380;
+        if (a !== prevA) autoLocal = local;
+        if (!idle) autoLocal = local;
+        else if (reduceMM) autoLocal = 1;
+        else autoLocal = Math.min(1, autoLocal + dt / 1100);
+        prog = Math.max(local, autoLocal);
+      }
+      prevA = a;
+
       const st = stageRef.current;
       if (st) {
         st.style.setProperty('--p', p.toFixed(4));
-        const fp = Math.min(p, 0.999) * N;
-        // 씬별 강조 색조(hue) 보간 → 화면 전체가 씬마다 다른 색으로
         const seg = Math.min(N - 1, Math.floor(fp));
         const frac = Math.min(1, Math.max(0, fp - seg));
         const h = HUES[seg]! + (HUES[Math.min(N - 1, seg + 1)]! - HUES[seg]!) * frac;
@@ -169,26 +229,58 @@ export function CinematicHero() {
       if (engNumRef.current) engNumRef.current.textContent = String(eng).padStart(2, '0');
       if (engBarRef.current) engBarRef.current.style.width = `${eng}%`;
       if (tcRef.current) tcRef.current.textContent = fmtTC(p);
-      const a = Math.min(N - 1, Math.floor(Math.min(p, 0.999) * N));
-      // 스크롤 = 타이핑: 씬 내부 진행도만큼 자막을 한 글자씩 친다(중앙 캡션 프레임)
+
+      // 자막(KO) → 번역(EN) 순차 타이핑
+      const koFrac = Math.min(1, prog / 0.6);
+      const enFrac = Math.min(1, Math.max(0, (prog - 0.62) / 0.3));
       if (capRef.current) {
-        const local = Math.min(1, Math.max(0, Math.min(p, 0.999) * N - a));
-        const cap = SCENES[a]!.caption;
-        const shown = cap.slice(0, Math.min(cap.length, Math.ceil(local * 1.8 * cap.length)));
-        if (capRef.current.textContent !== shown) capRef.current.textContent = shown;
+        const ko = SCENES[a]!.caption;
+        const s = ko.slice(0, Math.ceil(koFrac * ko.length));
+        if (capRef.current.textContent !== s) capRef.current.textContent = s;
       }
+      if (transRef.current) {
+        const en = SCENES[a]!.en;
+        const s = enFrac > 0 ? en.slice(0, Math.ceil(enFrac * en.length)) : '';
+        if (transRef.current.textContent !== s) transRef.current.textContent = s;
+      }
+
       setActive((prev) => (prev === a ? prev : a));
-      raf = requestAnimationFrame(tick);
+      raf = inView ? requestAnimationFrame(tick) : 0;
     };
 
-    const onScroll = () => measure();
+    const start = () => {
+      if (!raf && inView) {
+        lastFrame = performance.now();
+        raf = requestAnimationFrame(tick);
+      }
+    };
+
+    const onScroll = () => {
+      lastScrollRef.current = performance.now();
+      if (playRef.current) {
+        playRef.current = false;
+        setPlaying(false);
+      }
+      measure();
+    };
+
+    const io = new IntersectionObserver(
+      ([e]) => {
+        inView = !!e?.isIntersecting;
+        if (inView) start();
+      },
+      { rootMargin: '160px' },
+    );
+    if (sectionRef.current) io.observe(sectionRef.current);
+
     measure();
-    tick();
+    start();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
     return () => {
-      running = false;
+      inView = false;
       cancelAnimationFrame(raf);
+      io.disconnect();
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
     };
@@ -297,7 +389,7 @@ export function CinematicHero() {
 
         {/* ===================== 중앙: 캡션 프레임 + 헤드라인 ===================== */}
         <div className="relative z-10 flex w-full max-w-4xl flex-col items-center px-6 text-center">
-          <CaptionStage reduce={reduce} capRef={capRef} />
+          <CaptionStage reduce={reduce} playing={playing} onToggle={togglePlay} capRef={capRef} transRef={transRef} />
 
           <div key={`chip-${active}`} className="enter-fade-up mt-9 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs tracking-wider text-white/70 backdrop-blur-sm">
             <span className="size-1.5 animate-pulse-glow rounded-full" style={{ background: 'var(--sa)' }} />
@@ -461,9 +553,21 @@ function Corner({ className }: { className: string }) {
  * (capRef는 rAF가 갱신), 하단 스크러버가 진행도(--p)를 채운다. make_cc의 본질
  * (음성→자막)을 직관적으로 보여준다. 색은 씬별 --sa로 recolor.
  */
-function CaptionStage({ reduce, capRef }: { reduce: boolean; capRef: React.RefObject<HTMLSpanElement> }) {
+function CaptionStage({
+  reduce,
+  playing,
+  onToggle,
+  capRef,
+  transRef,
+}: {
+  reduce: boolean;
+  playing: boolean;
+  onToggle: () => void;
+  capRef: React.RefObject<HTMLSpanElement>;
+  transRef: React.RefObject<HTMLSpanElement>;
+}) {
   return (
-    <div className="relative w-[min(90vw,540px)]" style={{ transform: 'scale(calc(1 + var(--p) * 0.05))' }}>
+    <div className="relative w-[min(92vw,560px)]" style={{ transform: 'scale(calc(1 + var(--p) * 0.05))' }}>
       <div
         className="reactor-breathe absolute -inset-10 rounded-[2.5rem]"
         style={{ background: 'radial-gradient(closest-side, color-mix(in oklab, var(--sa) 26%, transparent), transparent 72%)' }}
@@ -472,35 +576,48 @@ function CaptionStage({ reduce, capRef }: { reduce: boolean; capRef: React.RefOb
 
       {/* 비디오 캡션 프레임 */}
       <div
-        className="relative aspect-video overflow-hidden rounded-2xl border bg-[#0a0a12]"
+        className={`group relative aspect-video overflow-hidden rounded-2xl border bg-[#08080e] ${playing ? 'cap-play' : ''}`}
         style={{
           borderColor: 'color-mix(in oklab, var(--sa) 28%, rgba(255,255,255,0.12))',
           boxShadow:
             '0 40px 120px -30px color-mix(in oklab, var(--sa) 45%, transparent), inset 0 0 70px -24px color-mix(in oklab, var(--sa) 55%, transparent)',
         }}
       >
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(62% 54% at 50% 32%, color-mix(in oklab, var(--sa) 16%, transparent), transparent 72%)' }} aria-hidden />
+        {/* === 영상스러운 배경(그레이드된 footage 느낌) === */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(46% 60% at 38% 24%, color-mix(in oklab, var(--sa) 24%, transparent), transparent 66%), radial-gradient(50% 60% at 78% 82%, oklch(0.5 0.12 calc(var(--sa-h) + 40) / 0.28), transparent 70%)',
+            animation: reduce ? undefined : 'scene-drift 14s ease-in-out infinite',
+          }}
+          aria-hidden
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/60" aria-hidden />
         <div
           className="absolute inset-0 opacity-30 mix-blend-overlay"
           style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)' }}
           aria-hidden
         />
-        <div className="grain-overlay !absolute opacity-[0.05]" aria-hidden />
+        <div className="grain-overlay !absolute opacity-[0.06]" aria-hidden />
+        {/* 시네마 레터박스 */}
+        <div className="absolute inset-x-0 top-0 h-[7%] bg-black/55" aria-hidden />
+        <div className="absolute inset-x-0 bottom-0 h-[7%] bg-black/55" aria-hidden />
         <FrameCorners />
 
         {/* 상단 바 */}
-        <div className="absolute inset-x-3 top-3 flex items-center justify-between font-mono text-[10px] sm:text-[11px]">
+        <div className="absolute inset-x-3 top-[10%] flex items-center justify-between font-mono text-[10px] sm:text-[11px]">
           <span className="flex items-center gap-1.5">
             <span className="rounded px-1.5 py-0.5 text-[9px] font-bold" style={{ background: 'var(--sa)', color: '#05050a' }}>CC</span>
-            <span className="text-white/55">AI 자막 생성</span>
+            <span className="text-white/60">AI 자막 생성</span>
           </span>
-          <span className="flex items-center gap-1 text-[oklch(0.65_0.2_18)]">
-            <span className="size-1.5 animate-pulse-glow rounded-full bg-[oklch(0.65_0.2_18)]" /> REC
+          <span className="flex items-center gap-1 text-[oklch(0.66_0.2_18)]">
+            <span className="size-1.5 animate-pulse-glow rounded-full bg-[oklch(0.66_0.2_18)]" /> REC
           </span>
         </div>
 
-        {/* 중앙 파형 — 듣는 중(자막 바 뒤) */}
-        <div className="absolute inset-x-0 top-[30%] flex h-12 items-center justify-center gap-[3px] px-10 opacity-60 sm:h-16" aria-hidden>
+        {/* 중앙 파형 — 듣는 중(자막 뒤). 재생 중엔 .cap-play로 활성화 */}
+        <div className="absolute inset-x-0 top-[33%] flex h-12 items-center justify-center gap-[3px] px-10 opacity-55 sm:h-16" aria-hidden>
           {CBARS.map((b, i) => (
             <span
               key={i}
@@ -519,8 +636,38 @@ function CaptionStage({ reduce, capRef }: { reduce: boolean; capRef: React.RefOb
           ))}
         </div>
 
-        {/* 자막 바 — 스크롤로 타이핑(주인공) */}
-        <div className="absolute inset-x-0 bottom-9 flex justify-center px-5 sm:bottom-11">
+        {/* 재생 버튼 (영상 위) — 클릭 시 자막 자동 타이핑 데모 */}
+        <div
+          className="absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 transition-opacity duration-300"
+          style={{ opacity: playing ? 0 : 1, pointerEvents: playing ? 'none' : 'auto' }}
+        >
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label="자막 생성 데모 재생"
+            className="grid size-16 place-items-center rounded-full border bg-black/55 text-white backdrop-blur-md transition-transform duration-300 hover:scale-110 sm:size-[72px]"
+            style={{ borderColor: 'color-mix(in oklab, var(--sa) 55%, white)', boxShadow: '0 0 50px -6px color-mix(in oklab, var(--sa) 80%, transparent)' }}
+          >
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" className="translate-x-0.5">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </button>
+          <span className="rounded-full bg-black/55 px-2.5 py-1 font-mono text-[10px] tracking-wider text-white/85 backdrop-blur-sm">
+            ▶ 자막 생성 데모
+          </span>
+        </div>
+        {/* 재생 중 일시정지(전체 프레임 클릭) */}
+        {playing && (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label="데모 일시정지"
+            className="absolute inset-0 z-[9] cursor-pointer"
+          />
+        )}
+
+        {/* 자막 바(주인공) + 번역 한 줄 */}
+        <div className="absolute inset-x-0 bottom-[14%] flex flex-col items-center gap-1.5 px-5">
           <div className="max-w-[92%] rounded-md bg-black/65 px-3 py-1.5 text-center backdrop-blur-sm">
             <span ref={capRef} className="align-middle text-base font-bold leading-snug text-white sm:text-2xl" />
             <span
@@ -529,12 +676,18 @@ function CaptionStage({ reduce, capRef }: { reduce: boolean; capRef: React.RefOb
               aria-hidden
             />
           </div>
+          {/* 번역 자막 — 한국어 뒤로 따라 뜸 */}
+          <div className="flex max-w-[92%] items-center gap-1.5 text-center">
+            <span className="font-mono text-[9px] tracking-wider" style={{ color: 'var(--sa)' }}>EN</span>
+            <span ref={transRef} className="text-[11px] font-medium leading-snug text-white/70 sm:text-sm" />
+          </div>
         </div>
 
         {/* 하단 스크러버 = 진행도(--p) */}
-        <div className="absolute inset-x-3 bottom-3 flex items-center gap-2" aria-hidden>
+        <div className="absolute inset-x-3 bottom-[8.5%] flex items-center gap-2" aria-hidden>
           <svg width="9" height="9" viewBox="0 0 24 24" fill="white" className="shrink-0 opacity-70">
-            <path d="M8 5v14l11-7z" />
+            {playing ? <rect x="6" y="5" width="4" height="14" rx="1" /> : <path d="M8 5v14l11-7z" />}
+            {playing ? <rect x="14" y="5" width="4" height="14" rx="1" /> : null}
           </svg>
           <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/15">
             <div className="h-full rounded-full" style={{ width: 'calc(var(--p) * 100%)', background: 'var(--sa)' }} />
