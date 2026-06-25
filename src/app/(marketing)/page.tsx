@@ -25,12 +25,16 @@ export default function LandingPage() {
       {/* ============ HERO — 시네마틱 HUD (스크롤 시네마틱) ============ */}
       <CinematicHero />
 
+      {/* 다크 히어로 → 라이트 본문 전환 브리지 */}
+      <div aria-hidden className="h-24 bg-gradient-to-b from-[#05050a] to-transparent sm:h-36" />
+
       {/* ============ 제품 쇼케이스 ============ */}
-      <section className="mx-auto max-w-5xl px-6 pt-16 pb-16">
-        <p className="mb-5 text-center text-sm text-muted-foreground">
+      <section className="mx-auto -mt-10 max-w-5xl px-6 pb-16">
+        <p className="mb-5 text-center font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
           무료 체험 · 카드 등록 불필요 · 처리 후 자동 삭제
         </p>
-        <div className="scroll-pop">
+        <div className="scroll-pop relative">
+          <HudCorners />
           <EditorShowcase />
         </div>
       </section>
@@ -69,13 +73,22 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ 통계 ============ */}
+      {/* ============ 통계 (텔레메트리 패널) ============ */}
       <section className="mx-auto max-w-5xl px-6 pb-28">
-        <div className="scroll-fade grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-4">
-          <Stat value={3} suffix="분" label="5분 영상 평균 처리" />
-          <Stat value={15} prefix="< " suffix="%" label="WER (오인식률)" />
-          <Stat value={100} suffix="+" label="지원 영상 포맷" />
-          <Stat value={0} prefix="₩" label="게스트 무료" />
+        <div className="scroll-fade">
+          <p className="mb-3 flex items-center gap-2 font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground">
+            <span className="size-1.5 animate-pulse-glow rounded-full bg-accent" />
+            {'// LIVE METRICS'}
+          </p>
+          <div className="relative">
+            <HudCorners />
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-4">
+              <Stat value={3} suffix="분" label="5분 영상 평균 처리" />
+              <Stat value={15} prefix="< " suffix="%" label="WER (오인식률)" />
+              <Stat value={100} suffix="+" label="지원 영상 포맷" />
+              <Stat value={0} prefix="₩" label="게스트 무료" />
+            </div>
+          </div>
         </div>
       </section>
 
@@ -247,13 +260,27 @@ const PLATFORMS = [
 function SectionHead({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
     <div className="scroll-fade mb-8">
-      <p className="text-sm font-semibold uppercase tracking-widest">
+      <p className="flex items-center gap-2 font-mono text-xs font-medium uppercase tracking-[0.25em] text-muted-foreground">
+        <span className="size-1.5 rounded-full bg-accent" />
         <ShinyText text={eyebrow} />
       </p>
-      <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.03em] sm:text-5xl">
+      <h2 className="mt-2.5 text-3xl font-extrabold tracking-[-0.03em] sm:text-5xl">
         <BlurText text={title} scroll />
       </h2>
     </div>
+  );
+}
+
+/** 라이트 본문용 HUD 모서리 브래킷 — 시네마틱 히어로의 HUD 결을 본문으로 연결. */
+function HudCorners() {
+  const base = 'pointer-events-none absolute size-3 border-border-strong';
+  return (
+    <span aria-hidden>
+      <span className={`${base} -left-1.5 -top-1.5 border-l border-t`} />
+      <span className={`${base} -right-1.5 -top-1.5 border-r border-t`} />
+      <span className={`${base} -bottom-1.5 -left-1.5 border-b border-l`} />
+      <span className={`${base} -bottom-1.5 -right-1.5 border-b border-r`} />
+    </span>
   );
 }
 

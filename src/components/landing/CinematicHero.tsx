@@ -113,10 +113,10 @@ const RADIAL = Array.from({ length: 64 }, (_, i) => ({
 }));
 
 const FRAGMENTS = [
-  { pos: 'left-[4%] top-[24%] sm:left-[7%]', px: 2.2, tag: 'TELEMETRY', title: '「영상의 말을, 텍스트로」', meta: 'SAMPLE 48.0kHz · MONO', hideMobile: false },
-  { pos: 'right-[4%] top-[30%] sm:right-[8%]', px: 1.4, tag: 'MODEL', title: 'Whisper large-v3', meta: 'WER 14.2% · ko-KR', hideMobile: true },
-  { pos: 'left-[6%] bottom-[20%] sm:left-[11%]', px: 3.0, tag: 'STREAM', title: '자막 큐 정렬 완료', meta: '00:00 → 00:09 · 3 CUES', hideMobile: true },
-  { pos: 'right-[5%] bottom-[24%] sm:right-[10%]', px: 2.6, tag: 'EXPORT', title: 'SRT · VTT · BURN-IN', meta: 'READY TO SHIP', hideMobile: false },
+  { pos: 'left-[4%] top-[24%] sm:left-[7%]', px: 2.2, tag: 'ENGINE', title: 'Whisper large-v3', meta: 'self-hosted GPU · ko-KR', hideMobile: false },
+  { pos: 'right-[4%] top-[30%] sm:right-[8%]', px: 1.4, tag: 'SPEED', title: '5분 영상 ≈ 3분 처리', meta: '평균 처리 시간', hideMobile: true },
+  { pos: 'left-[6%] bottom-[20%] sm:left-[11%]', px: 3.0, tag: 'OUTPUT', title: 'SRT · 번인 MP4 · 공유', meta: '표준 자막 그대로 사용', hideMobile: true },
+  { pos: 'right-[5%] bottom-[24%] sm:right-[10%]', px: 2.6, tag: 'PRIVACY', title: '처리 후 자동 삭제', meta: '게스트 1시간 · 회원 30일', hideMobile: false },
 ] as const;
 
 const fmtTC = (p: number) => {
