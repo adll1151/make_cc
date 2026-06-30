@@ -6,7 +6,7 @@ import { EditorShowcase } from '@/components/landing/EditorShowcase';
 import { CinematicHero } from '@/components/landing/CinematicHero';
 import { ReadingProgress } from '@/components/landing/ReadingProgress';
 import { BurnInStyles } from '@/components/landing/BurnInStyles';
-import { BeforeAfterSlider } from '@/components/landing/BeforeAfterSlider';
+import { MultiLangCaptions } from '@/components/landing/MultiLangCaptions';
 import { BlurText } from '@/components/reactbits/BlurText';
 import { CountUp } from '@/components/reactbits/CountUp';
 import { ScrollVelocity } from '@/components/reactbits/ScrollVelocity';
@@ -32,11 +32,11 @@ export default function LandingPage() {
       {/* ============ HERO — 시네마틱 HUD (스크롤 시네마틱) ============ */}
       <CinematicHero />
 
-      {/* 다크 히어로 → 라이트 본문 전환 브리지 */}
-      <div aria-hidden className="h-24 bg-gradient-to-b from-[#05050a] to-transparent sm:h-36" />
+      {/* 다크 히어로 → 라이트 본문 전환 브리지 (하단 마무리 브리지와 대칭) */}
+      <div aria-hidden className="h-24 bg-gradient-to-b from-[#05050a] to-transparent sm:h-32" />
 
-      {/* ============ 제품 쇼케이스 ============ */}
-      <section className="mx-auto -mt-10 max-w-5xl px-6 pb-16">
+      {/* ============ 제품 쇼케이스 (브리지 위로 당겨 히어로 seam의 빈 공백 최소화) ============ */}
+      <section className="mx-auto -mt-20 max-w-5xl px-6 pb-16">
         <p className="mb-5 text-center font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
           무료 체험 · 카드 등록 불필요 · 처리 후 자동 삭제
         </p>
@@ -46,12 +46,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ Before / After ============ */}
+      {/* ============ 다국어 번역 ============ */}
       <section className="mx-auto max-w-5xl px-6 pb-28">
-        <SectionHead eyebrow="Before / After" title="자막 하나로, 이렇게." />
-        <BeforeAfterSlider />
+        <SectionHead eyebrow="Translation" title="한 번 만들면, 전 세계로." />
+        <MultiLangCaptions />
         <p className="scroll-fade mt-5 text-center text-sm text-muted-foreground">
-          손잡이를 끌어 비교해보세요 — 같은 영상, 자막 한 줄의 차이.
+          한국어 자막을 영어·일본어·중국어로 — 클릭 한 번에 다국어 자막.
         </p>
       </section>
 
@@ -135,7 +135,7 @@ export default function LandingPage() {
           {FEATURES.map((f) => (
             <SpotlightCard
               key={f.title}
-              className={`group rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)] ${f.span ?? ''} ${f.wide ? 'flex items-center justify-between gap-6' : ''}`}
+              className={`group rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)] ${f.span ?? ''} ${f.preview ? 'min-h-[15rem]' : ''} ${f.wide ? 'flex items-center justify-between gap-6' : ''}`}
             >
               <CardHud />
               <div>
@@ -162,6 +162,7 @@ export default function LandingPage() {
                   </div>
                 )}
               </div>
+              {f.preview && <FeatureHoverPreview kind={f.preview} />}
               {f.wide && (
                 <span className="hidden shrink-0 items-center gap-2 rounded-xl border border-success/30 bg-success/5 px-4 py-3 text-sm font-semibold text-success sm:inline-flex">
                   <IconLock /> 자동 삭제
@@ -178,8 +179,8 @@ export default function LandingPage() {
         <BurnInStyles />
       </section>
 
-      {/* 라이트 본문 → 다크 마무리 전환 브리지 (히어로 진입의 역방향, 수미상관) */}
-      <div aria-hidden className="h-20 bg-gradient-to-b from-transparent to-[#05050a] sm:h-28" />
+      {/* 라이트 본문 → 다크 마무리 전환 브리지 (상단 진입 브리지와 대칭, 수미상관) */}
+      <div aria-hidden className="h-24 bg-gradient-to-b from-transparent to-[#05050a] sm:h-32" />
 
       {/* ============ CTA — 다크 시네마틱 마무리 ============ */}
       <section className="bg-[#05050a] text-white">
@@ -289,8 +290,8 @@ const STEPS = [
 const FEATURES = [
   { title: 'Whisper 기반 인식', desc: 'self-hosted large-v3로 한국어 음성을 정확하게 인식합니다.', icon: <IconMic />, span: 'sm:col-span-2', featured: true },
   { title: '표준 SRT 다운로드', desc: '유튜브·편집 프로그램에 바로 쓰는 표준 자막.', icon: <IconDoc /> },
-  { title: '브라우저 편집기', desc: '라인 단위 수정 + 영상 위 실시간 미리보기.', icon: <IconEdit /> },
-  { title: '번인 자막 영상', desc: '쇼츠·릴스용으로 자막이 박힌 MP4 출력.', icon: <IconFilm /> },
+  { title: '브라우저 편집기', desc: '라인 단위 수정 + 영상 위 실시간 미리보기.', icon: <IconEdit />, preview: 'editor' as const },
+  { title: '번인 자막 영상', desc: '쇼츠·릴스용으로 자막이 박힌 MP4 출력.', icon: <IconFilm />, preview: 'burnin' as const },
   { title: '공유 링크', desc: '회원은 링크 하나로 자막을 공유·다운로드.', icon: <IconLink /> },
   { title: '프라이버시 우선', desc: '학습 미사용 + 처리 후 원본 자동 삭제. 게스트 1시간 · 회원 30일 후 자동 삭제.', icon: <IconLock />, span: 'sm:col-span-3', wide: true },
 ];
@@ -325,7 +326,8 @@ function SectionHead({ eyebrow, title }: { eyebrow: string; title: string }) {
         <ShinyText text={eyebrow} />
       </p>
       <h2 className="mt-2.5 text-3xl font-extrabold tracking-[-0.03em] sm:text-5xl">
-        <BlurText text={title} scroll />
+        {/* 진입 시 1회 reveal — 스크롤을 멈춰도 항상 선명하게 끝난다(중간 블러 고정 방지). */}
+        <BlurText text={title} />
       </h2>
     </div>
   );
@@ -355,6 +357,62 @@ function CardHud() {
       <span className={`${base} bottom-2 left-2 border-b border-l`} />
       <span className={`${base} bottom-2 right-2 border-b border-r`} />
     </span>
+  );
+}
+
+/** 기능 카드 hover 시 아래에서 슬라이드-업되는 미니 미리보기(드로어). 레이아웃에 영향 없도록 absolute. */
+function FeatureHoverPreview({ kind }: { kind: 'editor' | 'burnin' }) {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-x-3 bottom-3 z-10 translate-y-3 opacity-0 transition-all duration-300 ease-[var(--ease-out-expo)] group-hover:translate-y-0 group-hover:opacity-100"
+    >
+      <div className="rounded-xl border border-border bg-card/95 p-2.5 shadow-[var(--shadow-card-hover)] backdrop-blur-sm">
+        {kind === 'editor' ? <EditorMini /> : <BurninMini />}
+      </div>
+    </div>
+  );
+}
+
+/** 브라우저 편집기 미니 목업 — 영상 + 자막 라인 리스트. */
+function EditorMini() {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1">
+        <span className="size-1.5 rounded-full bg-[#ff5f56]" />
+        <span className="size-1.5 rounded-full bg-[#ffbd2e]" />
+        <span className="size-1.5 rounded-full bg-[#27c93f]" />
+        <span className="ml-1 font-mono text-[8px] text-muted-foreground">make_cc / 편집기</span>
+      </div>
+      <div className="flex gap-1.5">
+        <div className="relative aspect-video w-1/2 overflow-hidden rounded-md bg-[#0b0b12]">
+          <span className="absolute left-1 top-1 rounded bg-accent px-1 text-[7px] font-bold leading-tight text-accent-foreground">CC</span>
+          <span className="absolute inset-x-1 bottom-1 rounded bg-black/70 px-1 py-0.5 text-center text-[7px] font-semibold text-white">안녕하세요</span>
+        </div>
+        <div className="flex w-1/2 flex-col gap-1">
+          <span className="rounded bg-accent/15 px-1.5 py-1 text-[7px] font-medium text-accent">00:00 · 안녕하세요</span>
+          <span className="rounded bg-muted px-1.5 py-1 text-[7px] text-muted-foreground">00:03 · 영상의 음성을</span>
+          <span className="rounded bg-muted px-1.5 py-1 text-[7px] text-muted-foreground">00:06 · 자막으로</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 번인 자막 영상 미니 목업 — 9:16 프레임에 박힌 자막 + MP4 배지. */
+function BurninMini() {
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="relative h-[72px] w-10 shrink-0 overflow-hidden rounded-md bg-[#0b0b12]">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(60% 50% at 50% 35%, color-mix(in oklab, var(--color-accent) 22%, transparent), transparent 70%)' }} />
+        <span className="absolute right-1 top-1 rounded bg-white/15 px-1 font-mono text-[6px] text-white/80">MP4</span>
+        <span className="absolute inset-x-1 bottom-1.5 rounded bg-accent px-1 py-0.5 text-center text-[6px] font-bold leading-tight text-accent-foreground">자막 박힘</span>
+      </div>
+      <div className="space-y-1">
+        <p className="text-[9px] font-semibold leading-tight">쇼츠·릴스용 번인 MP4</p>
+        <p className="text-[8px] leading-snug text-muted-foreground">켜고 끄는 자막이 아니라 영상에 박혀 어디서나 보임.</p>
+      </div>
+    </div>
   );
 }
 
