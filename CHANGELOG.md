@@ -9,7 +9,7 @@ make_cc의 버전별 작업 기록입니다. 형식은 [Keep a Changelog](https:
 
 ---
 
-## [Unreleased] · 자막 다국어 번역 (phase3)
+## [0.5.0] · 자막 다국어 번역 (phase3)
 <!-- date: 2026-06-24 -->
 
 완성된 한국어 자막을 다른 언어로 번역하는 기능. 백엔드부터 편집기 번역 패널·번인 다국어까지 구현·검증 완료. main 머지(PR#2) + 프로덕션 배포 완료(Check 96%).
@@ -106,7 +106,7 @@ make_cc의 버전별 작업 기록입니다. 형식은 [Keep a Changelog](https:
 
 ---
 
-[Unreleased]: https://github.com/adll1151/make_cc/tree/phase3
+[0.5.0]: https://github.com/adll1151/make_cc/releases/tag/v0.5.0
 [0.4.0]: https://github.com/adll1151/make_cc/releases/tag/v0.4.0
 [0.3.0]: https://github.com/adll1151/make_cc/releases/tag/v0.3.0
 [0.2.0]: https://github.com/adll1151/make_cc/releases/tag/v0.2.0
