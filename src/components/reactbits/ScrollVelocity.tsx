@@ -60,7 +60,7 @@ export function ScrollVelocity({
   return (
     <div
       className={cn(
-        'relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_5%,#000_95%,transparent)]',
+        'relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_12%,#000_88%,transparent)]',
         className,
       )}
     >

@@ -100,15 +100,18 @@ const rand = (i: number, s: number) => {
   const x = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453;
   return x - Math.floor(x);
 };
+// 인라인 스타일은 서버/클라가 글자 단위로 동일해야 하이드레이션 미스매치가 안 난다.
+// 생성 시 고정 소수점으로 양자화해 두 곳의 직렬화를 일치시킨다.
+const q = (n: number, d = 3) => Number(n.toFixed(d));
 
 const DOTS = Array.from({ length: 56 }, (_, i) => ({
-  x: rand(i, 1) * 100,
-  y: rand(i, 2) * 100,
-  s: 0.5 + rand(i, 3) * 2.2,
-  o: 0.12 + rand(i, 4) * 0.5,
-  tw: 2 + rand(i, 5) * 4,
-  dl: rand(i, 6) * 4,
-  px: 0.4 + rand(i, 7) * 2.2, // 시차 깊이(강화)
+  x: q(rand(i, 1) * 100),
+  y: q(rand(i, 2) * 100),
+  s: q(0.5 + rand(i, 3) * 2.2),
+  o: q(0.12 + rand(i, 4) * 0.5),
+  tw: q(2 + rand(i, 5) * 4),
+  dl: q(rand(i, 6) * 4),
+  px: q(0.4 + rand(i, 7) * 2.2), // 시차 깊이(강화)
 }));
 
 const CBARS = Array.from({ length: 30 }, (_, i) => ({
@@ -368,8 +371,8 @@ export function CinematicHero() {
                 {
                   left: `${d.x}%`,
                   top: `${d.y}%`,
-                  width: d.s,
-                  height: d.s,
+                  width: `${d.s}px`,
+                  height: `${d.s}px`,
                   opacity: d.o,
                   boxShadow: '0 0 4px rgba(255,255,255,0.5)',
                   transform: `translateY(calc(var(--p) * ${(-90 * d.px).toFixed(1)}px))`,
@@ -411,7 +414,7 @@ export function CinematicHero() {
         <div className="relative z-10 flex w-full max-w-4xl flex-col items-center px-6 text-center">
           <CaptionStage reduce={reduce} playing={playing} onToggle={togglePlay} capRef={capRef} transRef={transRef} />
 
-          <div key={`chip-${active}`} className="enter-fade-up mt-9 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs tracking-wider text-white/70 backdrop-blur-sm">
+          <div key={`chip-${active}`} className="enter-fade-up mt-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs tracking-wider text-white/70 backdrop-blur-sm sm:mt-9">
             <span className="size-1.5 animate-pulse-glow rounded-full" style={{ background: 'var(--sa)' }} />
             STEP {String(active + 1).padStart(2, '0')} / 0{N} · {scene.stage}
           </div>
@@ -426,7 +429,7 @@ export function CinematicHero() {
             {scene.sub}
           </p>
 
-          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:mt-9 sm:flex-row">
             <Magnet padding={70} magnetStrength={4}>
               <StarBorder>
                 <Button asChild size="xl" className="group min-w-48 rounded-full">
@@ -442,7 +445,7 @@ export function CinematicHero() {
             </Button>
           </div>
 
-          <div className="mt-10 flex items-center gap-2" aria-hidden>
+          <div className="mt-7 flex items-center gap-2 sm:mt-10" aria-hidden>
             {SCENES.map((s, i) => (
               <span key={s.id} className="h-1 rounded-full transition-all duration-500" style={{ width: i === active ? 28 : 10, background: i === active ? 'var(--sa)' : 'color-mix(in oklab, white 22%, transparent)' }} />
             ))}
@@ -466,9 +469,12 @@ export function CinematicHero() {
 /* ===================== 배경 거대 파형 (정적 + 가로 시프트) ===================== */
 
 function BackgroundWave() {
+  // 좌표를 고정 소수점으로 양자화 — Math.sin의 ULP가 런타임(Node/Chromium V8)별로
+  // 갈려도 직렬화 문자열이 동일해야 하이드레이션 미스매치가 안 난다.
   const pts = Array.from({ length: 120 }, (_, i) => {
-    const y = 50 + Math.sin(i * 0.5) * (8 + (i % 9)) * (i % 2 ? 1 : -1) * 0.6;
-    return `${(i / 119) * 200 - 50},${y}`;
+    const x = q((i / 119) * 200 - 50);
+    const y = q(50 + Math.sin(i * 0.5) * (8 + (i % 9)) * (i % 2 ? 1 : -1) * 0.6);
+    return `${x},${y}`;
   }).join(' ');
   return (
     <svg className="absolute inset-x-0 top-1/2 h-40 w-full -translate-y-1/2 opacity-[0.12]" preserveAspectRatio="none" viewBox="0 0 100 100" aria-hidden>

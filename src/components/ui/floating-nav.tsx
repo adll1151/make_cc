@@ -15,6 +15,7 @@ import { createBrowserSupabase } from '@/lib/supabase/browser';
 export function FloatingNav() {
   const [email, setEmail] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -27,11 +28,27 @@ export function FloatingNav() {
   }, []);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 12);
+      // 섹션 헤딩과 겹치지 않도록: 아래로 내리면 숨기고, 위로 올리면 즉시 복귀.
+      // 상단 근처(<120px)에서는 항상 노출.
+      const delta = y - last;
+      if (y < 120) setHidden(false);
+      else if (delta > 6) setHidden(true);
+      else if (delta < -6) setHidden(false);
+      last = y;
+    };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // 메뉴를 열면 네비는 반드시 보이게.
+  useEffect(() => {
+    if (menuOpen) setHidden(false);
+  }, [menuOpen]);
 
   // Esc로 메뉴 닫기
   useEffect(() => {
@@ -47,7 +64,7 @@ export function FloatingNav() {
     <nav
       className={`fixed left-1/2 top-6 z-50 -translate-x-1/2 enter-fade-up transition-all duration-500 ease-[var(--ease-out-expo)] ${
         scrolled ? 'top-3 scale-[0.96]' : ''
-      }`}
+      } ${hidden ? 'pointer-events-none -translate-y-[160%] opacity-0' : ''}`}
     >
       <div
         className={`glass-strong relative flex items-center gap-1 rounded-full transition-all duration-500 ease-[var(--ease-out-expo)] ${

@@ -21,10 +21,11 @@ const buttonVariants = cva(
           'hover:shadow-[var(--shadow-glow)]',
         ],
         gradient: [
-          'text-primary-foreground shadow-md',
-          'bg-[linear-gradient(135deg,var(--color-primary)_0%,oklch(0.65_0.22_320)_100%)]',
+          // 브랜드 앰버 계열로 통일 (이전엔 마젠타 hue320이라 랜딩 정체성과 충돌).
+          'text-accent-foreground shadow-md',
+          'bg-[linear-gradient(135deg,var(--color-accent)_0%,oklch(0.7_0.2_42)_100%)]',
           'hover:shadow-[var(--shadow-glow)]',
-          'hover:brightness-110',
+          'hover:brightness-105',
         ],
         destructive:
           'bg-destructive text-destructive-foreground shadow-sm hover:bg-[color-mix(in_oklab,var(--color-destructive)_88%,black_12%)]',
