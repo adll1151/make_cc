@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -17,15 +17,10 @@ const TRANS = [
 export function MultiLangCaptions() {
   const [hi, setHi] = useState(0);
   const [typed, setTyped] = useState(0);
-  const reduced = useRef(false);
 
+  // 항상 애니메이션(reduce-motion 무시) — 핵심 데모라 설정과 무관하게 움직이게 한다.
   useEffect(() => {
-    reduced.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const full = TRANS[hi]!.text.length;
-    if (reduced.current) {
-      setTyped(full);
-      return;
-    }
     setTyped(0);
     let i = 0;
     let hold: ReturnType<typeof setTimeout>;
@@ -68,7 +63,7 @@ export function MultiLangCaptions() {
         <Row flag={ORIG.flag} label={ORIG.label} text={ORIG.text} origin />
         <span className="font-mono text-[10px] tracking-widest text-accent/80">↓ 자동 번역</span>
         {TRANS.map((t, i) => {
-          const isActive = !reduced.current && i === hi;
+          const isActive = i === hi;
           const shown = isActive ? t.text.slice(0, typed) : t.text;
           return <Row key={t.code} flag={t.flag} label={t.label} text={shown} lang={t.code} active={isActive} caret={isActive} />;
         })}
