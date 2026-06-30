@@ -19,7 +19,8 @@
     "worker:poll": "tsx --env-file=.env worker/cli/poll-loop.ts",
     "worker:render": "tsx --env-file=.env worker/cli/render-one.ts",
     "discord:setup": "node --env-file=.env scripts/discord-setup.mjs",
-    "discord:relay": "node --env-file=.env scripts/discord-automod-relay.mjs"
+    "discord:relay": "node --env-file=.env scripts/discord-automod-relay.mjs",
+    "usage": "node --env-file=.env scripts/usage-stats.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
