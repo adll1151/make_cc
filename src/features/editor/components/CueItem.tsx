@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import type { Cue } from '@/types/subtitle';
 import { shortTimecode, formatEditTimecode, parseEditTimecode } from '../lib/timecode-format';
@@ -106,7 +107,12 @@ export function CueItem({
   const cps = computeCps(cue.text, cue.endMs - cue.startMs);
 
   return (
-    <li
+    <motion.li
+      layout
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
       data-cue-index={cue.index}
       data-active={isActive || undefined}
       data-selected={isSelected || undefined}
@@ -114,7 +120,7 @@ export function CueItem({
         if (!editing) selectAndSeek();
       }}
       className={cn(
-        'group relative cursor-pointer rounded-xl border p-3 transition-all',
+        'group relative cursor-pointer rounded-xl border p-3 transition-colors',
         isActive
           ? 'border-primary/40 bg-primary/5 shadow-[var(--shadow-glow)]'
           : isSelected
@@ -266,7 +272,7 @@ export function CueItem({
           </div>
         )}
       </div>
-    </li>
+    </motion.li>
   );
 }
 

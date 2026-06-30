@@ -91,10 +91,11 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
   lastSavedAt: null,
 
   setLoaded({ jobId, cues, speakerMap }) {
-    const sig = computeSignature(cues);
+    const withUid = cues.map((c) => ({ ...c, uid: c.uid ?? crypto.randomUUID() }));
+    const sig = computeSignature(withUid);
     set({
       jobId,
-      cues,
+      cues: withUid,
       speakerMap: speakerMap ?? {},
       originalSignature: sig,
       signature: sig,
@@ -174,7 +175,7 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
       e = cur.endMs + NEW_CUE_MS;
     }
     const arr = cues.slice();
-    arr.splice(i + 1, 0, { index: 0, startMs: s, endMs: e, text: '새 자막' });
+    arr.splice(i + 1, 0, { index: 0, uid: crypto.randomUUID(), startMs: s, endMs: e, text: '새 자막' });
     const next = arr.map((c, k) => ({ ...c, index: k + 1 }));
     set({
       ...recomputed(next, get().originalSignature),

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { useSubtitleStore } from '../hooks/useSubtitleStore';
 import { CueItem } from './CueItem';
 
@@ -78,23 +79,25 @@ export function CueList({ onSeek, onPlayCue, getCurrentMs }: CueListProps) {
   return (
     <>
       <ul ref={containerRef} className="space-y-2">
-        {cues.map((cue, idx) => {
-          const next = cues[idx + 1];
-          const canAddAfter = !next || next.startMs - cue.endMs >= MIN_GAP_MS;
-          return (
-            <CueItem
-              key={cue.index}
-              cue={cue}
-              idx={idx}
-              isActive={activeIndex === idx}
-              isSelected={selectedIndex === idx}
-              canAddAfter={canAddAfter}
-              onSeek={onSeek}
-              onPlayCue={onPlayCue}
-              getCurrentMs={getCurrentMs}
-            />
-          );
-        })}
+        <AnimatePresence initial={false}>
+          {cues.map((cue, idx) => {
+            const next = cues[idx + 1];
+            const canAddAfter = !next || next.startMs - cue.endMs >= MIN_GAP_MS;
+            return (
+              <CueItem
+                key={cue.uid ?? cue.index}
+                cue={cue}
+                idx={idx}
+                isActive={activeIndex === idx}
+                isSelected={selectedIndex === idx}
+                canAddAfter={canAddAfter}
+                onSeek={onSeek}
+                onPlayCue={onPlayCue}
+                getCurrentMs={getCurrentMs}
+              />
+            );
+          })}
+        </AnimatePresence>
       </ul>
       {lastCue && (
         <button

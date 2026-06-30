@@ -16,6 +16,11 @@ export interface WordTiming {
 export interface Cue {
   /** 1부터 시작하는 순번 (SRT 표준) */
   index: number;
+  /**
+   * 편집기 런타임 식별자 (옵션, 저장 안 됨). index는 추가/삭제 시 재번호가
+   * 매겨지므로, 리스트 애니메이션(AnimatePresence)의 안정적 key로 사용.
+   */
+  uid?: string;
   /** 자막 시작 시각 (ms) */
   startMs: number;
   /** 자막 종료 시각 (ms). startMs < endMs */
