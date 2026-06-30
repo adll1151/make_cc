@@ -21,7 +21,9 @@
 
 ## 📸 스크린샷
 
-> 이미지는 `docs/screenshots/`에 있습니다. (캡처 가이드: [`docs/screenshots/README.md`](docs/screenshots/README.md))
+> 전체 이미지는 `docs/screenshots/`에 있습니다. (캡처 가이드: [`docs/screenshots/README.md`](docs/screenshots/README.md))
+
+### 메인 화면
 
 | 랜딩 | 업로드 |
 |------|--------|
@@ -30,6 +32,28 @@
 | 자막 편집기 | 번인 자막 스튜디오 |
 |-------------|--------------------|
 | ![편집기](docs/screenshots/03-editor.png) | ![번인](docs/screenshots/04-burnin.png) |
+
+### 업로드 → 자막 생성 흐름
+
+| 처리 중 | 자막 완성 |
+|---------|-----------|
+| ![처리 중](docs/screenshots/03b-processing.png) | ![완성](docs/screenshots/03c-finished.png) |
+
+### 랜딩 · 콘텐츠 페이지
+
+| Before / After | 인터랙티브 데모 |
+|----------------|------------------|
+| ![Before/After](docs/screenshots/05-beforeafter.png) | ![데모](docs/screenshots/08-demo.png) |
+
+| 사용법 가이드 | FAQ |
+|---------------|-----|
+| ![가이드](docs/screenshots/09-guide.png) | ![FAQ](docs/screenshots/10-faq.png) |
+
+### 모바일
+
+| 랜딩 | 업로드 |
+|------|--------|
+| ![모바일 랜딩](docs/screenshots/11-mobile-landing.png) | ![모바일 업로드](docs/screenshots/12-mobile-upload.png) |
 
 ---
 
