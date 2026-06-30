@@ -4,16 +4,15 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * 다국어 번역 쇼케이스 — 한국어 자막이 영어·일본어·중국어로 바뀌는 라이브 데모.
- * 주력 기능(DeepL 번역, v0.5.0)을 랜딩에 노출. 자동 순환 + 칩 클릭으로 전환, 호버 시 정지.
+ * 다국어 번역 쇼케이스 — "한국어 자막(원본)을 만들면 영어·일본어·중국어로 자동 번역"을
+ * 한눈에 보여준다. 원본 한국어를 고정 노출하고, 그 아래 번역본이 언어별로 순환.
  */
+const KO = '이제 영상만 올리면 끝';
 const LANGS = [
-  { code: 'ko', label: '한국어', text: '이제 영상만 올리면 끝' },
-  { code: 'en', label: 'English', text: "Just upload your video — that's it." },
-  { code: 'ja', label: '日本語', text: 'あとは動画をアップするだけ' },
-  { code: 'zh', label: '中文', text: '只需上传视频，就这么简单' },
+  { code: 'en', flag: '🇺🇸', label: 'English', text: "Just upload your video — that's it." },
+  { code: 'ja', flag: '🇯🇵', label: '日本語', text: 'あとは動画をアップするだけ' },
+  { code: 'zh', flag: '🇨🇳', label: '中文', text: '只需上传视频，就这么简单' },
 ] as const;
-
 const CYCLE_MS = 2600;
 
 export function MultiLangCaptions() {
@@ -24,7 +23,6 @@ export function MultiLangCaptions() {
   useEffect(() => {
     reduced.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }, []);
-
   useEffect(() => {
     if (paused || reduced.current) return;
     const id = setInterval(() => setActive((a) => (a + 1) % LANGS.length), CYCLE_MS);
@@ -35,37 +33,64 @@ export function MultiLangCaptions() {
 
   return (
     <div
-      className="scroll-pop relative mx-auto aspect-video w-full max-w-3xl select-none overflow-hidden rounded-2xl border border-border bg-[#0a0a12] shadow-[var(--shadow-card)]"
+      className="scroll-pop relative mx-auto flex aspect-video w-full max-w-3xl select-none flex-col overflow-hidden rounded-2xl border border-border bg-[#0a0a12] shadow-[var(--shadow-card)]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* 영상 느낌 배경 */}
+      {/* 배경 */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(46% 58% at 36% 28%, color-mix(in oklab, var(--color-accent) 22%, transparent), transparent 66%), radial-gradient(54% 60% at 78% 80%, oklch(0.5 0.13 280 / 0.3), transparent 70%)',
+            'radial-gradient(44% 56% at 32% 24%, color-mix(in oklab, var(--color-accent) 20%, transparent), transparent 66%), radial-gradient(54% 60% at 80% 82%, oklch(0.5 0.13 280 / 0.28), transparent 70%)',
         }}
       />
-      <div
-        className="absolute inset-0 opacity-25 mix-blend-overlay"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)',
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/60" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/55" />
 
-      {/* CC 배지 */}
-      <span className="absolute left-3 top-3 z-10 rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
-        CC
-      </span>
-      <span className="absolute right-3 top-3 z-10 rounded-md bg-white/10 px-2 py-0.5 font-mono text-[10px] tracking-wider text-white/70 backdrop-blur-sm">
-        원본 KO → {cur.label}
-      </span>
+      {/* 헤더: 무슨 기능인지 명시 */}
+      <div className="relative z-10 flex items-center justify-between px-4 pt-3.5">
+        <span className="inline-flex items-center gap-1.5 rounded-md bg-accent/15 px-2 py-1 text-[11px] font-bold text-accent ring-1 ring-accent/30">
+          <span className="size-1.5 animate-pulse-glow rounded-full bg-accent" /> 자동 번역
+        </span>
+        <span className="rounded-md bg-white/10 px-2 py-0.5 font-mono text-[10px] tracking-wider text-white/60 backdrop-blur-sm">
+          1개 자막 → {LANGS.length + 1}개 언어
+        </span>
+      </div>
+
+      {/* 본문: 원본(한국어) → 번역본 */}
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-3 px-6">
+        {/* 원본 */}
+        <div className="flex flex-col items-center gap-1.5">
+          <span className="font-mono text-[10px] tracking-widest text-white/40">🇰🇷 원본 · 한국어</span>
+          <span className="rounded-md bg-white/[0.07] px-3.5 py-1.5 text-base font-semibold text-white/90 sm:text-lg">
+            {KO}
+          </span>
+        </div>
+
+        {/* 화살표 (자동 번역) */}
+        <div className="flex flex-col items-center text-accent">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M12 5v14M19 12l-7 7-7-7" />
+          </svg>
+        </div>
+
+        {/* 번역본 (언어별 순환) */}
+        <div className="flex flex-col items-center gap-1.5">
+          <span key={`l-${cur.code}`} className="animate-[fade-up_0.4s_ease] font-mono text-[10px] tracking-widest text-accent/80">
+            {cur.flag} 번역 · {cur.label}
+          </span>
+          <span
+            key={`t-${cur.code}`}
+            lang={cur.code}
+            className="animate-[fade-up_0.45s_ease] rounded-md bg-accent/15 px-4 py-2 text-center text-lg font-bold text-white shadow-[0_2px_12px_rgba(0,0,0,0.4)] ring-1 ring-accent/25 sm:text-2xl"
+          >
+            {cur.text}
+          </span>
+        </div>
+      </div>
 
       {/* 언어 선택 칩 */}
-      <div className="absolute inset-x-0 top-11 z-10 flex flex-wrap justify-center gap-1.5 px-4">
+      <div className="relative z-10 flex flex-wrap items-center justify-center gap-1.5 px-4 pb-4">
         {LANGS.map((l, i) => (
           <button
             key={l.code}
@@ -79,20 +104,9 @@ export function MultiLangCaptions() {
                 : 'border-white/15 bg-white/5 text-white/55 hover:text-white/80',
             )}
           >
-            {l.label}
+            {l.flag} {l.label}
           </button>
         ))}
-      </div>
-
-      {/* 자막 (언어 전환 시 페이드) */}
-      <div className="absolute inset-x-0 bottom-[14%] z-10 flex justify-center px-6">
-        <span
-          key={cur.code}
-          lang={cur.code}
-          className="animate-[fade-up_0.5s_ease] rounded-md bg-black/70 px-4 py-2 text-center text-lg font-bold text-white shadow-[0_2px_12px_rgba(0,0,0,0.5)] backdrop-blur-sm sm:text-2xl"
-        >
-          {cur.text}
-        </span>
       </div>
     </div>
   );

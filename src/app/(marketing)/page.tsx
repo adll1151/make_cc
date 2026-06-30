@@ -48,10 +48,10 @@ export default function LandingPage() {
 
       {/* ============ 다국어 번역 ============ */}
       <section className="mx-auto max-w-5xl px-6 pb-28">
-        <SectionHead eyebrow="Translation" title="한 번 만들면, 전 세계로." />
+        <SectionHead eyebrow="Auto Translation" title="자막 하나로, 전 세계로." />
         <MultiLangCaptions />
         <p className="scroll-fade mt-5 text-center text-sm text-muted-foreground">
-          한국어 자막을 영어·일본어·중국어로 — 클릭 한 번에 다국어 자막.
+          한국어 자막을 만들면 <span className="font-semibold text-foreground">영어·일본어·중국어로 자동 번역</span> — 해외 시청자까지 한 번에 잡으세요.
         </p>
       </section>
 
