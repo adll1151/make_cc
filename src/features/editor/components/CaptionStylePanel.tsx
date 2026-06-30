@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import type { CaptionFont, CaptionPosition } from '@/types/caption-style';
 import { useCaptionStyle } from '../hooks/useCaptionStyle';
 import { TemplatePicker } from './TemplatePicker';
+import { CaptionSuggestion } from './CaptionSuggestion';
 
 /**
  * 자막 스타일 편집 패널 (Design §5.1/§5.2).
@@ -28,6 +29,8 @@ export function CaptionStylePanel() {
 
   return (
     <div className="space-y-5">
+      <CaptionSuggestion />
+
       <Field label="프리셋">
         <TemplatePicker />
       </Field>

@@ -6,6 +6,7 @@ import type { Cue } from '@/types/subtitle';
 import { shortTimecode, formatEditTimecode, parseEditTimecode } from '../lib/timecode-format';
 import { useSubtitleStore } from '../hooks/useSubtitleStore';
 import { speakerColor, speakerLabel } from '../lib/speaker-color';
+import { computeCps } from '../lib/caption-signals';
 
 interface CueItemProps {
   cue: Cue;
@@ -101,10 +102,8 @@ export function CueItem({
     else setEndStr(formatEditTimecode(cue.endMs));
   };
 
-  // CPS (읽기 속도) — 공백 제외 글자수 / 지속(초)
-  const durSec = (cue.endMs - cue.startMs) / 1000;
-  const chars = cue.text.replace(/\s/g, '').length;
-  const cps = durSec > 0 ? chars / durSec : 0;
+  // CPS (읽기 속도) — caption-signals의 computeCps 단일 출처
+  const cps = computeCps(cue.text, cue.endMs - cue.startMs);
 
   return (
     <li
