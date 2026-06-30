@@ -1,27 +1,88 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 /**
  * Before / After 슬라이더 — 손잡이를 끌면 왼쪽=자막 없는 원본, 오른쪽=자막 박힌 영상.
- * 제품 가치를 한 컷에 증명. 접근성/터치/키보드를 위해 range input을 투명 오버레이로 사용.
+ * 제품 가치를 한 컷에 증명.
+ *
+ * 드래그는 컨테이너의 **포인터 이벤트 + `touch-action: none`** 으로 직접 처리한다.
+ * (네이티브 `<input type=range>`는 터치에서 드래그가 스크롤 제스처에 가로채여 손잡이가
+ *  안 움직이는 문제가 있어 제거. 키보드/a11y는 role="slider" + 화살표 키로 대체.)
  */
 export function BeforeAfterSlider() {
   const [pos, setPos] = useState(52); // 0..100, 노출 경계(%)
+  const ref = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+
+  const updateFromClientX = useCallback((clientX: number) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const p = ((clientX - r.left) / r.width) * 100;
+    setPos(Math.max(0, Math.min(100, p)));
+  }, []);
+
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      dragging.current = true;
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // 캡처 미지원/비활성 포인터면 무시 — dragging 플래그로 계속 추적
+      }
+      updateFromClientX(e.clientX);
+    },
+    [updateFromClientX],
+  );
+
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (dragging.current) updateFromClientX(e.clientX);
+    },
+    [updateFromClientX],
+  );
+
+  const endDrag = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    dragging.current = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // capture가 이미 해제된 경우 무시
+    }
+  }, []);
+
+  const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      setPos((p) => Math.max(0, p - 2));
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      setPos((p) => Math.min(100, p + 2));
+    }
+  }, []);
 
   return (
-    <div className="scroll-pop relative mx-auto aspect-video w-full max-w-3xl select-none overflow-hidden rounded-2xl border border-border bg-[#0a0a12] shadow-[var(--shadow-card)]">
+    <div
+      ref={ref}
+      role="slider"
+      aria-label="자막 전후 비교 슬라이더"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(pos)}
+      tabIndex={0}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onKeyDown={onKeyDown}
+      className="scroll-pop relative mx-auto aspect-video w-full max-w-3xl cursor-ew-resize touch-none select-none overflow-hidden rounded-2xl border border-border bg-[#0a0a12] shadow-[var(--shadow-card)] outline-none focus-visible:ring-2 focus-visible:ring-accent">
       {/* ===== AFTER (자막 박힌 영상) — 베이스 ===== */}
       <Footage>
         <span className="absolute left-3 top-3 z-10 rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">CC</span>
         <span className="absolute right-3 top-3 z-10 rounded-md bg-white/10 px-2 py-0.5 font-mono text-[10px] tracking-wider text-white/70 backdrop-blur-sm">
           AFTER · 자막
         </span>
-        <div className="absolute inset-x-0 bottom-[12%] flex justify-center px-6">
-          <span className="rounded-md bg-black/65 px-3 py-1.5 text-center text-base font-bold text-white backdrop-blur-sm sm:text-2xl">
-            이제 영상만 올리면 끝
-          </span>
-        </div>
       </Footage>
 
       {/* ===== BEFORE (원본, 자막 없음) — 왼쪽만 노출 ===== */}
@@ -46,16 +107,12 @@ export function BeforeAfterSlider() {
         </div>
       </div>
 
-      {/* ===== range 오버레이 (드래그/터치/키보드/a11y) ===== */}
-      <input
-        type="range"
-        min={0}
-        max={100}
-        value={pos}
-        onChange={(e) => setPos(Number(e.target.value))}
-        aria-label="자막 전후 비교 슬라이더"
-        className="absolute inset-0 z-30 size-full cursor-ew-resize opacity-0"
-      />
+      {/* ===== 결과 캡션 — 손잡이 위로 올려 어디서 끌어도 읽히게 ===== */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-[12%] z-[24] flex justify-center px-6">
+        <span className="rounded-md bg-black/70 px-3 py-1.5 text-center text-base font-bold text-white shadow-[0_2px_12px_rgba(0,0,0,0.5)] backdrop-blur-sm sm:text-2xl">
+          이제 영상만 올리면 끝
+        </span>
+      </div>
     </div>
   );
 }
