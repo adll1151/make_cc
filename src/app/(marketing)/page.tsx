@@ -99,9 +99,9 @@ export default function LandingPage() {
           <div className="relative">
             <HudCorners />
             <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-4">
-              <Stat value={3} suffix="분" label="5분 영상 평균 처리" />
-              <Stat value={15} prefix="< " suffix="%" label="WER (오인식률)" />
-              <Stat value={100} suffix="+" label="지원 영상 포맷" />
+              <Stat value={30} suffix="초" label="1분 영상 처리" />
+              <Stat value={4} suffix="개" label="자막 언어 (한·영·일·중)" />
+              <Stat value={4} suffix="종" label="지원 포맷 (MP4·MOV·MKV·WebM)" />
               <Stat value={0} prefix="₩" label="게스트 무료" />
             </div>
           </div>
