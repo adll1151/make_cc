@@ -1,0 +1,111 @@
+[
+  {
+    "epic": "영상 자동 자막 (MVP)",
+    "status": "done",
+    "priority": "Low",
+    "start": "2026-06-17",
+    "due": "2026-06-20",
+    "stories": [
+      { "summary": "업로드 → self-host Whisper STT 파이프라인", "status": "done" },
+      { "summary": "브라우저 편집기 (미리보기·자막 편집)", "status": "done" },
+      { "summary": "게스트 캡 + SRT 다운로드", "status": "done" },
+      { "summary": "자막 공유 토큰", "status": "done" }
+    ]
+  },
+  {
+    "epic": "재디자인 & 랜딩",
+    "status": "done",
+    "priority": "Low",
+    "start": "2026-06-20",
+    "due": "2026-06-23",
+    "stories": [
+      { "summary": "흑백 미니멀 전면 재디자인 + 모션", "status": "done" },
+      { "summary": "다국어 섹션 (한·영·일·중 동시 노출 + 타자기)", "status": "done" },
+      { "summary": "모바일 최적화 (배경 깜빡임 수정)", "status": "done" },
+      { "summary": "신뢰 지표 정직화", "status": "done" }
+    ]
+  },
+  {
+    "epic": "자막 다국어 번역",
+    "status": "done",
+    "priority": "Low",
+    "start": "2026-06-24",
+    "due": "2026-06-25",
+    "stories": [
+      { "summary": "DeepL API Free 연동", "status": "done" },
+      { "summary": "번역 잡 큐 (워커 poll-loop 분기)", "status": "done" },
+      { "summary": "편집기 번역 패널 + SSE 진행률", "status": "done" },
+      { "summary": "번인 다국어 (renders.subtitle_lang)", "status": "done" },
+      { "summary": "번역 가독성 후처리 (Netflix/BBC CPS)", "status": "done" }
+    ]
+  },
+  {
+    "epic": "자막 스타일 어시",
+    "status": "in-progress",
+    "priority": "Medium",
+    "start": "2026-06-30",
+    "due": "2026-06-30",
+    "stories": [
+      { "summary": "Tier1 — 영상 분석 휴리스틱 프리셋 추천", "status": "done" },
+      { "summary": "Tier2 — 프레임 색·안전영역 분석", "status": "planned" },
+      { "summary": "Tier3 — 비전 LLM 스타일 추천", "status": "planned" }
+    ]
+  },
+  {
+    "epic": "first-party 분석 (퍼널)",
+    "status": "in-progress",
+    "priority": "High",
+    "start": "2026-07-01",
+    "due": "2026-07-01",
+    "stories": [
+      { "summary": "퍼널 계측 + analytics_events 테이블", "status": "done" },
+      { "summary": "track() 트래커 + 퍼널 배선", "status": "done" },
+      { "summary": "npm run funnel 리포트 CLI", "status": "done" },
+      { "summary": "운영자 대시보드 페이지 (/admin/analytics)", "status": "planned" }
+    ]
+  },
+  {
+    "epic": "MAKECC Control Center (운영 런처)",
+    "status": "done",
+    "priority": "Low",
+    "start": "2026-07-01",
+    "due": "2026-07-01",
+    "stories": [
+      { "summary": "Spectre.Console TUI 대시보드 (멀티뷰)", "status": "done" },
+      { "summary": "Diagnostics + Crash Report", "status": "done" },
+      { "summary": "Command Palette + 명령 레지스트리", "status": "done" },
+      { "summary": "테마 5종 + 설정 파일", "status": "done" }
+    ]
+  },
+  {
+    "epic": "cloud-worker (RunPod) — 수익화 선결",
+    "status": "planned",
+    "priority": "Highest",
+    "stories": [
+      { "summary": "Design (phase4)", "status": "planned", "priority": "Highest" },
+      { "summary": "RunPod Serverless 엔드포인트 구축", "status": "planned" },
+      { "summary": "Push 트리거 + write-back", "status": "planned" },
+      { "summary": "로컬 GPU 폴백 유지", "status": "planned" }
+    ]
+  },
+  {
+    "epic": "수익화",
+    "status": "planned",
+    "priority": "High",
+    "stories": [
+      { "summary": "Pro 구독 (Merchant of Record)", "status": "planned" },
+      { "summary": "광고 (AdSense 재심사)", "status": "planned" },
+      { "summary": "워커 24/7 상시 가동", "status": "planned" }
+    ]
+  },
+  {
+    "epic": "Discord 통합",
+    "status": "planned",
+    "priority": "Low",
+    "stories": [
+      { "summary": "Discord OAuth 로그인", "status": "planned" },
+      { "summary": "잡 완료 DM 알림", "status": "planned" },
+      { "summary": "공지/문의 채널 통합", "status": "planned" }
+    ]
+  }
+]
