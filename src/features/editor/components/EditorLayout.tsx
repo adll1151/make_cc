@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { FloatingNav } from '@/components/ui/floating-nav';
 import { ShareLinkCard } from '@/features/share';
 import { createBrowserSupabase } from '@/lib/supabase/browser';
+import { track } from '@/lib/analytics';
 import type { Cue } from '@/types/subtitle';
 import { VideoPlayer } from './VideoPlayer';
 import { CueList } from './CueList';
@@ -66,6 +67,11 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
       setShowShare(true);
     }
   }, []);
+
+  // 편집기 진입 퍼널
+  useEffect(() => {
+    track('editor_opened', { jobId });
+  }, [jobId]);
 
   // 데이터 로드
   useEffect(() => {
@@ -207,7 +213,12 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
               variant="gradient"
               size="default"
             >
-              <a href={`/api/subtitles/${jobId}/download`}>SRT 다운로드</a>
+              <a
+                href={`/api/subtitles/${jobId}/download`}
+                onClick={() => track('srt_downloaded', { jobId })}
+              >
+                SRT 다운로드
+              </a>
             </Button>
           </div>
         </header>

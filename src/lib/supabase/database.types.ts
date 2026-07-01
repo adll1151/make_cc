@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          anon_id: string | null
+          created_at: string
+          event: string
+          id: string
+          job_id: string | null
+          path: string | null
+          properties: Json
+          referrer: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          anon_id?: string | null
+          created_at?: string
+          event: string
+          id?: string
+          job_id?: string | null
+          path?: string | null
+          properties?: Json
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          anon_id?: string | null
+          created_at?: string
+          event?: string
+          id?: string
+          job_id?: string | null
+          path?: string | null
+          properties?: Json
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       daily_guest_usage: {
         Row: {
           date: string

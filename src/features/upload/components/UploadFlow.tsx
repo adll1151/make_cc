@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { createBrowserSupabase } from '@/lib/supabase/browser';
 import { extractVideoMetadata } from '../lib/video-metadata';
 import { putFile, UploadError } from '../lib/upload-client';
+import { track } from '@/lib/analytics';
 import {
   ALLOWED_VIDEO_MIME,
   GUEST_CAPS,
@@ -88,6 +89,7 @@ export function UploadFlow() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const uploadAbortRef = useRef<AbortController | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const finishedTrackedRef = useRef(false);
 
   useEffect(() => {
     const supabase = createBrowserSupabase();
@@ -107,6 +109,7 @@ export function UploadFlow() {
     uploadAbortRef.current = null;
     eventSourceRef.current?.close();
     eventSourceRef.current = null;
+    finishedTrackedRef.current = false;
     setState({ phase: 'idle' });
   }, []);
 
@@ -119,6 +122,10 @@ export function UploadFlow() {
     es.addEventListener('status', (e: MessageEvent<string>) => {
       try {
         const data = JSON.parse(e.data) as StreamPayload;
+        if (data.status === 'finished' && !finishedTrackedRef.current) {
+          finishedTrackedRef.current = true;
+          track('job_finished', { jobId });
+        }
         setState((prev) => {
           if (
             prev.phase === 'idle' ||
@@ -180,6 +187,9 @@ export function UploadFlow() {
       }
 
       // 3. 메타데이터
+      track('upload_started', {
+        properties: { sizeBytes: file.size, mime: file.type || 'unknown' },
+      });
       setState({ phase: 'validating', file });
       let durationSec: number;
       try {
@@ -300,6 +310,8 @@ export function UploadFlow() {
         return;
       }
 
+      track('upload_completed', { jobId: initResp.jobId });
+
       // 8. SSE 구독 — queued / transcribing / finished / failed
       setState({
         phase: 'queued',
@@ -389,7 +401,12 @@ export function UploadFlow() {
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <a href={`/api/subtitles/${state.jobId}/download`}>SRT 다운로드</a>
+              <a
+                href={`/api/subtitles/${state.jobId}/download`}
+                onClick={() => track('srt_downloaded', { jobId: state.jobId })}
+              >
+                SRT 다운로드
+              </a>
             </Button>
           </div>
           <div className="mt-4">

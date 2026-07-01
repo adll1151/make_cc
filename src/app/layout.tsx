@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { AnalyticsTracker } from '@/features/analytics/AnalyticsTracker';
 
 export const metadata: Metadata = {
   title: 'make_cc — 한국어 영상 자막 자동 생성',
@@ -37,7 +38,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AdsenseScript />로 스크립트를 두고, 그 위에서 <AdSlot />이 광고를 push한다.
         */}
       </head>
-      <body className="min-h-screen bg-background text-foreground">{children}</body>
+      <body className="min-h-screen bg-background text-foreground">
+        {children}
+        <AnalyticsTracker />
+      </body>
     </html>
   );
 }

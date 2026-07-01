@@ -20,7 +20,8 @@
     "worker:render": "tsx --env-file=.env worker/cli/render-one.ts",
     "discord:setup": "node --env-file=.env scripts/discord-setup.mjs",
     "discord:relay": "node --env-file=.env scripts/discord-automod-relay.mjs",
-    "usage": "node --env-file=.env scripts/usage-stats.mjs"
+    "usage": "node --env-file=.env scripts/usage-stats.mjs",
+    "funnel": "node --env-file=.env scripts/analytics-funnel.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
