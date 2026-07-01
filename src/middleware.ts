@@ -58,8 +58,14 @@ export async function middleware(req: NextRequest) {
       },
     });
 
-    // 세션 조회만 해도 쿠키 갱신이 트리거됨
-    await supabase.auth.getUser();
+    // 세션 조회만 해도 쿠키 갱신이 트리거됨.
+    // 손상된 auth 쿠키(청크 누락 등)로 JSON 파싱이 실패해도 앱 전체가 500으로 죽지 않도록 보호 —
+    // 이 요청은 비로그인으로 진행(사용자는 재로그인/쿠키 정리로 복구).
+    try {
+      await supabase.auth.getUser();
+    } catch {
+      // ignore — corrupted/partial session cookie
+    }
   }
 
   // 2. anonymousId 쿠키 보장 (HTTP-only, SameSite=Lax)
