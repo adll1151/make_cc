@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { AppError } from '@/lib/api';
+import { env } from '@/lib/env';
 import { ANONYMOUS_COOKIE, type OwnerContext } from '@/types/session';
 
 /**
@@ -49,4 +50,24 @@ export async function getOptionalOwnerContext(): Promise<OwnerContext | null> {
   } catch {
     return null;
   }
+}
+
+/** 이메일이 ADMIN_EMAILS(운영자 목록)에 속하는지 */
+export function isAdminEmail(email: string): boolean {
+  const admins = env.ADMIN_EMAILS.split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  return admins.includes(email.toLowerCase());
+}
+
+/**
+ * 운영자 컨텍스트 — 로그인 + ADMIN_EMAILS 포함 시에만 user 반환, 아니면 null.
+ * 운영자 전용 화면(/admin/*)에서 사용. null이면 페이지는 notFound()로 존재 자체를 숨긴다.
+ */
+export async function getAdminContext(): Promise<
+  Extract<OwnerContext, { kind: 'user' }> | null
+> {
+  const owner = await getOptionalOwnerContext();
+  if (owner?.kind !== 'user') return null;
+  return isAdminEmail(owner.email) ? owner : null;
 }

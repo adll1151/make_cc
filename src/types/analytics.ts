@@ -33,3 +33,33 @@ export const analyticsBatchSchema = z.object({
 
 export type AnalyticsEventInput = z.infer<typeof analyticsEventInputSchema>;
 export type AnalyticsBatch = z.infer<typeof analyticsBatchSchema>;
+
+// ── 운영자 대시보드 퍼널 집계 타입 (client-safe) ──────────
+
+export interface FunnelStep {
+  event: AnalyticsEventName;
+  label: string;
+  sessions: number;
+  pctOfTop: number; // 방문(최상단) 대비 %
+  stepConv: number | null; // 직전 단계 대비 %
+}
+
+export interface FunnelKpi {
+  key: string;
+  label: string;
+  value: number;
+  suffix?: string;
+  delta: number | null; // 이전 동일 기간 대비 (null=비교 불가)
+  deltaSuffix: '%' | 'pp';
+}
+
+export interface FunnelSummary {
+  sinceDays: number;
+  totalEvents: number;
+  topSessions: number;
+  kpis: FunnelKpi[];
+  steps: FunnelStep[];
+  referrers: { name: string; count: number }[];
+  paths: { path: string; count: number }[];
+  generatedAt: string;
+}

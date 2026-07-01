@@ -20,6 +20,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
+  // 운영자 전용 화면(/admin/*) 접근 허용 이메일 (쉼표 구분). 미설정 시 접근 불가(404).
+  ADMIN_EMAILS: z.string().optional().default(''),
 
   // Supabase (Auth + DB + Storage 통합)
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
