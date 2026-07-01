@@ -17,10 +17,10 @@ public static class ShutdownScreen
         public StepStatus Status { get; set; } = StepStatus.Pending;
     }
 
-    public static async Task RunAsync(AppServices svc)
+    public static async Task RunAsync(AppServices svc, bool preview = false)
     {
         var s = svc.State;
-        svc.RecordUserAction("Shutdown");
+        if (!preview) svc.RecordUserAction("Shutdown");
 
         // 헤더 로고 (기동은 Accent, 종료는 Accent2 로 대비)
         AnsiConsole.Clear();
@@ -48,7 +48,7 @@ public static class ShutdownScreen
                 await Step(ctx, seq, () => frame++, seq[0], async () =>
                 {
                     s.Logs.Warn("Stopping Worker...");
-                    svc.Process.Stop("worker");
+                    if (!preview) svc.Process.Stop("worker");
                     await Task.Delay(350);
                     return StepStatus.Ok;
                 });
@@ -56,7 +56,7 @@ public static class ShutdownScreen
                 await Step(ctx, seq, () => frame++, seq[1], async () =>
                 {
                     s.Logs.Warn("Stopping API...");
-                    svc.Process.Stop("dev");
+                    if (!preview) svc.Process.Stop("dev");
                     await Task.Delay(350);
                     return StepStatus.Ok;
                 });
@@ -66,7 +66,8 @@ public static class ShutdownScreen
                     if (svc.Docker.Available)
                     {
                         s.Logs.Warn("Stopping Containers (docker compose down)...");
-                        try { await svc.Docker.ComposeDownAsync(svc.Paths.Root); } catch { }
+                        if (!preview) { try { await svc.Docker.ComposeDownAsync(svc.Paths.Root); } catch { } }
+                        else await Task.Delay(500);
                         return StepStatus.Ok;
                     }
                     s.Logs.Info("Containers — skipped (no Docker)");

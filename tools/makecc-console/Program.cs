@@ -17,6 +17,16 @@ if (args.Contains("--selftest"))
     return 0;
 }
 
+// --shutdown-preview : 부팅/파괴적 동작 없이 종료 화면만 미리보기(샘플 세션 시드)
+if (args.Contains("--shutdown-preview"))
+{
+    SelfTest.Seed(svc);
+    svc.Docker.Available = svc.State.Env.DockerAvailable; // Containers 스텝을 ✔로 보이게(실제 케이스)
+    AnsiConsole.Profile.Width = Math.Max(AnsiConsole.Profile.Width, 130);
+    await ShutdownScreen.RunAsync(svc, preview: true);
+    return 0;
+}
+
 // 헤드리스 진단(#2) — 인터랙티브 없이 전체 점검 결과 출력
 if (args.Contains("--diagnostics"))
 {
