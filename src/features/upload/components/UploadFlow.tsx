@@ -332,6 +332,12 @@ export function UploadFlow() {
       <div>
         {authed === false && <GuestCapBanner />}
         <UploadDropzone onFileSelected={onFileSelected} />
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          영상이 없나요?{' '}
+          <Link href="/editor/sample" className="font-medium text-foreground underline-offset-2 hover:underline">
+            샘플로 편집기 체험 →
+          </Link>
+        </p>
       </div>
     );
   }

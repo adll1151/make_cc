@@ -20,6 +20,7 @@ import { TranslationsPanel } from './TranslationsPanel';
 import { useSubtitleStore } from '../hooks/useSubtitleStore';
 import { useAutoSave, saveNow } from '../hooks/useAutoSave';
 import { useVideoSync, seekToCue, playCueSegment } from '../hooks/useVideoSync';
+import { SAMPLE_CUES, SAMPLE_VIDEO_SRC, SAMPLE_SRT_HREF } from '../lib/sample-cues';
 
 interface EditorLayoutProps {
   jobId: string;
@@ -52,6 +53,7 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
   const [mobileTab, setMobileTab] = useState<'captions' | 'style'>('captions');
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isSample = jobId === 'sample';
 
   // 회원 여부 + ?share=1로 진입 시 자동 열기
   useEffect(() => {
@@ -68,9 +70,9 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
     }
   }, []);
 
-  // 편집기 진입 퍼널
+  // 편집기 진입 퍼널 (샘플 체험은 실제 퍼널에서 제외)
   useEffect(() => {
-    track('editor_opened', { jobId });
+    if (jobId !== 'sample') track('editor_opened', { jobId });
   }, [jobId]);
 
   // 데이터 로드
@@ -79,6 +81,16 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
     (async () => {
       setLoading(true);
       setLoadError(null);
+
+      // 가입 전 "샘플로 편집기 체험" — 네트워크 없이 예시 자막/영상 주입
+      if (jobId === 'sample') {
+        setLoaded({ jobId, cues: SAMPLE_CUES, speakerMap: {} });
+        setVideoUrl(SAMPLE_VIDEO_SRC);
+        setFileName('예시 영상.mp4');
+        setLoading(false);
+        return;
+      }
+
       try {
         const [subRes, urlRes, jobRes] = await Promise.all([
           fetch(`/api/subtitles/${jobId}`),
@@ -196,8 +208,8 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <SaveStatusBadge />
-            {isMember && (
+            {!isSample && <SaveStatusBadge />}
+            {isMember && !isSample && (
               <Button
                 type="button"
                 variant="outline"
@@ -214,7 +226,8 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
               size="default"
             >
               <a
-                href={`/api/subtitles/${jobId}/download`}
+                href={isSample ? SAMPLE_SRT_HREF : `/api/subtitles/${jobId}/download`}
+                download={isSample ? 'make_cc-korean-sample.srt' : undefined}
                 onClick={() => track('srt_downloaded', { jobId })}
               >
                 SRT 다운로드
@@ -223,7 +236,21 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
           </div>
         </header>
 
-        {showShare && isMember && (
+        {isSample && (
+          <div className="enter-fade-up mb-4 flex flex-col items-start justify-between gap-3 rounded-2xl border border-accent/30 bg-accent/[0.06] px-5 py-4 sm:flex-row sm:items-center">
+            <p className="text-sm">
+              <span className="font-semibold text-foreground">🎬 샘플 체험 중</span>
+              <span className="ml-2 text-muted-foreground">
+                자유롭게 편집·구간듣기·미리보기해보세요. 저장·번인·공유는 내 영상에서 됩니다.
+              </span>
+            </p>
+            <Button asChild variant="gradient" size="default" className="shrink-0">
+              <Link href="/upload">내 영상으로 만들기 →</Link>
+            </Button>
+          </div>
+        )}
+
+        {showShare && isMember && !isSample && (
           <div className="mb-4">
             <ShareLinkCard jobId={jobId} />
           </div>
@@ -304,7 +331,8 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
           </aside>
         </div>
 
-        {/* 번인 자막 스타일 + 내보내기 (모바일은 '번인 스타일' 탭일 때만) */}
+        {/* 번인 자막 스타일 + 내보내기 (모바일은 '번인 스타일' 탭일 때만) — 샘플 체험에선 숨김 */}
+        {!isSample && (
         <section
           className={`mt-4 lg:mt-6 lg:block ${mobileTab === 'style' ? 'block' : 'hidden'}`}
         >
@@ -324,11 +352,14 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
             </div>
           </div>
         </section>
+        )}
 
-        {/* 다국어 자막 (번역) — 메인 편집 store와 분리된 read-only 트랙 관리 */}
+        {/* 다국어 자막 (번역) — 메인 편집 store와 분리된 read-only 트랙 관리 · 샘플 체험에선 숨김 */}
+        {!isSample && (
         <section className="mt-4 lg:mt-6">
           <TranslationsPanel jobId={jobId} />
         </section>
+        )}
 
         {/* 하단 단축키 안내 */}
         <footer className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">

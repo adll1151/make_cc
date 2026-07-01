@@ -38,10 +38,16 @@ export default function DemoPage() {
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <Link
+            href="/editor/sample"
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:opacity-90"
+          >
+            샘플로 편집기 체험 →
+          </Link>
           <a
             href={SAMPLE_SRT}
             download="make_cc-korean-sample.srt"
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:opacity-90"
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:border-border-strong"
           >
             <DownloadIcon /> 샘플 SRT 다운로드
           </a>
@@ -49,7 +55,7 @@ export default function DemoPage() {
             href="/upload"
             className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:border-border-strong"
           >
-            내 영상으로 만들어보기 →
+            내 영상으로 →
           </Link>
         </div>
 

@@ -25,7 +25,8 @@ export function useAutoSave() {
 
   // 디바운스 트리거
   useEffect(() => {
-    if (!dirty || !jobId) return;
+    // 'sample' = 가입 전 체험 모드 — 서버 저장하지 않음
+    if (!dirty || !jobId || jobId === 'sample') return;
     if (timerRef.current) clearTimeout(timerRef.current);
 
     timerRef.current = setTimeout(async () => {
@@ -72,7 +73,7 @@ export function useAutoSave() {
 /** 수동 저장 — 사용자가 "지금 저장" 버튼 누를 때 */
 export async function saveNow(): Promise<void> {
   const state = useSubtitleStore.getState();
-  if (!state.jobId || !state.dirty) return;
+  if (!state.jobId || state.jobId === 'sample' || !state.dirty) return;
   state.markSaving();
   try {
     const res = await fetch(`/api/subtitles/${state.jobId}`, {
