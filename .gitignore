@@ -76,3 +76,6 @@ makecc.config.json
 
 # 미사용 스크래치 보관함 (수동 정리 대상)
 trashcan/
+
+# Supabase CLI 임시
+supabase/.temp/
