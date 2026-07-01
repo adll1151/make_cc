@@ -6,7 +6,7 @@ date: 2026-06-15
 author: shong7500
 project: make_cc
 phase: check
-matchRate: 93
+matchRate: 98
 ---
 
 # discord-integration Gap Analysis (PDCA Check)
@@ -91,7 +91,29 @@ matchRate: 93
 
 → `/pdca report discord-integration`로 완료 보고 진행 권장.
 
+---
+
+## 재검증 (2026-07-01) — Match Rate 93% → 98%
+
+cloud-worker 보류 후 다음 작업 선정 중 discord 재확인. 6/15 지적된 Important 갭이 모두 해소됐고 회귀 없음을 실측 확인.
+
+**6/15 갭 처리 상태**
+| # | 항목 | 현재 |
+|---|------|------|
+| I-1 | dispatch.ts 멱등 주석 모순 | ✅ 해소 — 헤더 주석 "이 dispatcher가 직접 수행한다"로 정정됨 |
+| I-2 | design 이벤트명 `notify_dispatched` | ✅ 해소 — design 전반 `notified`로 정합 (잔존 0건) |
+| I-3 | 429 2-step backoff 명기 | ✅ 코드 반영 확인 (`discord.ts` 채널개설+전송 양단계) |
+
+**실측 (2026-07-01)**
+- `npx tsc --noEmit` → **0 오류** (discord + 미커밋 analytics WIP 포함 전체)
+- `npx vitest run` → **190 passed** (6/15 130개 → 증가, discord 관련 19개 전부 green)
+- 보안 재확인: `DISCORD_BOT_TOKEN` 클라(`features/components/app`) 참조 **0건** (N-03), `format.ts` 자막 원문 **0** (N-06)
+- 운영 env: `.env`에 `DISCORD_BOT_TOKEN`·`DISCORD_OAUTH_REDIRECT_URL`·`NEXT_PUBLIC_DISCORD_INVITE_URL` 설정됨
+
+**잔여 (코드 아님 · 2%)**: 라이브 E2E(실계정 연결→실제 잡 DM 수신) 1회 + Supabase Manual Linking/Discord provider 원격 설정 확인. → 통과 시 feature 종료.
+
 ## Version History
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2026-06-15 | gap-detector 분석 + 런타임 검증 통합. Match Rate 93%, Critical 0 |
+| 1.1 | 2026-07-01 | 재검증 — I-1/I-2/I-3 해소 확인, 190 테스트·typecheck 0, Match Rate 98% |
