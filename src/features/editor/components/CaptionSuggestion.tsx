@@ -28,20 +28,31 @@ export function CaptionSuggestion() {
   const [dismissed, setDismissed] = useState(false);
   const [applied, setApplied] = useState(false);
 
-  // 편집기 영상 엘리먼트에서 종횡비 + 소스 URL 읽기 (로드 후, 메타데이터 갱신 시 재측정)
+  // 편집기 영상 엘리먼트에서 종횡비 + 소스 URL 읽기.
+  // loadedmetadata는 CaptionSuggestion 마운트 전에 이미 발생했을 수 있어(번인 패널이
+  // 화면 하단이라 늦게 마운트) 놓치기 쉬움 → 이벤트 + videoWidth 폴링 폴백 병행.
   useEffect(() => {
     const v = document.querySelector('video');
     if (!v) return;
+    let gotDims = false;
     const read = () => {
-      if (v.videoWidth > 0 && v.videoHeight > 0) {
-        setDims({ width: v.videoWidth, height: v.videoHeight });
-      }
       const url = v.currentSrc || v.src;
       if (url) setVideoUrl(url);
+      if (!gotDims && v.videoWidth > 0 && v.videoHeight > 0) {
+        gotDims = true;
+        setDims({ width: v.videoWidth, height: v.videoHeight });
+        clearInterval(poll);
+      }
     };
     read();
     v.addEventListener('loadedmetadata', read);
-    return () => v.removeEventListener('loadedmetadata', read);
+    const poll = setInterval(read, 250);
+    const stop = setTimeout(() => clearInterval(poll), 8000);
+    return () => {
+      v.removeEventListener('loadedmetadata', read);
+      clearInterval(poll);
+      clearTimeout(stop);
+    };
   }, []);
 
   // 자막 밴드 = 현재 자막 위치 기준. 'middle'은 'bottom'으로 매핑 (Design §10.3)
