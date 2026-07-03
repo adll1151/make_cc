@@ -60,18 +60,21 @@ plan_ref: docs/01-plan/features/cc-rich-tagging.plan.md
 - **CPU 근거**: onnxruntime CPU 빌드 + NAR/경량이라 빠름 → **GPU는 Whisper 전용**(경합 0). m1 VRAM 절감은 GPU 헤드룸으로 유지.
 - ⚠️ **m2 잔여 검증(라이브)**: 모델 가중치 다운로드(~수백MB) + **이벤트 포함 실클립**으로 감지 정확도·라벨 커버리지 확인(API 노출은 확정, 정확도만 남음).
 
-### Q2. 이벤트 라벨 한글 매핑 → **핵심 6종, 표준 CC 표기**
-| SenseVoice 이벤트 | CC 표기(한국어) | 비고 |
+### Q2. 이벤트 라벨 한글 매핑 → **AudioSet 라벨군 → CC 표기 (라이브 검증 반영)**
+m2 라이브 스파이크(2026-07-03)에서 실제 감지된 AudioSet 라벨 기준. 여러 세부 라벨을 하나의 CC 표기로 그룹핑:
+| AudioSet 라벨(감지 예) | CC 표기(한국어) | 실측 |
 |------|------|------|
-| BGM / Music | `♪ 음악 ♪` | 국제 CC 관례(♪) |
-| Applause | `[박수]` | |
-| Laughter | `[웃음]` | |
-| Cough | `[기침]` | |
-| Sneeze | `[재채기]` | |
-| Cry/Crying | `[울음]` | |
-| (그 외/불확실) | **버림** | 오탐 방지 |
-- 감정(SER: 기쁨/슬픔 등)은 **비목표**(이연). 이벤트만.
-- 표기 문자열은 `worker/lib/sound-events.ts` 상수 맵으로 단일 출처.
+| Music / Singing / A capella / Vocal music | `♪ 음악 ♪` | Music 0.79 ✅ |
+| Laughter / Giggle / Snicker / Chuckle | `[웃음]` | Laughter 0.93 ✅ |
+| Applause / Clapping / Cheering | `[박수]` | Clapping 감지(전용클립 필요) |
+| Crying, sobbing / Baby cry | `[울음]` | Baby cry 0.91 ✅ |
+| Cough | `[기침]` | AudioSet 클래스 존재 |
+| Sneeze | `[재채기]` | AudioSet 클래스 존재 |
+| **Speech / Male·Female speech** | (표기 안 함) | 대사=Whisper 담당. **한국어 말→Speech 0.98 정확분류=오탐 안전** |
+| (그 외/불확실/저conf) | **버림** | 오탐 방지 |
+- 감정(SER)은 **비목표**(이연). 이벤트만.
+- 매핑은 `worker/lib/sound-events.ts` 상수(AudioSet 라벨→CC표기)로 단일 출처.
+- **confidence 임계** 예: 주 이벤트 prob ≥ 0.5(음악/웃음/울음 등). Speech가 지배적이면 약한 비음성 태그 억제.
 
 ### Q3. 대사와 겹칠 때 표기 → **별도 사운드 큐(독립 라인)**
 - 사운드 이벤트는 대사 큐에 접두하지 않고 **자체 타임스탬프의 독립 큐**(`kind='sound'`)로 삽입 → SRT 표준 유지·토글 용이·번인 시 별도 처리.
@@ -114,8 +117,8 @@ export function eventsToCues(events: SoundEvent[], opts): Cue[]; // 임계·dedu
 `WHISPER_MODEL=large-v3-turbo`(enum 추가·실측·채택). 본 Design의 GPU 전제.
 
 ### m2 — 사운드 이벤트 감지 (워커)
-- **m2.0 스파이크**: ✅ API 검증 완료(sherpa-onnx `event`/`AudioTagging` 노출). **잔여** = 모델 다운로드 + 이벤트 실클립으로 정확도·라벨 커버리지 확인 → AudioTagging vs SenseVoice.event 최종 택.
-- `worker/scripts/sound_events.py`: 오디오 → sherpa-onnx AudioTagging(top_k, 시간 윈도잉) → stdout JSON `events[{startMs,endMs,tag,confidence}]`. whisper.py 로깅/`emit` 패턴 미러.
+- **m2.0 스파이크**: ✅ **완료(API+라이브)**. sherpa-onnx AudioTagging(zipformer-small, AudioSet 527클래스, 111MB, `model.int8.onnx`, CPU) 실측: Music 0.79·Laughter 0.93·Baby cry 0.91 감지, **한국어 말→Speech 0.98(오탐 안전)**. → **AudioTagging 채택 확정**(SenseVoice.event 불요).
+- `worker/scripts/sound_events.py`: 오디오 → sherpa-onnx AudioTagging **시간 윈도잉**(예 2s hop, 겹침) → 창별 top_k → 임계·인접 병합 → stdout JSON `events[{startMs,endMs,tag,confidence}]`. whisper.py 로깅/`emit` 패턴 미러. 모델은 `worker/models/`에 배치(gitignore, 최초 1회 다운로드 스크립트).
 - `worker/lib/sound-events.ts`: 파이썬 출력 파싱 + 정규화(태그→표기 매핑, `MIN_EVENT_MS`, confidence 임계, 인접 dedup). **순수·테스트 대상**.
 - 의존성: `sherpa-onnx`(wheel) — worker requirements에 추가. 모델은 최초 1회 다운로드.
 
