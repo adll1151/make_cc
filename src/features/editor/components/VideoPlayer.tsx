@@ -29,6 +29,10 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
             ref={ref}
             src={src}
             controls
+            // crossOrigin=anonymous: 자막 스타일 어시(Tier 2) 프레임 샘플러가 같은 URL을
+            // CORS-clean하게 재사용하려면 메인 로드도 CORS 요청이어야 캐시가 오염되지 않는다.
+            // Supabase signed URL은 ACAO:*라 재생에 영향 없음(동일 오리진 데모도 무해).
+            crossOrigin="anonymous"
             className="size-full bg-black object-contain"
             preload="metadata"
             playsInline

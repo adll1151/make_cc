@@ -70,16 +70,24 @@ function once(
   });
 }
 
-/** seek 후 프레임 페인트 확정을 기다린다(rVFC 우선, 없으면 rAF 폴백). */
+/**
+ * seek 후 프레임 페인트 확정을 기다린다(rVFC 우선, 없으면 rAF).
+ * 히든/오프스크린 비디오는 컴포지터에 프레임을 표시하지 않아 rVFC가 영영 안 올 수 있으므로
+ * 반드시 타임아웃 폴백을 둔다. 'seeked' 이후엔 currentTime 프레임이 drawImage로 그릴 수 있다.
+ */
 function waitForFrame(video: HTMLVideoElement): Promise<void> {
   return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
     const rvfc = (video as { requestVideoFrameCallback?: (cb: () => void) => number })
       .requestVideoFrameCallback;
-    if (typeof rvfc === 'function') {
-      rvfc.call(video, () => resolve());
-    } else {
-      requestAnimationFrame(() => resolve());
-    }
+    if (typeof rvfc === 'function') rvfc.call(video, finish);
+    else requestAnimationFrame(finish);
+    setTimeout(finish, 250); // rVFC/rAF가 오지 않는 오프스크린 대비
   });
 }
 

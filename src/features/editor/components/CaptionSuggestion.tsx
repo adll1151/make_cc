@@ -29,13 +29,14 @@ export function CaptionSuggestion() {
   const [applied, setApplied] = useState(false);
 
   // 편집기 영상 엘리먼트에서 종횡비 + 소스 URL 읽기.
-  // loadedmetadata는 CaptionSuggestion 마운트 전에 이미 발생했을 수 있어(번인 패널이
-  // 화면 하단이라 늦게 마운트) 놓치기 쉬움 → 이벤트 + videoWidth 폴링 폴백 병행.
+  // 주의: 편집기 로딩 중엔 videoUrl이 null이라 <video>가 아직 DOM에 없다(늦게 렌더).
+  // 또 loadedmetadata를 놓칠 수도 있다. → 매 틱 video 엘리먼트를 재조회하며 폴링해
+  // 요소가 나중에 나타나도, 이벤트를 놓쳐도 견고하게 dims/url을 얻는다.
   useEffect(() => {
-    const v = document.querySelector('video');
-    if (!v) return;
     let gotDims = false;
     const read = () => {
+      const v = document.querySelector('video');
+      if (!v) return;
       const url = v.currentSrc || v.src;
       if (url) setVideoUrl(url);
       if (!gotDims && v.videoWidth > 0 && v.videoHeight > 0) {
@@ -45,11 +46,9 @@ export function CaptionSuggestion() {
       }
     };
     read();
-    v.addEventListener('loadedmetadata', read);
     const poll = setInterval(read, 250);
-    const stop = setTimeout(() => clearInterval(poll), 8000);
+    const stop = setTimeout(() => clearInterval(poll), 10000);
     return () => {
-      v.removeEventListener('loadedmetadata', read);
       clearInterval(poll);
       clearTimeout(stop);
     };
