@@ -46,7 +46,7 @@ makecc --info            활성 테마/경로
 | **UAT-004** | Redis 장애 | Redis 미기동 | 관찰 | Redis ●빨강 Down, worker 로그에 ECONNREFUSED, 대시보드는 계속 동작 |
 | **UAT-005** | API 장애 | dev 서버 종료 | 관찰 | API ●빨강 Down, STATUS=DEGRADED |
 | **UAT-006** | Diagnostics 실행 | 기동 상태 | `F9` | 진단 화면, 11항목 ✓/✗ + 실패 원인, 키 입력 시 복귀, audit `USER Diagnostics` |
-| **UAT-007** | Command Palette | 기동 상태 | `Ctrl+Shift+P` | 팔레트 모달, 타이핑 필터, 명령 선택 실행, Cancel 취소 |
+| **UAT-007** | Command Palette | 기동 상태 | `Ctrl+P` | 팔레트 모달, 타이핑 필터, 명령 선택 실행, Cancel 취소 |
 | **UAT-008** | Crash Report | 예외/기동 실패 유발 or 팔레트 `Export Report` | — | `logs/reports/report-*.md` 생성, 서비스상태·리소스·(예외)·최근이벤트 포함 |
 | **UAT-009** | 로그 확인 | 운영 후 | 팔레트 `Open Logs` / 파일 탐색 | runtime/error/audit/startup 로그 열람 가능 |
 | **UAT-010** | 정상 종료 | 기동 상태 | `ESC` | Shutdown 시퀀스 후 종료, 백그라운드 서비스 정지 |

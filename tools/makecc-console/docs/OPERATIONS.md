@@ -38,7 +38,7 @@ dotnet run -c Release --project tools\makecc-console\MakeccConsole.csproj
 | `F1` / `F6` | Main / History 뷰 |
 | `F2` | Worker + API 재시작 |
 | `F9` | Diagnostics 화면 |
-| `Ctrl+Shift+P` | Command Palette |
+| `Ctrl+P` | Command Palette |
 | `F4` | 브라우저 열기(localhost:3000) |
 | `ESC` | 종료 |
 

@@ -106,10 +106,10 @@ public static class DashboardScreen
             {
                 var key = Console.ReadKey(intercept: true);
 
-                // Ctrl+Shift+P → Command Palette
+                // Ctrl+P → Command Palette (푸터 '^P' 표기와 일치).
+                // Ctrl+Shift+P는 Windows Terminal이 자체 팔레트로 가로채 콘솔이 못 받으므로 Ctrl+P 사용.
                 if (key.Key == ConsoleKey.P
-                    && key.Modifiers.HasFlag(ConsoleModifiers.Control)
-                    && key.Modifiers.HasFlag(ConsoleModifiers.Shift))
+                    && key.Modifiers.HasFlag(ConsoleModifiers.Control))
                 {
                     view.Palette = true;
                     return;

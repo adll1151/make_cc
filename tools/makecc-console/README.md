@@ -31,11 +31,11 @@ dotnet run -c Release --project tools\makecc-console\MakeccConsole.csproj
 - **System Snapshot** (`S`) — 설정+진단+상태+당일 로그+크래시 리포트+이력을 `logs/snapshots/*.zip` 으로 패키징
 - **RBAC 로그인** — `makecc.operators.json` 에 계정이 있으면 부팅 전 계정 선택+PIN(3회 실패 시 종료). 계정 없으면 단독 사용자 모드(전체 권한, 기존 동작). 계정 관리는 팔레트 `Manage Operators`(운영자 전용)
 - **Diagnostics** (`F9`) — 서비스+환경 11종 점검(✓/✗ + 원인)
-- **Command Palette** (`Ctrl+Shift+P`) — 모달, 타이핑 필터. 재시작·로그·리포트·진단·업데이트·종료 등
+- **Command Palette** (`Ctrl+P`) — 모달, 타이핑 필터. 재시작·로그·리포트·진단·업데이트·종료 등
 - **Shutdown** — 서비스 역순 정지 애니메이션
 
 ### 단축키
-`F1` Main · `F6` History · `F7` Logs · `Q` Queue · `F2` Restart · `F5` Maintenance · `F8` Watchdog · `S` Snapshot · `E` Config Editor · `F9` Diagnostics · `T` Theme · `Ctrl+Shift+P` Palette · `F4` Browser · `ESC` Exit
+`F1` Main · `F6` History · `F7` Logs · `Q` Queue · `F2` Restart · `F5` Maintenance · `F8` Watchdog · `S` Snapshot · `E` Config Editor · `F9` Diagnostics · `T` Theme · `Ctrl+P` Palette · `F4` Browser · `ESC` Exit
 
 ### 헤드리스 CLI (서버/CI)
 ```bat

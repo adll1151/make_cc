@@ -21,7 +21,7 @@
 
 ## 기능
 - [ ] **Diagnostics 실행** (F9) — 11항목 ✓/✗ + 실패 원인 — UAT-006, IT-010
-- [ ] **Command Palette 실행** (Ctrl+Shift+P) — 필터·실행·취소 — UAT-007
+- [ ] **Command Palette 실행** (Ctrl+P) — 필터·실행·취소 — UAT-007
 - [ ] **History 저장** — `logs/history.json`에 실행 이력 누적 — IT-001
 - [ ] **Report 생성** — 예외/실패 or Export Report → `logs/reports/report-*.md` — UAT-008, FT-009/010
 - [ ] **Audit Log** — 재시작·종료 등 `logs/audit/`에 기록 — IT-009

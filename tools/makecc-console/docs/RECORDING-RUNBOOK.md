@@ -36,8 +36,8 @@
 - **F6** → History 뷰: Containers · Latest Deployment · Recent Launches · Failed Launches.
 - 실행 이력(`logs/history.json` 기반)이 Recent에 쌓인 것 확인 → **F1**로 복귀. *(약 20초)*
 
-### 5. Command Palette 실행  `[Ctrl+Shift+P]`
-- **Ctrl+Shift+P** → 팔레트 모달. 타이핑으로 필터(예: `restart` 입력) → 목록 좁혀지는 것 보여줌.
+### 5. Command Palette 실행  `[Ctrl+P]`
+- **Ctrl+P** → 팔레트 모달. 타이핑으로 필터(예: `restart` 입력) → 목록 좁혀지는 것 보여줌.
 - 일단 **Cancel**(첫 항목) 또는 Esc로 닫기. *(약 25초)*
 
 ### 6. Diagnostics 실행  `[F9]`
@@ -47,19 +47,19 @@
 ### 7. Worker/API 재시작  `[F2]`
 - **F2** → "Worker + API Restarted". Live Log에 재시작 로그, Timeline/Notification에 이벤트, **Session의 Restarts 카운트 증가** 확인. *(약 25초)*
 
-### 8. 장애 → 복구 재현  `[Ctrl+Shift+P → Stop Worker]` → `[F2]`
-- **Ctrl+Shift+P** → `Stop Worker` 선택 실행.
+### 8. 장애 → 복구 재현  `[Ctrl+P → Stop Worker]` → `[F2]`
+- **Ctrl+P** → `Stop Worker` 선택 실행.
 - Dashboard에서 **Worker ● 빨강 Stopped**, Timeline `Worker Health Failed`, Notification 표시 확인. *(2~3초 대기)*
 - **F2**(재시작) → Worker 다시 Running, Timeline `Worker Recovered`, **Session의 Recovery 카운트 증가** 확인. *(약 40초)*
 - (Redis는 미기동이면 항상 Down으로 표시 — 자연 장애 상태도 함께 보여줄 수 있음)
 
-### 9. Report 생성  `[Ctrl+Shift+P → Export Report]` → `[Open Reports Folder]`
-- **Ctrl+Shift+P** → `Export Report` → `logs/reports/report-*.md` 생성(Live Log에 "Report 생성" 표시).
-- **Ctrl+Shift+P** → `Open Reports Folder` → 탐색기에서 방금 생성된 `.md` 열어 내용(서비스 상태·리소스·최근 이벤트) 잠깐 보여줌. *(약 40초)*
+### 9. Report 생성  `[Ctrl+P → Export Report]` → `[Open Reports Folder]`
+- **Ctrl+P** → `Export Report` → `logs/reports/report-*.md` 생성(Live Log에 "Report 생성" 표시).
+- **Ctrl+P** → `Open Reports Folder` → 탐색기에서 방금 생성된 `.md` 열어 내용(서비스 상태·리소스·최근 이벤트) 잠깐 보여줌. *(약 40초)*
 - (참고: 실제 치명 예외 시엔 자동으로 Crash Report가 생성됨 — 여기선 수동 Export로 동일 형식 확인)
 
-### 10. 로그 확인  `[Ctrl+Shift+P → Open Logs Folder]`
-- **Ctrl+Shift+P** → `Open Logs Folder` → `logs/{startup,runtime,error,audit,reports,archive}` 구조 + 파일 열어 확인.
+### 10. 로그 확인  `[Ctrl+P → Open Logs Folder]`
+- **Ctrl+P** → `Open Logs Folder` → `logs/{startup,runtime,error,audit,reports,archive}` 구조 + 파일 열어 확인.
 - 특히 `audit/`에 방금까지의 사용자 작업(Restart/Stop/Export/Diagnostics)이 기록된 것 보여줌. *(약 30초)*
 
 ### 11. 정상 종료  `[ESC]`
