@@ -22,7 +22,9 @@
 | DB | **Supabase Postgres** | RLS로 권한 강제 |
 | Storage | **Supabase Storage** | private 버킷 + signed URL |
 | 큐 | BullMQ + Redis | STT 잡 분산 |
-| STT | Self-host Whisper (large-v3, ko) | GPU 노드 (별도 워커) |
+| STT | Self-host Whisper (large-v3-turbo, ko) | GPU 노드 (별도 워커). turbo=VRAM~40%↓·속도2배↑ |
+| 리치 CC | sherpa-onnx AudioTagging (AudioSet, CPU) | 음악·박수·웃음 등 오디오 이벤트→♪음악♪·[웃음]. Whisper와 병렬 |
+| 번역 | DeepL API (무료 티어) | 영·일·중. 워커에서 REST |
 | UI | Tailwind + shadcn/ui + Zustand + TanStack Query | |
 | Email 알림 | Resend | 잡 완료 알림 |
 | 테스트 | Vitest + Playwright | |
@@ -101,10 +103,12 @@ pending → uploading → queued → transcribing → finished | failed | cancel
 ## CC 출력 정책
 
 - **표준 출력**: SRT 파일 다운로드 (Closed Caption 표준)
+- **리치 CC**: 대사(Whisper) + 비음성 사운드 이벤트(AudioTagging)를 병합. 사운드 큐는 `Cue.kind='sound'`(`♪음악♪`/`[웃음]`), SRT엔 kind가 없어 재파싱 시 표기 휴리스틱(`lib/srt.isSoundCueText`)으로 복원. 기본 ON·무료.
 - **미리보기**: 브라우저 내 `<video>` + 자막 오버레이 (편집기)
 - **편집 결과 저장**: SRT 텍스트는 Supabase Storage `subtitles` 버킷에 저장
+- **번인 MP4**: 스타일 입힌 번인 영상 출력(ffmpeg+libass). 다국어(DeepL 영·일·중) 번역·번인 지원. **모두 구현 완료.**
 - **공유**: 회원이 공유 토큰 생성 → 익명 다운로드 가능
-- **MVP 비포함**: burn-in MP4, VTT, 다국어 (Phase 2+)
+- **미구현(로드맵)**: VTT, 감정(SER) 태깅, 코드스위칭(Qwen3-ASR), 클라우드 워커(RunPod)
 
 ## 로컬 개발
 

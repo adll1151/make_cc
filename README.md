@@ -14,7 +14,7 @@
   <img alt="BullMQ" src="https://img.shields.io/badge/BullMQ_+_Redis-DC382D?logo=redis&logoColor=white">
   <img alt="Whisper" src="https://img.shields.io/badge/Whisper_large--v3--turbo-412991?logo=openai&logoColor=white">
   <img alt="Tests" src="https://img.shields.io/badge/tests-225_passing-3FCF8E">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.6.1-blue">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.7.0-blue">
 </p>
 
 ---
@@ -207,7 +207,7 @@ Supabase·Redis는 단위 테스트에서 mock 처리하고, 핵심 도메인 �
 
 | 버전 | 날짜 | 핵심 |
 |------|------|------|
-| _main (미출시)_ | 2026-07-03 | **리치 CC — 오디오 이벤트 태깅**(♪음악♪·[웃음]) · Whisper large-v3-turbo · 자막 어시 Tier 2.1(외곽선) · 실영상 CC E2E |
+| **0.7.0** | 2026-07-03 | **리치 CC — 오디오 이벤트 태깅**(♪음악♪·[웃음]) · Whisper large-v3-turbo · 자막 어시 Tier 2.1(외곽선) · 실영상 CC E2E |
 | **0.6.1** | 2026-07-03 | 자막 어시 Tier2 실동작 수정(dims 폴링·CORS·프레임 대기) — headed E2E 검증 |
 | **0.6.0** | 2026-07-03 | 자막 스타일 어시(프레임 인지형 Tier1+2) · 퍼스트파티 퍼널 분석 + 운영자 대시보드 · 가입 전 샘플 편집기 |
 | **0.5.0** | 2026-06-24 | 자막 다국어 번역 — DeepL 백엔드 · 편집기 번역 패널 · 번인 다국어 (prod 배포) |
