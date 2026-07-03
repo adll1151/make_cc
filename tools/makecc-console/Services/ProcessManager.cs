@@ -23,6 +23,13 @@ public sealed class ProcessManager
     public bool IsRunning(string name) =>
         _procs.TryGetValue(name, out var p) && !p.HasExited;
 
+    /// <summary>이 세션에서 한 번이라도 기동했던 프로세스인지(워치독 대상 판별, #14).</summary>
+    public bool WasStarted(string name) => _procs.ContainsKey(name);
+
+    /// <summary>기동했던 프로세스가 종료된 상태인지(#14).</summary>
+    public bool HasExited(string name) =>
+        _procs.TryGetValue(name, out var p) && p.HasExited;
+
     public int? LastExitCode(string name) =>
         _procs.TryGetValue(name, out var p) && p.HasExited ? SafeExit(p) : null;
 

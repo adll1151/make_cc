@@ -32,4 +32,7 @@ public sealed class SystemMetrics
     public int Queue { get; set; }
     public long Requests { get; set; }
     public double SuccessRate { get; set; } = 100;
+
+    /// <summary>API TCP 연결 지연(ms). null = API down/미측정. (#16)</summary>
+    public double? LatencyMs { get; set; }
 }

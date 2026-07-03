@@ -35,6 +35,7 @@ public static class SelfTest
         m.RamUsedGb = 11.6; m.RamTotalGb = 16.0;
         m.Uptime = TimeSpan.FromMinutes(12).Add(TimeSpan.FromSeconds(31));
         m.Queue = 2; m.Requests = 1284; m.SuccessRate = 99.5;
+        m.LatencyMs = 12; // API Latency(#16)
 
         s.Latest = new LaunchRecord
         {
@@ -77,10 +78,15 @@ public static class SelfTest
         s.Session.RestartCount = 2;
         s.Session.RecoveryCount = 1;
 
-        // Metrics History / Sparkline (#7)
+        // Metrics History / Sparkline (#7 · #16)
         double[] cpu = { 20, 24, 31, 28, 40, 55, 62, 58, 47, 42, 38, 44, 51, 49, 42 };
         double[] ram = { 60, 62, 63, 65, 68, 70, 73, 74, 72, 71, 73, 74, 73, 72, 73 };
-        for (int i = 0; i < cpu.Length; i++) s.MetricHistory.Add(cpu[i], ram[i]);
+        double[] lat = { 9, 11, 10, 14, 22, 35, 18, 12, 11, 10, 13, 15, 12, 11, 12 };
+        for (int i = 0; i < cpu.Length; i++)
+        {
+            s.MetricHistory.Add(cpu[i], ram[i]);
+            s.MetricHistory.AddLatency(lat[i]);
+        }
 
         // Update Checker (#8)
         s.Update = new UpdateInfo { Current = "0.5.0", Latest = "0.6.0", UpdateAvailable = true };

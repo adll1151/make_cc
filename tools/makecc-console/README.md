@@ -22,14 +22,15 @@ dotnet run -c Release --project tools\makecc-console\MakeccConsole.csproj
 ## 화면 (멀티뷰)
 
 - **Splash** — Figlet 로고 + 부트 스피너(Environment→Docker→Containers→Worker→API→Health→Ready) + **Startup Summary**
-- **Main 뷰** (`F1`) — 헤더(로고·상태·**Update**·**Notification Center**) / Services / System(+**Sparkline**) / **Event Timeline** / **Session** / Live Log
+- **Main 뷰** (`F1`) — 컴팩트 헤더(브랜드·탭·상태 클러스터) / Services / System(**Sparkline**·**API Latency**) / **Event Timeline** / **Session** / Live Log
 - **History 뷰** (`F6`) — Containers / Latest Deployment / Recent / Failed Launches
+- **Logs 뷰** (`F7`) — 로그 브라우저. `L` 레벨 필터(ALL→WARN+→ERROR) · `Space` 일시정지/재개
 - **Diagnostics** (`F9`) — 서비스+환경 11종 점검(✓/✗ + 원인)
 - **Command Palette** (`Ctrl+Shift+P`) — 모달, 타이핑 필터. 재시작·로그·리포트·진단·업데이트·종료 등
 - **Shutdown** — 서비스 역순 정지 애니메이션
 
 ### 단축키
-`F1` Main · `F6` History · `F2` Restart · `F9` Diagnostics · `Ctrl+Shift+P` Palette · `F4` Browser · `ESC` Exit
+`F1` Main · `F6` History · `F7` Logs · `F2` Restart · `F8` Watchdog on/off · `F9` Diagnostics · `T` Theme 순환 · `Ctrl+Shift+P` Palette · `F4` Browser · `ESC` Exit
 
 ### 헤드리스 CLI (서버/CI)
 ```bat
@@ -45,11 +46,15 @@ makecc --selftest        :: 대시보드 1프레임 렌더(검증용)
 {
   "theme": "dark",
   "logs": { "archiveAfterDays": 7, "retentionDays": 30 },
-  "update": { "enabled": true, "repo": "adll1151/make_cc" }
+  "update": { "enabled": true, "repo": "adll1151/make_cc" },
+  "watchdog": { "enabled": true, "maxRestarts": 3, "windowMinutes": 5 },
+  "notify": { "discordWebhookUrl": "", "cooldownSeconds": 60 }
 }
 ```
 
-- **theme**: `dark`(기본) · `nord` · `dracula` · `catppuccin` · `gruvbox`
+- **theme**: `dark`(기본) · `nord` · `dracula` · `catppuccin` · `gruvbox` · `tokyonight` — 대시보드에서 `T` 키로 순환 전환(자동 저장)
+- **watchdog**: 이 세션에서 기동한 dev/worker 프로세스가 죽으면 자동 재기동. `windowMinutes` 내 `maxRestarts` 초과 시 수동 개입 요구로 전환(이벤트/알림 1회). `F8` 로 런타임 토글.
+- **notify.discordWebhookUrl**: 서비스 Down/Recover·워치독 이벤트를 Discord 웹훅으로 통보. 비우면 `.env` 의 `DISCORD_WORKER_ALERT_WEBHOOK` 폴백, 그것도 없으면 완전 비활성. `cooldownSeconds` 로 서비스별 재알림 억제.
 - **logs.archiveAfterDays**: 이보다 오래된 runtime/error 로그를 gzip으로 `archive/` 이동
 - **logs.retentionDays**: 이보다 오래된 archive 삭제
 - **update.repo**: 최신 버전 비교 대상 GitHub 저장소
@@ -81,6 +86,8 @@ logs/
 | 모니터 | `Services/Monitors` | **IServiceMonitor** — 서비스 확장 지점 |
 | 진단 | `Diagnostics/Diagnostics` | 서비스+환경 체크 |
 | 명령 | `Commands/Commands` | **CommandRegistry** — 팔레트/단축키 공유 |
+| 워치독 | `Services/Watchdog` | 자동 복구 + 윈도우 한도(#14) |
+| 알림 | `Services/DiscordNotifier` | Discord 웹훅 통보(#15) |
 | 업데이트 | `Update/UpdateChecker` | GitHub Releases 비교 |
 | 리포트 | `Reports/CrashReport` | Markdown 보고서 |
 | 테마 | `Theme` | 교체 가능한 Palette |
@@ -93,5 +100,7 @@ logs/
 
 ## 참고
 
+- 헤더의 Notification Center 는 UI 개편으로 **Event Timeline 에 통합**되었습니다(같은 EventHub 스트림, source 태그 표시).
+- **API Latency** 는 `:3000` TCP 연결 시간 실측(스파크라인 포함). 임계: <100ms 정상 · <300ms 경고 · 이상 위험.
 - Queue / Request / Success Rate 는 `Telemetry` 플레이스홀더(코드 TODO) — 실제 BullMQ/API 메트릭으로 교체 예정.
 - Docker 미설치/미실행 시 자동 degrade(컨테이너 패널 "disconnected", 앱은 계속 동작).

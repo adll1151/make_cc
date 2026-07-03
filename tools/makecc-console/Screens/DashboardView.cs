@@ -4,111 +4,174 @@ using Spectre.Console.Rendering;
 
 namespace MakeccConsole;
 
-public enum DashboardTab { Main, History }
+public enum DashboardTab { Main, History, Logs }
+
+/// <summary>Logs 뷰(#17)의 레벨 필터 — L 키로 순환.</summary>
+public enum LogFilter { All, WarnPlus, ErrorOnly }
+
+/// <summary>화면 계층이 소유하는 뷰 옵션 — 렌더러에 스냅샷으로 전달된다.</summary>
+public sealed class ViewOptions
+{
+    public LogFilter LogFilter { get; set; } = LogFilter.All;
+    public bool LogsPaused { get; set; }
+    public IReadOnlyList<LogEntry>? FrozenLogs { get; set; }
+    public bool WatchdogEnabled { get; set; } = true;
+}
 
 /// <summary>
 /// 순수 렌더 계층 — AppState를 읽어 Layout을 만든다(부작용 없음).
-/// 멀티뷰: Main(운영) / History(배포 이력). 패널 추가는 메서드 1개 + Build의 Update 1줄.
+/// 멀티뷰: Main(운영) / History(배포 이력) / Logs(로그 브라우저 #17).
+/// UI 개편: Figlet 헤더 → 컴팩트 브랜드 바 + 탭 + 상태 클러스터, 무테두리 키바 푸터.
 /// </summary>
 public static class DashboardView
 {
-    public static Layout Build(AppState s, DashboardTab tab = DashboardTab.Main) =>
-        tab == DashboardTab.History ? BuildHistory(s) : BuildMain(s);
+    private static readonly ViewOptions DefaultOpt = new();
+
+    public static Layout Build(AppState s, DashboardTab tab = DashboardTab.Main, ViewOptions? opt = null)
+    {
+        opt ??= DefaultOpt;
+        return tab switch
+        {
+            DashboardTab.History => BuildHistory(s, opt),
+            DashboardTab.Logs => BuildLogs(s, opt),
+            _ => BuildMain(s, opt),
+        };
+    }
 
     // ── Main 뷰 (라이브 운영) ─────────────────────────────
-    private static Layout BuildMain(AppState s)
+    private static Layout BuildMain(AppState s, ViewOptions opt)
     {
         var layout = new Layout("root").SplitRows(
-            new Layout("header").Size(8),
+            new Layout("header").Size(3),
             new Layout("mid").SplitColumns(
-                new Layout("services"),
-                new Layout("system"),
-                new Layout("timeline")),
+                new Layout("services").Ratio(3),
+                new Layout("system").Ratio(3),
+                new Layout("timeline").Ratio(4)),
             new Layout("session").Size(3),
-            new Layout("logs").Size(8),
-            new Layout("footer").Size(3));
+            new Layout("logs").Size(9),
+            new Layout("footer").Size(1));
 
-        layout["header"].Update(Header(s));
+        layout["header"].Update(Header(s, DashboardTab.Main, opt));
         layout["services"].Update(Services(s));
         layout["system"].Update(System(s));
         layout["timeline"].Update(Timeline(s));
-        layout["session"].Update(SessionBar(s));
-        layout["logs"].Update(Logs(s));
-        layout["footer"].Update(Footer(DashboardTab.Main));
+        layout["session"].Update(SessionBar(s, opt));
+        layout["logs"].Update(LiveLog(s));
+        layout["footer"].Update(KeyBar(DashboardTab.Main, opt));
         return layout;
     }
 
     // ── History 뷰 (배포 이력) ────────────────────────────
-    private static Layout BuildHistory(AppState s)
+    private static Layout BuildHistory(AppState s, ViewOptions opt)
     {
         var layout = new Layout("root").SplitRows(
-            new Layout("header").Size(8),
+            new Layout("header").Size(3),
             new Layout("body").SplitColumns(
                 new Layout("containers").Ratio(2),
                 new Layout("right").SplitRows(
                     new Layout("latest"),
                     new Layout("recent"),
                     new Layout("failed"))),
-            new Layout("footer").Size(3));
+            new Layout("footer").Size(1));
 
-        layout["header"].Update(Header(s));
+        layout["header"].Update(Header(s, DashboardTab.History, opt));
         layout["containers"].Update(Containers(s));
         layout["latest"].Update(Deployment(s));
         layout["recent"].Update(Recent(s));
         layout["failed"].Update(Failed(s));
-        layout["footer"].Update(Footer(DashboardTab.History));
+        layout["footer"].Update(KeyBar(DashboardTab.History, opt));
         return layout;
     }
 
-    // ── 헤더 (로고 + 상태 + Notification Center) ─────────
-    private static IRenderable Header(AppState s)
+    // ── Logs 뷰 (#17, F7) — 필터·일시정지 로그 브라우저 ──
+    private static Layout BuildLogs(AppState s, ViewOptions opt)
     {
-        var fig = new FigletText("MAKECC").LeftJustified().Color(Theme.Accent);
+        var layout = new Layout("root").SplitRows(
+            new Layout("header").Size(3),
+            new Layout("body"),
+            new Layout("footer").Size(1));
 
-        var status = new Grid().AddColumn().AddColumn();
-        status.AddRow($"[{Theme.CMuted}]STATUS[/]",
-            s.Online ? $"[{Theme.COk}]● ONLINE[/]" : $"[{Theme.CWarn}]● DEGRADED[/]");
-        status.AddRow($"[{Theme.CMuted}]VERSION[/]", $"[{Theme.CText}]v{Theme.Esc(s.Env.Version)}[/]");
-        status.AddRow($"[{Theme.CMuted}]NODE[/]", $"[{Theme.CText}]{Theme.Esc(s.Env.Node)}[/]");
-        status.AddRow($"[{Theme.CMuted}]DOCKER[/]",
-            s.Env.DockerAvailable ? $"[{Theme.COk}]Connected[/]" : $"[{Theme.CErr}]Disconnected[/]");
-        status.AddRow($"[{Theme.CMuted}]UPDATE[/]", UpdateMarkup(s.Update));
-
-        var inner = new Grid();
-        inner.AddColumn(new GridColumn().Width(54).NoWrap());
-        inner.AddColumn(new GridColumn().Width(26));
-        inner.AddColumn();
-        inner.AddRow(fig, new Align(status, HorizontalAlignment.Left, VerticalAlignment.Middle), Notifications(s));
-
-        return Card(" MAKECC · Control Center ", inner);
+        layout["header"].Update(Header(s, DashboardTab.Logs, opt));
+        layout["body"].Update(LogBrowser(s, opt));
+        layout["footer"].Update(KeyBar(DashboardTab.Logs, opt));
+        return layout;
     }
 
-    // ── Notification Center (#5) — 헤더 우측 ─────────────
-    private static IRenderable Notifications(AppState s)
+    // ── 헤더 — 브랜드 + 탭 + 상태 클러스터 (컴팩트 1행) ──
+    private static IRenderable Header(AppState s, DashboardTab tab, ViewOptions opt)
     {
-        var rows = new List<IRenderable> { new Markup($"[{Theme.CMuted}]NOTIFICATIONS[/]") };
-        var notes = s.Events.Notifications(5);
-        if (notes.Count == 0)
-            rows.Add(new Markup($"[{Theme.CMuted}]—[/]"));
-        foreach (var e in notes)
-            rows.Add(new Markup($"[{SevColor(e.Severity)}]●[/] [{Theme.CText}]{Theme.Esc(Trunc(e.Message, 34))}[/]"));
-        return new Rows(rows);
+        string TabMark(DashboardTab t, string label) => t == tab
+            ? $"[black on {Theme.CAccent}] {label} [/]"
+            : $"[{Theme.CMuted}] {label} [/]";
+
+        var left =
+            $"[bold {Theme.CAccent}]▎MAKECC[/][{Theme.CMuted}] ctl[/]  " +
+            TabMark(DashboardTab.Main, "F1 Main") +
+            TabMark(DashboardTab.History, "F6 History") +
+            TabMark(DashboardTab.Logs, "F7 Logs");
+
+        string online = s.Online
+            ? $"[{Theme.COk}]● ONLINE[/]"
+            : $"[{Theme.CWarn}]● DEGRADED[/]";
+        string docker = s.Env.DockerAvailable
+            ? $"[{Theme.COk}]docker ✓[/]"
+            : $"[{Theme.CErr}]docker ✗[/]";
+        string wd = opt.WatchdogEnabled
+            ? $"[{Theme.COk}]wd on[/]"
+            : $"[{Theme.CMuted}]wd off[/]";
+
+        var right = string.Join($"  [{Theme.CMuted}]│[/]  ", new[]
+        {
+            online,
+            $"[{Theme.CText}]v{Theme.Esc(s.Env.Version)}[/]",
+            $"[{Theme.CMuted}]{Theme.Esc(s.Env.Branch)}@{Theme.Esc(s.Env.Commit)}[/]",
+            docker,
+            wd,
+            UpdateMarkup(s.Update),
+            $"[{Theme.CMuted}]{DateTime.Now:HH:mm:ss}[/]",
+        });
+
+        var g = new Grid();
+        g.AddColumn(new GridColumn().NoWrap());
+        g.AddColumn(new GridColumn { Alignment = Justify.Right });
+        g.AddRow(new Markup(left), new Markup(right));
+
+        return new Panel(g)
+        {
+            Border = BoxBorder.Rounded,
+            Expand = true,
+            Padding = new Padding(1, 0, 1, 0),
+            BorderStyle = Theme.Border,
+        };
     }
 
     // ── Services ─────────────────────────────────────────
     private static IRenderable Services(AppState s)
     {
-        var g = new Grid().AddColumn().AddColumn();
+        var g = new Grid();
+        g.AddColumn(new GridColumn().NoWrap());
+        g.AddColumn(new GridColumn().NoWrap());
+        g.AddColumn();
         foreach (var svc in s.Services)
         {
             var col = DotColor(svc.State);
-            g.AddRow($"[{col}]●[/] [{Theme.CText}]{Theme.Esc(svc.Name)}[/]",
-                     $"[{col}]{Theme.Esc(svc.StatusLabel)}[/]");
+            g.AddRow(
+                $"[{col}]{StateIcon(svc.State)}[/] [{Theme.CText}]{Theme.Esc(svc.Name)}[/]",
+                $"[{col}]{Theme.Esc(svc.StatusLabel)}[/]",
+                $"[{Theme.CMuted}]{Theme.Esc(Trunc(svc.Detail, 18))}[/]");
         }
         return Card("Services", g);
     }
 
-    // ── System (+ Sparkline #7) ──────────────────────────
+    private static string StateIcon(HealthState st) => st switch
+    {
+        HealthState.Ok => "●",
+        HealthState.Warn => "◐",
+        HealthState.Error => "✖",
+        _ => "○",
+    };
+
+    // ── System (게이지 + 스파크라인 + Latency #16) ───────
     private static IRenderable System(AppState s)
     {
         var m = s.Metrics;
@@ -120,12 +183,38 @@ public static class DashboardView
             SparkLine(s.MetricHistory.Ram),
             Bar("Disk", m.Disk),
             new Rule { Style = new Style(Theme.Accent2) },
+            LatencyRow(m.LatencyMs),
+            LatencySpark(s.MetricHistory.Latency),
             Kv("Uptime", FormatUptime(m.Uptime)),
             Kv("Queue", m.Queue.ToString()),
             Kv("Request", m.Requests.ToString()),
             Kv("Success", $"{m.SuccessRate:0.0}%"),
         };
         return Card("System", new Rows(rows));
+    }
+
+    private static IRenderable LatencyRow(double? ms)
+    {
+        if (ms is null)
+            return new Markup($"[{Theme.CMuted}]Latency [/] [{Theme.CErr}]down[/]");
+        string col = ms < 100 ? Theme.COk : ms < 300 ? Theme.CWarn : Theme.CErr;
+        return new Markup($"[{Theme.CMuted}]Latency [/] [{col}]{ms:0} ms[/] [{Theme.CMuted}](api :3000)[/]");
+    }
+
+    /// <summary>지연 표본을 최대값 기준으로 정규화한 스파크라인.</summary>
+    private static IRenderable LatencySpark(double[] vals)
+    {
+        const string blocks = "▁▂▃▄▅▆▇█";
+        if (vals.Length == 0)
+            return new Markup($"[{Theme.CMuted}]         —[/]");
+        double max = Math.Max(50, vals.Max()); // 최소 50ms 스케일 — 저지연 구간 노이즈 억제
+        var sb = new StringBuilder();
+        foreach (var v in vals)
+        {
+            int idx = (int)Math.Round(Math.Clamp(v / max, 0, 1) * (blocks.Length - 1));
+            sb.Append(blocks[idx]);
+        }
+        return new Markup($"[{Theme.CMuted}]         [/][{Theme.CInfo}]{sb}[/]");
     }
 
     private static IRenderable Bar(string label, double pct, string extra = "")
@@ -160,29 +249,36 @@ public static class DashboardView
     private static IRenderable Timeline(AppState s)
     {
         var rows = new List<IRenderable>();
-        var events = s.Events.Timeline(9);
+        var events = s.Events.Timeline(11);
         if (events.Count == 0)
             rows.Add(new Markup($"[{Theme.CMuted}]운영 이벤트 없음[/]"));
         foreach (var e in events)
+        {
+            string src = e.Source is null ? "" : $"[{Theme.CMuted}]{Theme.Esc(Trunc(e.Source, 8)),-8}[/] ";
             rows.Add(new Markup(
-                $"[{Theme.CMuted}]{e.Time:HH:mm:ss}[/] [{SevColor(e.Severity)}]{Theme.Esc(e.Message)}[/]"));
+                $"[{Theme.CMuted}]{e.Time:HH:mm:ss}[/] {src}[{SevColor(e.Severity)}]{Theme.Esc(e.Message)}[/]"));
+        }
         return Card("Event Timeline", new Rows(rows));
     }
 
     // ── Session (#6) — 하단 바 ───────────────────────────
-    private static IRenderable SessionBar(AppState s)
+    private static IRenderable SessionBar(AppState s, ViewOptions opt)
     {
         var ss = s.Session;
         var g = new Grid();
-        g.AddColumn().AddColumn().AddColumn().AddColumn().AddColumn();
+        g.AddColumn().AddColumn().AddColumn().AddColumn().AddColumn().AddColumn();
         string statusMk = s.Online
             ? $"[{Theme.COk}]● Healthy[/]"
             : $"[{Theme.CWarn}]● Degraded[/]";
+        string wdMk = opt.WatchdogEnabled
+            ? $"[{Theme.COk}]ON[/]"
+            : $"[{Theme.CMuted}]OFF[/]";
         g.AddRow(
             $"[{Theme.CMuted}]Started[/]  [{Theme.CText}]{ss.StartedAt:HH:mm:ss}[/]",
             $"[{Theme.CMuted}]Duration[/]  [{Theme.CText}]{FormatUptime(ss.Duration)}[/]",
             $"[{Theme.CMuted}]Restarts[/]  [{Theme.CText}]{ss.RestartCount}[/]",
             $"[{Theme.CMuted}]Recovery[/]  [{Theme.CText}]{ss.RecoveryCount}[/]",
+            $"[{Theme.CMuted}]Watchdog[/]  {wdMk}",
             $"[{Theme.CMuted}]Status[/]  {statusMk}");
         return Card("Session", g);
     }
@@ -266,57 +362,110 @@ public static class DashboardView
         return Card("Failed Launches", new Rows(rows));
     }
 
-    // ── Live Log ─────────────────────────────────────────
-    private static IRenderable Logs(AppState s)
+    // ── Live Log (Main 하단 미니 패널) ───────────────────
+    private static IRenderable LiveLog(AppState s)
     {
         var rows = new List<IRenderable>();
-        foreach (var e in s.Logs.Tail(6))
-        {
-            string col = e.Level switch
-            {
-                LogLevel.Success => Theme.COk,
-                LogLevel.Warning => Theme.CWarn,
-                LogLevel.Error => Theme.CErr,
-                LogLevel.Debug => Theme.CMuted,
-                _ => Theme.CInfo,
-            };
-            string lvl = e.Level.ToString().ToUpperInvariant();
-            rows.Add(new Markup(
-                $"[{Theme.CMuted}]{e.Time:HH:mm:ss}[/] [{col}]{lvl,-7}[/] [{Theme.CText}]{Theme.Esc(e.Message)}[/]"));
-        }
-        return Card("Live Log", new Rows(rows));
+        foreach (var e in s.Logs.Tail(7))
+            rows.Add(LogLine(e));
+        return Card("Live Log · F7 전체보기", new Rows(rows));
     }
 
-    private static IRenderable Footer(DashboardTab tab)
+    // ── Logs 뷰 본문 (#17) ───────────────────────────────
+    private static IRenderable LogBrowser(AppState s, ViewOptions opt)
     {
-        string k(string key, string label) => $"[{Theme.CAccent}]{key}[/] [{Theme.CText}]{label}[/]";
-        var main = tab == DashboardTab.Main ? $"[{Theme.CAccent2}]Main[/]" : "Main";
-        var hist = tab == DashboardTab.History ? $"[{Theme.CAccent2}]History[/]" : "History";
-        var m = string.Join("   ", new[]
+        var source = opt.LogsPaused && opt.FrozenLogs is not null
+            ? opt.FrozenLogs
+            : s.Logs.Tail(400);
+
+        var filtered = source.Where(e => opt.LogFilter switch
         {
-            $"[{Theme.CAccent}]F1[/] {main}",
-            $"[{Theme.CAccent}]F6[/] {hist}",
-            k("F2", "Restart"), k("F9", "Diag"), k("^P", "Palette"),
-            k("F4", "Browser"), k("ESC", "Exit"),
-        });
-        var p = new Panel(new Align(new Markup(m), HorizontalAlignment.Center))
+            LogFilter.WarnPlus => e.Level is LogLevel.Warning or LogLevel.Error,
+            LogFilter.ErrorOnly => e.Level == LogLevel.Error,
+            _ => true,
+        }).ToList();
+
+        int take = 27;
+        var tail = filtered.Count <= take ? filtered : filtered.Skip(filtered.Count - take).ToList();
+
+        var rows = new List<IRenderable>();
+        if (tail.Count == 0)
+            rows.Add(new Markup($"[{Theme.CMuted}]해당 레벨의 로그 없음[/]"));
+        foreach (var e in tail)
+            rows.Add(LogLine(e));
+
+        string filterLabel = opt.LogFilter switch
         {
-            Border = BoxBorder.Rounded,
-            Expand = true,
-            BorderStyle = Theme.Border,
+            LogFilter.WarnPlus => $"[{Theme.CWarn}]WARN+[/]",
+            LogFilter.ErrorOnly => $"[{Theme.CErr}]ERROR[/]",
+            _ => $"[{Theme.CText}]ALL[/]",
         };
-        return p;
+        string modeLabel = opt.LogsPaused
+            ? $"[black on {Theme.CWarn}] PAUSED [/]"
+            : $"[{Theme.COk}]LIVE ⣿[/]";
+
+        var title = $"Logs · {filterLabel} · {modeLabel} [{Theme.CMuted}]· L 필터 · Space 정지/재개[/]";
+        return Card(title, new Rows(rows), rawTitle: true);
+    }
+
+    private static IRenderable LogLine(LogEntry e)
+    {
+        string col = e.Level switch
+        {
+            LogLevel.Success => Theme.COk,
+            LogLevel.Warning => Theme.CWarn,
+            LogLevel.Error => Theme.CErr,
+            LogLevel.Debug => Theme.CMuted,
+            _ => Theme.CInfo,
+        };
+        string lvl = e.Level.ToString().ToUpperInvariant();
+        return new Markup(
+            $"[{Theme.CMuted}]{e.Time:HH:mm:ss}[/] [{col}]{lvl,-7}[/] [{Theme.CText}]{Theme.Esc(e.Message)}[/]");
+    }
+
+    // ── 키바 푸터 — 무테두리 1행 (k9s 스타일) ────────────
+    private static IRenderable KeyBar(DashboardTab tab, ViewOptions opt)
+    {
+        string k(string key, string label) =>
+            $"[black on {Theme.CAccent2}] {key} [/][{Theme.CMuted}] {label}[/]";
+
+        var keys = new List<string>
+        {
+            k("F1", "Main"), k("F6", "History"), k("F7", "Logs"),
+        };
+
+        if (tab == DashboardTab.Logs)
+        {
+            keys.Add(k("L", "Filter"));
+            keys.Add(k("Spc", opt.LogsPaused ? "Resume" : "Pause"));
+        }
+        else
+        {
+            keys.Add(k("F2", "Restart"));
+            keys.Add(k("F8", opt.WatchdogEnabled ? "WD off" : "WD on"));
+        }
+
+        keys.Add(k("F9", "Diag"));
+        keys.Add(k("T", "Theme"));
+        keys.Add(k("^P", "Palette"));
+        keys.Add(k("F4", "Browser"));
+        keys.Add(k("ESC", "Exit"));
+
+        return new Align(new Markup(string.Join("  ", keys)), HorizontalAlignment.Center);
     }
 
     // ── 공통 헬퍼 ────────────────────────────────────────
-    private static IRenderable Card(string title, IRenderable content)
+    private static IRenderable Card(string title, IRenderable content, bool rawTitle = false)
     {
+        var header = rawTitle
+            ? new PanelHeader($" {title} ")
+            : new PanelHeader($"[{Theme.CAccent}] {title} [/]");
         var p = new Panel(content)
         {
             Border = BoxBorder.Rounded,
             Expand = true,
             Padding = new Padding(1, 0, 1, 0),
-            Header = new PanelHeader($"[{Theme.CAccent}] {title} [/]"),
+            Header = header,
             BorderStyle = Theme.Border,
         };
         return p;
@@ -344,7 +493,7 @@ public static class DashboardView
     private static string UpdateMarkup(UpdateInfo? u) =>
         u is null ? $"[{Theme.CMuted}]…[/]"
         : u.Error is not null ? $"[{Theme.CMuted}]n/a[/]"
-        : u.UpdateAvailable ? $"[{Theme.CWarn}]v{Theme.Esc(u.Latest ?? "")} ●[/]"
+        : u.UpdateAvailable ? $"[{Theme.CWarn}]⬆ v{Theme.Esc(u.Latest ?? "")}[/]"
         : $"[{Theme.COk}]up to date[/]";
 
     private static string Trunc(string s, int max) =>

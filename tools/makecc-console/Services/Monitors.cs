@@ -37,10 +37,18 @@ public sealed class WorkerMonitor : IServiceMonitor
 public sealed class ApiMonitor : IServiceMonitor
 {
     public string Name => "API";
-    public async Task<HealthResult> CheckAsync() =>
-        await Net.PortOpen("127.0.0.1", 3000)
-            ? new HealthResult(HealthState.Ok, "Listening", ":3000")
+
+    /// <summary>마지막 체크의 TCP 연결 지연(ms). null = down. (#16)</summary>
+    public double? LastLatencyMs { get; private set; }
+
+    public async Task<HealthResult> CheckAsync()
+    {
+        var ms = await Net.PortLatency("127.0.0.1", 3000);
+        LastLatencyMs = ms;
+        return ms is not null
+            ? new HealthResult(HealthState.Ok, "Listening", $":3000 · {ms:0}ms")
             : new HealthResult(HealthState.Error, "Down", "포트 3000 미응답");
+    }
 }
 
 public sealed class RedisMonitor : IServiceMonitor

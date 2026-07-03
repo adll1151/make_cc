@@ -11,6 +11,7 @@ public static class DashboardScreen
     private sealed class ViewState
     {
         public DashboardTab Tab = DashboardTab.Main;
+        public ViewOptions Opt = new();
         public bool Exit;
         public bool Palette;
         public bool Diagnostics;
@@ -20,6 +21,7 @@ public static class DashboardScreen
     {
         var s = svc.State;
         var view = new ViewState();
+        view.Opt.WatchdogEnabled = svc.Watchdog.Enabled;
 
         while (!ct.IsCancellationRequested)
         {
@@ -28,7 +30,7 @@ public static class DashboardScreen
             bool reguard = false;
             try
             {
-                await AnsiConsole.Live(DashboardView.Build(s, view.Tab))
+                await AnsiConsole.Live(DashboardView.Build(s, view.Tab, view.Opt))
                     .AutoClear(false)
                     .StartAsync(async ctx =>
                     {
@@ -36,7 +38,7 @@ public static class DashboardScreen
                         {
                             if (IsTooSmall()) { reguard = true; return; }
 
-                            ctx.UpdateTarget(DashboardView.Build(s, view.Tab));
+                            ctx.UpdateTarget(DashboardView.Build(s, view.Tab, view.Opt));
                             ctx.Refresh();
 
                             HandleKeys(svc, view);
@@ -106,6 +108,36 @@ public static class DashboardScreen
                         break;
                     case ConsoleKey.F6:
                         view.Tab = DashboardTab.History;
+                        break;
+                    case ConsoleKey.F7: // Logs 뷰(#17)
+                        view.Tab = DashboardTab.Logs;
+                        break;
+                    case ConsoleKey.F8: // 워치독 토글(#14)
+                        svc.Watchdog.Enabled = !svc.Watchdog.Enabled;
+                        view.Opt.WatchdogEnabled = svc.Watchdog.Enabled;
+                        svc.RecordUserAction(svc.Watchdog.Enabled ? "Watchdog ON" : "Watchdog OFF");
+                        s.Events.Publish($"Watchdog {(svc.Watchdog.Enabled ? "enabled" : "disabled")}",
+                            svc.Watchdog.Enabled ? EventSeverity.Success : EventSeverity.Warning,
+                            source: "watchdog");
+                        break;
+                    case ConsoleKey.T: // 테마 순환(#13) — 설정에 저장
+                        var themeName = Theme.CycleNext();
+                        svc.Config.Theme = themeName;
+                        svc.Config.Save(svc.ConfigPath);
+                        svc.RecordUserAction($"Theme → {themeName}");
+                        s.Events.Publish($"Theme changed: {themeName}", EventSeverity.Info, source: "user");
+                        break;
+                    case ConsoleKey.L when view.Tab == DashboardTab.Logs: // 레벨 필터 순환(#17)
+                        view.Opt.LogFilter = view.Opt.LogFilter switch
+                        {
+                            LogFilter.All => LogFilter.WarnPlus,
+                            LogFilter.WarnPlus => LogFilter.ErrorOnly,
+                            _ => LogFilter.All,
+                        };
+                        break;
+                    case ConsoleKey.Spacebar when view.Tab == DashboardTab.Logs: // 일시정지(#17)
+                        view.Opt.LogsPaused = !view.Opt.LogsPaused;
+                        view.Opt.FrozenLogs = view.Opt.LogsPaused ? s.Logs.Tail(400) : null;
                         break;
                     case ConsoleKey.F9:
                         view.Diagnostics = true;

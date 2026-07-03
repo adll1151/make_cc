@@ -84,6 +84,22 @@ public static class Palettes
         Text = new(0xEB, 0xDB, 0xB2),     // fg
     };
 
+    public static readonly Palette TokyoNight = new()
+    {
+        Name = "tokyonight",
+        Accent = new(0x7A, 0xA2, 0xF7),   // blue
+        Accent2 = new(0xBB, 0x9A, 0xF7),  // magenta
+        Info = new(0x7D, 0xCF, 0xFF),     // cyan
+        Ok = new(0x9E, 0xCE, 0x6A),       // green
+        Warn = new(0xE0, 0xAF, 0x68),     // yellow
+        Err = new(0xF7, 0x76, 0x8E),      // red
+        Muted = new(0x56, 0x5F, 0x89),    // comment
+        Text = new(0xC0, 0xCA, 0xF5),     // foreground
+    };
+
+    /// <summary>등록 순서 = T 키 순환 순서(#13 런타임 테마 전환).</summary>
+    public static readonly Palette[] All = { Dark, Nord, Dracula, Catppuccin, Gruvbox, TokyoNight };
+
     public static Palette ByName(string? name) => (name?.ToLowerInvariant()) switch
     {
         "dark" => Dark,
@@ -91,6 +107,7 @@ public static class Palettes
         "dracula" => Dracula,
         "catppuccin" => Catppuccin,
         "gruvbox" => Gruvbox,
+        "tokyonight" => TokyoNight,
         _ => Dark,
     };
 }
@@ -105,6 +122,14 @@ public static class Theme
     public static Palette Current { get; private set; } = Palettes.Dark;
 
     public static void Apply(string? name) => Current = Palettes.ByName(name);
+
+    /// <summary>다음 팔레트로 전환하고 이름을 반환(#13, T 키).</summary>
+    public static string CycleNext()
+    {
+        int i = Array.FindIndex(Palettes.All, p => p.Name == Current.Name);
+        Current = Palettes.All[(i + 1 + Palettes.All.Length) % Palettes.All.Length];
+        return Current.Name;
+    }
 
     // Spectre Color (렌더러용)
     public static Color Accent => Current.Accent;

@@ -88,6 +88,23 @@ public static class CommandRegistry
             else
                 c.Svc.State.Events.Publish("Up to date", EventSeverity.Success, source: "update");
         }),
+        new("toggle-watchdog", "Toggle Watchdog (auto-recover)", c =>
+        {
+            c.Svc.Watchdog.Enabled = !c.Svc.Watchdog.Enabled;
+            c.Svc.RecordUserAction(c.Svc.Watchdog.Enabled ? "Watchdog ON" : "Watchdog OFF");
+            c.Svc.State.Events.Publish($"Watchdog {(c.Svc.Watchdog.Enabled ? "enabled" : "disabled")}",
+                c.Svc.Watchdog.Enabled ? EventSeverity.Success : EventSeverity.Warning, source: "watchdog");
+            return Task.CompletedTask;
+        }),
+        new("cycle-theme", "Cycle Theme", c =>
+        {
+            var name = Theme.CycleNext();
+            c.Svc.Config.Theme = name;
+            c.Svc.Config.Save(c.Svc.ConfigPath);
+            c.Svc.RecordUserAction($"Theme → {name}");
+            c.Svc.State.Events.Publish($"Theme changed: {name}", EventSeverity.Info, source: "user");
+            return Task.CompletedTask;
+        }),
         new("shutdown", "Shutdown", c => { c.RequestExit = true; return Task.CompletedTask; }),
     };
 

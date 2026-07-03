@@ -64,6 +64,7 @@ public sealed class MetricsHistory
     private readonly object _lock = new();
     private readonly Queue<double> _cpu = new();
     private readonly Queue<double> _ram = new();
+    private readonly Queue<double> _latency = new();
     private const int Cap = 40;
 
     public void Add(double cpu, double ram)
@@ -77,6 +78,18 @@ public sealed class MetricsHistory
         }
     }
 
+    /// <summary>API 지연(ms) 표본 추가(#16). down(null)은 표본에서 제외.</summary>
+    public void AddLatency(double? ms)
+    {
+        if (ms is null) return;
+        lock (_lock)
+        {
+            _latency.Enqueue(ms.Value);
+            if (_latency.Count > Cap) _latency.Dequeue();
+        }
+    }
+
     public double[] Cpu { get { lock (_lock) return _cpu.ToArray(); } }
     public double[] Ram { get { lock (_lock) return _ram.ToArray(); } }
+    public double[] Latency { get { lock (_lock) return _latency.ToArray(); } }
 }

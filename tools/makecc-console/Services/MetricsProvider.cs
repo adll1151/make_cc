@@ -68,15 +68,22 @@ public sealed class MetricsProvider : IDisposable
 public static class Net
 {
     public static async Task<bool> PortOpen(string host, int port, int timeoutMs = 500)
+        => await PortLatency(host, port, timeoutMs) is not null;
+
+    /// <summary>TCP 연결 소요(ms). 실패/타임아웃이면 null. (#16 Latency)</summary>
+    public static async Task<double?> PortLatency(string host, int port, int timeoutMs = 500)
     {
         try
         {
             using var c = new System.Net.Sockets.TcpClient();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             var connect = c.ConnectAsync(host, port);
             var done = await Task.WhenAny(connect, Task.Delay(timeoutMs));
-            return done == connect && c.Connected;
+            if (done != connect || !c.Connected) return null;
+            sw.Stop();
+            return sw.Elapsed.TotalMilliseconds;
         }
-        catch { return false; }
+        catch { return null; }
     }
 }
 

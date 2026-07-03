@@ -21,6 +21,15 @@ public sealed class AppServices
     public string SupabaseUrl { get; }
     public IReadOnlyList<IServiceMonitor> Monitors { get; }
 
+    /// <summary>Latency 판독용 참조(#16).</summary>
+    public ApiMonitor Api { get; }
+
+    /// <summary>자동 복구 워치독(#14).</summary>
+    public Watchdog Watchdog { get; }
+
+    /// <summary>Discord 운영 알림(#15).</summary>
+    public DiscordNotifier Notifier { get; }
+
     public AppServices()
     {
         Paths = RepoPaths.Discover();
@@ -44,14 +53,22 @@ public sealed class AppServices
         SupabaseUrl = ReadEnv("NEXT_PUBLIC_SUPABASE_URL") ?? ReadEnv("SUPABASE_URL") ?? "";
 
         // 서비스 모니터 레지스트리(#11) — 새 서비스는 여기 1줄 추가로 확장.
+        Api = new ApiMonitor();
         Monitors = new IServiceMonitor[]
         {
             new DockerMonitor(Docker),
             new WorkerMonitor(Process),
-            new ApiMonitor(),
+            Api,
             new RedisMonitor(),
             new DatabaseMonitor(SupabaseUrl),
         };
+
+        // 워치독(#14) + Discord 알림(#15). 웹훅은 config 우선, 없으면 .env 폴백.
+        Watchdog = new Watchdog(Config.Watchdog);
+        var webhook = !string.IsNullOrWhiteSpace(Config.Notify.DiscordWebhookUrl)
+            ? Config.Notify.DiscordWebhookUrl
+            : ReadEnv("DISCORD_WORKER_ALERT_WEBHOOK") ?? "";
+        Notifier = new DiscordNotifier(webhook, Config.Notify.CooldownSeconds, Logs);
 
         // 좌측 Service 패널 초기 항목 = 모니터 목록에서 파생
         State.SetServices(Monitors.Select(m => new ServiceInfo { Name = m.Name }));
@@ -142,6 +159,48 @@ public sealed class MonitorLoop
         _state.Online = _state.Service("API")?.State == HealthState.Ok;
         _state.SetContainers(await _svc.Docker.ListAsync());
         _svc.Telemetry.Update(_state.Metrics, _state.Online);
+
+        // API Latency(#16) — 표본 기록 + 히스토리(스파크라인)
+        _state.Metrics.LatencyMs = _svc.Api.LastLatencyMs;
+        _state.MetricHistory.AddLatency(_svc.Api.LastLatencyMs);
+
+        // 워치독(#14) — 이 세션에서 기동한 프로세스가 죽으면 자동 재기동
+        if (_svc.Watchdog.Enabled) TryAutoRecover();
+    }
+
+    private void TryAutoRecover()
+    {
+        foreach (var (proc, script, label) in new[] { ("worker", "worker", "Worker"), ("dev", "dev", "API") })
+        {
+            if (!_svc.Process.WasStarted(proc)) continue;      // 우리가 띄운 적 없는 대상은 제외
+            if (_svc.Process.IsRunning(proc))
+            {
+                _svc.Watchdog.ClearExhausted(proc);            // 회복 → 한도 초과 알림 리셋
+                continue;
+            }
+
+            if (!_svc.Watchdog.CanRestart(proc))
+            {
+                if (_svc.Watchdog.MarkExhausted(proc))
+                {
+                    var msg = $"{label} watchdog limit reached " +
+                              $"({_svc.Watchdog.MaxRestarts}/{_svc.Watchdog.WindowMinutes}m) — manual restart required";
+                    _state.Events.Publish(msg, EventSeverity.Error, source: "watchdog");
+                    _state.Logs.Error(msg);
+                    _svc.Notifier.Notify($"watchdog:{proc}", "🛑 Watchdog Limit", msg, EventSeverity.Error);
+                }
+                continue;
+            }
+
+            _svc.Watchdog.RecordRestart(proc);
+            _svc.Process.Start(proc, script);
+            _state.Session.RestartCount++;
+            var n = _svc.Watchdog.RestartCount(proc);
+            var restartMsg = $"{label} auto-restarted by watchdog ({n}/{_svc.Watchdog.MaxRestarts})";
+            _state.Events.Publish(restartMsg, EventSeverity.Warning, source: "watchdog");
+            _state.Logs.Warn(restartMsg);
+            _svc.Notifier.Notify($"watchdog:{proc}", "♻️ Watchdog Restart", restartMsg, EventSeverity.Warning);
+        }
     }
 
     private void DetectTransition(string name, HealthResult r)
@@ -162,10 +221,14 @@ public sealed class MonitorLoop
         {
             _state.Session.RecoveryCount++;
             _state.Events.Publish($"{name} Recovered", EventSeverity.Success, source: name);
+            _svc.Notifier.Notify(name, $"✅ {name} Recovered",
+                $"{name} 서비스가 정상으로 복구되었습니다.", EventSeverity.Success);
         }
         else if (prev == HealthState.Ok && r.State == HealthState.Error)
         {
             _state.Events.Publish($"{name} Health Failed", EventSeverity.Error, source: name);
+            _svc.Notifier.Notify(name, $"🚨 {name} Down",
+                $"{name} 서비스 헬스체크 실패 — {r.Detail}", EventSeverity.Error);
         }
         else if (r.State == HealthState.Ok)
         {
