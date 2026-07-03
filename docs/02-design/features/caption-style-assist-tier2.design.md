@@ -235,9 +235,11 @@ export function suggestCaptionStyle(
 
 ## 9. 롤아웃
 
-1. m1~m3 구현·테스트 → 배포(동일 오리진 데모에서 Tier 2 동작, 실잡은 무해 강등).
-2. Supabase `videos` 버킷 CORS 설정(prod) → 실잡 Tier 2 활성.
+1. m1~m4 구현·테스트 → 배포. ✅ 완료(커밋 8aae868).
+2. ~~Supabase `videos` 버킷 CORS 설정~~ → **불필요 확인(2026-07-03 실측)**: Supabase Storage signed URL은 이미 `Access-Control-Allow-Origin: *`를 반환한다(REST 프로브: 임시객체 업로드→sign→Origin GET→ACAO=`*`). → `crossOrigin='anonymous'`로 canvas taint 없이 **실잡에서 즉시 동작**. 별도 버킷 CORS 구성 단계 없음.
 3. prod 검증(밝은 배경 실영상 업로드 → 박스/위치 보정 관찰).
+
+> **참고**: §6·§10.7의 graceful degrade(load error/taint→null)는 방어선으로 유지. Supabase가 ACAO를 계속 제공하는 한 실잡 Tier 2는 활성.
 
 - **비목표 재확인**: 얼굴/객체 검출·ML saliency·비전 LLM(Tier 3)은 범위 밖 — [[project-monetization]] 선행 후 별도 Plan.
 
