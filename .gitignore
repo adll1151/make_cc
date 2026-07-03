@@ -79,3 +79,4 @@ trashcan/
 
 # Supabase CLI 임시
 supabase/.temp/
+server.zip

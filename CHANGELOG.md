@@ -9,6 +9,25 @@ make_cc의 버전별 작업 기록입니다. 형식은 [Keep a Changelog](https:
 
 ---
 
+## [0.6.0] · 자막 스타일 어시 + 퍼널 분석
+<!-- date: 2026-07-03 -->
+
+무료 티어 폴리싱·사용자 확보 방향. 편집기가 영상·자막을 분석해 어울리는 번인 자막 스타일을 추천하고, 퍼스트파티 퍼널 분석으로 유입→전환을 자체 계측한다. 전부 $0(외부 SaaS·유료 API 없음).
+
+### Added
+- **자막 스타일 어시 Tier 1(휴리스틱)** — 영상 종횡비·CPS·화자 수 등 보유 데이터만으로 프리셋을 추천(`✨ 추천 적용`). 순수 클라이언트.
+- **자막 스타일 어시 Tier 2(프레임 인지형)** — 브라우저 canvas로 영상 프레임을 샘플링해 자막 영역의 밝기·대비·주색·피사체 쏠림을 분석 → 색/박스/위치를 자동 보정(밝은 배경→박스, 하단 인물→자막 위로). Tier 1에 progressive enhancement로 얹음. Supabase signed URL이 CORS(ACAO:*)를 제공해 실잡에서도 동작.
+- **퍼스트파티 퍼널 분석** — page_view→업로드→잡 완료→편집기→SRT 다운로드를 Supabase에 직접 적재(외부 SaaS 0·$0). `npm run funnel` 리포트 CLI.
+- **운영자 대시보드** — `/admin/analytics`(ADMIN_EMAILS allowlist 게이팅, robots disallow).
+- **가입 전 샘플 편집기** — `/editor/sample`로 로그인 없이 편집기 체험.
+- **MAKECC 콘솔 revamp** — .NET8 운영 콘솔 신규 버전(Watchdog·DiscordNotifier 등), 테스트 45개.
+
+### Fixed
+- **자막 어시 dims 레이스** — 번인 패널 지연 마운트로 video `loadedmetadata`를 놓쳐 Tier 2가 미작동하던 문제를 videoWidth 폴링 폴백으로 해결(headed E2E로 발견).
+- **middleware** — 손상된 auth 쿠키로 전체 500 나던 문제 방지.
+
+---
+
 ## [0.5.0] · 자막 다국어 번역 (phase3)
 <!-- date: 2026-06-24 -->
 
