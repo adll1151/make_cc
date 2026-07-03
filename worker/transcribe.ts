@@ -19,6 +19,7 @@ import { videosBucket } from '@/lib/storage';
 import { dispatchJobCompleted, dispatchJobFailed } from '@/services/notify';
 import { extractAudio } from './lib/ffmpeg';
 import { runWhisper } from './lib/whisper';
+import { runSoundEvents, eventsToSoundCues, type RawSoundEvent } from './lib/sound-events';
 
 /**
  * 잡 한 건의 STT 파이프라인 — 워커·CLI 양쪽이 호출.
@@ -89,6 +90,13 @@ export async function processTranscribe(jobId: string): Promise<{
     await extractAudio(videoPath, audioPath);
     log.info('audio extracted');
     await updateProgress(jobId, 18);
+
+    // 2b. 리치 CC — 오디오 이벤트 감지를 CPU에서 Whisper(GPU)와 **병렬** 시작.
+    //     베스트에포트: 실패해도 [] 반환(STT 무영향). 결과는 SRT 빌드 전에 await.
+    const soundEventsPromise: Promise<RawSoundEvent[]> = runSoundEvents(audioPath, {
+      device: 'cpu',
+      onInfo: (msg) => log.info({ soundEvents: msg }, 'sound-events info'),
+    });
 
     // 3. Whisper STT (스트리밍)
     const modelName = process.env.WHISPER_MODEL ?? 'small';
@@ -172,19 +180,30 @@ export async function processTranscribe(jobId: string): Promise<{
       log.info({ speakers: speakerIds.length }, '단일/미분리 화자 — speaker_map 생략');
     }
 
-    // 4. SRT 빌드 + 업로드
+    // 3c. 리치 CC — 사운드 이벤트 → CC 큐 → 대사 큐와 타임라인 병합 (베스트에포트)
+    let soundCues: Cue[] = [];
+    try {
+      const rawEvents = await soundEventsPromise;
+      soundCues = eventsToSoundCues(rawEvents);
+      log.info({ rawEvents: rawEvents.length, soundCues: soundCues.length }, 'sound events → CC 큐');
+    } catch (err) {
+      log.warn({ err: (err as Error)?.message }, 'sound events 처리 실패 (CC 사운드 생략)');
+    }
+    const allCues = mergeCuesByTime(cues, soundCues);
+
+    // 4. SRT 빌드 + 업로드 (대사 + CC 사운드 큐)
     log.info('building srt');
-    const srtText = buildSrt(cues);
+    const srtText = buildSrt(allCues);
     log.info({ chars: srtText.length }, 'uploading srt');
     const { path: subtitleKey } = await saveSubtitle({ jobId, srtText });
 
     // 4b. 단어 타이밍 저장 (있을 때만) — 번인 카라오케 하이라이트용.
     //     render 워커가 {jobId}.words.json을 우선 로드해 카라오케 활성화.
-    const wordCueCount = cues.filter((c) => c.words && c.words.length > 0).length;
+    const wordCueCount = allCues.filter((c) => c.words && c.words.length > 0).length;
     if (wordCueCount > 0) {
       try {
-        await putWordsJson(jobId, cues);
-        log.info({ wordCues: wordCueCount, totalCues: cues.length }, 'words.json saved (카라오케 가능)');
+        await putWordsJson(jobId, allCues);
+        log.info({ wordCues: wordCueCount, totalCues: allCues.length }, 'words.json saved (카라오케 가능)');
       } catch (err) {
         // 단어 타이밍 저장 실패는 비치명적 — SRT 평문 fallback으로 렌더 가능
         log.warn({ err: (err as Error)?.message }, 'words.json 저장 실패 (평문 fallback 유지)');
@@ -210,7 +229,9 @@ export async function processTranscribe(jobId: string): Promise<{
     const elapsedSec = (Date.now() - totalStart) / 1000;
     log.info(
       {
-        cueCount: cues.length,
+        cueCount: allCues.length,
+        speechCues: cues.length,
+        soundCues: soundCues.length,
         subtitleStorageKey: subtitleKey,
         elapsedSec: elapsedSec.toFixed(1),
       },
@@ -224,11 +245,11 @@ export async function processTranscribe(jobId: string): Promise<{
       userId: job.userId,
       videoOriginalName: job.videoOriginalName,
       videoDurationSec: job.videoDurationSec,
-      cueCount: cues.length,
+      cueCount: allCues.length,
     }).catch((err) => log.warn({ err: (err as Error)?.message }, 'notify completed failed'));
 
     return {
-      cueCount: cues.length,
+      cueCount: allCues.length,
       subtitleStorageKey: subtitleKey,
       elapsedSec,
       whisperElapsedSec: whisperResult.elapsedSec,
@@ -260,6 +281,19 @@ export async function processTranscribe(jobId: string): Promise<{
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
+}
+
+/**
+ * 대사 큐(speech) + CC 사운드 큐(sound)를 시작 시각 기준 병합·재인덱싱.
+ * 같은 시각이면 대사(speech) 먼저, 그다음 종료 시각 순. sound 큐 없으면 원본 그대로.
+ */
+function mergeCuesByTime(speech: Cue[], sound: Cue[]): Cue[] {
+  if (sound.length === 0) return speech;
+  const kindRank = (c: Cue) => (c.kind === 'sound' ? 1 : 0);
+  const all = [...speech, ...sound].sort(
+    (a, b) => a.startMs - b.startMs || kindRank(a) - kindRank(b) || a.endMs - b.endMs,
+  );
+  return all.map((c, i) => ({ ...c, index: i + 1 }));
 }
 
 /**
