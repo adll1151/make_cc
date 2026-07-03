@@ -117,8 +117,10 @@ HF 토큰이 없거나 약관 미동의 시 `HUGGINGFACE_TOKEN 미설정 — dia
 | small | 2GB | ~3.5GB | ~17% | 9~10× realtime |
 | medium | 5GB | ~6.5GB | ~13% | 5× realtime |
 | large-v3 | 10GB | ~11.5GB | ~10% | 2× realtime |
+| **large-v3-turbo** | ~6GB | ~7.5GB | ~10~11% | ~4× realtime |
 
 > 화자 분리가 켜져 있을 때 RTX 4060 8GB에서는 **small + diarization** 또는 **medium + diarization (한계)** 권장.
+> GPU 여유가 있으면 **large-v3-turbo** 권장 — large-v3 대비 VRAM ~40%↓·속도 ~2배↑, 정확도 저하 <1%. (리치 CC용 SenseVoice 동거 여지 확보)
 
 ### 모델별 메모리·정확도
 
@@ -129,8 +131,9 @@ HF 토큰이 없거나 약관 미동의 시 `HUGGINGFACE_TOKEN 미설정 — dia
 | small | 488MB | 2GB | ~17% | 빠름 |
 | **medium** | 1.5GB | 5GB | ~13% | 보통 |
 | large-v3 | 3GB | 10GB | ~10% | 느림 |
+| **large-v3-turbo** | 1.6GB | ~6GB | ~10~11% | 빠름(디코더 4레이어) |
 
-> Plan 목표 WER ≤ 15% → **medium 이상 권장**. small도 시작점으로 OK.
+> Plan 목표 WER ≤ 15% → **medium 이상 권장**. small도 시작점으로 OK. GPU면 **large-v3-turbo**가 가성비 최적(속도·VRAM).
 
 ## 파이프라인
 

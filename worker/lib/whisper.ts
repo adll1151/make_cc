@@ -24,7 +24,7 @@ export interface WhisperResult {
 }
 
 export interface RunWhisperOptions {
-  model: string; // 'small' | 'medium' | 'large-v3' ...
+  model: string; // 'small' | 'medium' | 'large-v3' | 'large-v3-turbo' ...
   language: string; // 'ko'
   device?: 'auto' | 'cuda' | 'cpu';
   /** true면 whisperx.py(STT+pyannote 화자분리) 실행. false면 whisper.py(STT만). */

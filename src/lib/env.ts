@@ -69,7 +69,7 @@ const envSchema = z.object({
 
   // Whisper (워커 전용 — 웹에서는 미사용)
   WHISPER_MODEL: z
-    .enum(['tiny', 'base', 'small', 'medium', 'large-v2', 'large-v3'])
+    .enum(['tiny', 'base', 'small', 'medium', 'large-v2', 'large-v3', 'large-v3-turbo'])
     .default('small'),
   WHISPER_DEVICE: z.enum(['auto', 'cuda', 'cpu']).default('auto'),
   WHISPER_DIARIZATION: z
