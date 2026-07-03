@@ -3,6 +3,7 @@ import {
   mapCcLabel,
   eventsToSoundCues,
   localizeSoundCue,
+  CC_LABELS,
   MIN_CONFIDENCE,
   type RawSoundEvent,
 } from '../../../worker/lib/sound-events';
@@ -34,11 +35,27 @@ describe('mapCcLabel — AudioSet 라벨 → CC 표기', () => {
     expect(mapCcLabel('Cough')).toBe('[기침]');
     expect(mapCcLabel('Sneeze')).toBe('[재채기]');
   });
-  it('대사(Speech)·기타는 null (CC 대상 아님)', () => {
-    expect(mapCcLabel('Speech')).toBeNull();
-    expect(mapCcLabel('Male speech, man speaking')).toBeNull();
-    expect(mapCcLabel('Siren')).toBeNull();
+
+  it('확장 라벨 — 환경·기계·동물 사운드', () => {
+    for (const l of ['Siren', 'Ambulance (siren)', 'Civil defense siren', 'Emergency vehicle'])
+      expect(mapCcLabel(l)).toBe('[사이렌]');
+    for (const l of ['Gunshot, gunfire', 'Machine gun']) expect(mapCcLabel(l)).toBe('[총성]');
+    for (const l of ['Thunder', 'Thunderstorm']) expect(mapCcLabel(l)).toBe('[천둥]');
+    for (const l of ['Doorbell', 'Ding-dong']) expect(mapCcLabel(l)).toBe('[초인종]');
+    for (const l of ['Ringtone', 'Telephone bell ringing']) expect(mapCcLabel(l)).toBe('[전화벨]');
+    expect(mapCcLabel('Knock')).toBe('[노크]');
+    for (const l of ['Bark', 'Bow-wow', 'Howl', 'Growling']) expect(mapCcLabel(l)).toBe('[개 짖음]');
+    for (const l of ['Alarm', 'Beep, bleep', 'Buzzer']) expect(mapCcLabel(l)).toBe('[알람]');
+  });
+
+  it('대사·무관 소리는 null (오탐 방지)', () => {
+    for (const l of ['Speech', 'Male speech, man speaking', 'Narration', 'Silence', 'Inside, small room'])
+      expect(mapCcLabel(l)).toBeNull();
+  });
+  it('매핑 대상 아닌 소리는 null (넓게 잡지 않음)', () => {
+    // 'Dog'(컨테이너 클래스)는 짖음이 아니라 null, 'Bark'만 매핑 — 오탐 억제
     expect(mapCcLabel('Dog')).toBeNull();
+    for (const l of ['Wind', 'Vehicle', 'Water', 'Engine']) expect(mapCcLabel(l)).toBeNull();
   });
 });
 
@@ -113,8 +130,9 @@ describe('localizeSoundCue — CC 표기 대상 언어 로컬라이즈', () => {
     expect(localizeSoundCue('  [웃음] ', 'en')).toBe('[Laughter]');
   });
 
-  it('CC_RULES가 내는 모든 표기는 en/ja/zh 매핑이 존재', () => {
-    for (const cc of ['♪ 음악 ♪', '[웃음]', '[박수]', '[울음]', '[기침]', '[재채기]']) {
+  it('CC_LABELS(모든 CC 표기)는 en/ja/zh 매핑이 빠짐없이 존재', () => {
+    expect(CC_LABELS.length).toBeGreaterThanOrEqual(14); // 확장 후 6→14
+    for (const cc of CC_LABELS) {
       for (const lang of ['en', 'ja', 'zh']) {
         expect(localizeSoundCue(cc, lang)).not.toBe(cc); // 원본과 달라야(=매핑됨)
       }

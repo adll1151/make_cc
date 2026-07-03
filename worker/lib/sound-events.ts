@@ -27,13 +27,27 @@ export const MIN_DURATION_MS = 500;
 
 /** AudioSet 라벨군 → CC 표기. 순서 있음(구체적 먼저, 음악은 넓어서 마지막). null이면 CC 대상 아님(대사 포함). */
 const CC_RULES: ReadonlyArray<{ match: RegExp; cc: string }> = [
+  // 사람 소리
   { match: /laugh|giggle|snicker|chuckle|chortle/i, cc: '[웃음]' },
   { match: /applause|clapping|cheering/i, cc: '[박수]' },
   { match: /crying|sobbing|\bcry\b|whimper|\bwail/i, cc: '[울음]' },
   { match: /\bcough/i, cc: '[기침]' },
   { match: /sneeze/i, cc: '[재채기]' },
+  // 환경·기계·동물 (확장). 전문 CC 관례의 대표 비음성 사운드 — 구체적 먼저.
+  { match: /siren|emergency vehicle|police car|ambulance|fire engine|fire truck|civil defense/i, cc: '[사이렌]' },
+  { match: /gunshot|gunfire|machine gun|cap gun|fusillade/i, cc: '[총성]' },
+  { match: /\bthunder/i, cc: '[천둥]' },
+  { match: /doorbell|ding-?dong/i, cc: '[초인종]' },
+  { match: /ringtone|telephone bell|telephone.*ring/i, cc: '[전화벨]' },
+  { match: /\bknock/i, cc: '[노크]' },
+  { match: /\bbark|bow-?wow|\bhowl|growl|\bwoof/i, cc: '[개 짖음]' },
+  { match: /\balarm|\bbeep|bleep|buzzer/i, cc: '[알람]' },
+  // 음악은 매칭 범위가 넓어 항상 마지막
   { match: /\bmusic|singing|a cappella|a capella|vocal music|\bchoir|\bsong\b/i, cc: '♪ 음악 ♪' },
 ];
+
+/** CC_RULES가 만들 수 있는 모든 CC 표기(중복 제거). 로컬라이즈·테스트 완전성 보증용. */
+export const CC_LABELS: ReadonlyArray<string> = [...new Set(CC_RULES.map((r) => r.cc))];
 
 /** AudioSet 라벨 → CC 표기. 대사(Speech)·기타는 null. */
 export function mapCcLabel(label: string): string | null {
@@ -54,6 +68,14 @@ const CC_LOCALES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
   '[울음]': { en: '[Crying]', ja: '[泣き声]', zh: '[哭声]' },
   '[기침]': { en: '[Coughing]', ja: '[咳]', zh: '[咳嗽]' },
   '[재채기]': { en: '[Sneezing]', ja: '[くしゃみ]', zh: '[喷嚏]' },
+  '[사이렌]': { en: '[Siren]', ja: '[サイレン]', zh: '[警笛]' },
+  '[총성]': { en: '[Gunshot]', ja: '[銃声]', zh: '[枪声]' },
+  '[천둥]': { en: '[Thunder]', ja: '[雷]', zh: '[雷声]' },
+  '[초인종]': { en: '[Doorbell]', ja: '[チャイム]', zh: '[门铃]' },
+  '[전화벨]': { en: '[Phone ringing]', ja: '[電話の呼び出し音]', zh: '[电话铃声]' },
+  '[노크]': { en: '[Knocking]', ja: '[ノック]', zh: '[敲门声]' },
+  '[개 짖음]': { en: '[Dog barking]', ja: '[犬の鳴き声]', zh: '[狗吠]' },
+  '[알람]': { en: '[Alarm]', ja: '[アラーム]', zh: '[警报音]' },
 };
 
 /** 사운드 CC 표기를 대상 언어(en/ja/zh)로 로컬라이즈. 매핑 없으면 원본 유지. */
