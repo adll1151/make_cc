@@ -128,15 +128,13 @@ export function eventsToCues(events: SoundEvent[], opts): Cue[]; // 임계·dedu
 - `worker/transcribe.ts`: Whisper 결과 + SenseVoice 결과 병합 후 SRT 빌드·저장. SenseVoice는 Whisper와 **병렬 실행**(GPU/CPU 분리라 동시 가능) 후 join.
 - SRT 빌드: 사운드 큐 = 표기 문자열 라인. words 없음(카라오케 비대상).
 
-### m4 — 편집기 · 출력
-- `features/editor/components/CueItem.tsx`: `kind==='sound'`이면 시각 구분(아이콘 🔊/♪·톤 다르게), 편집 가능(텍스트 수정·삭제).
-- 편집기 store: 사운드 큐 **표시 토글**(끄면 목록·오버레이·내보내기에서 제외). CPS 배지 비적용.
-- SRT 다운로드·번인: 토글 OFF면 사운드 큐 제외. 번인 시 사운드 큐 렌더(가능하면 이탤릭 등 CC 관례).
+### m4 — 편집기 · 출력 ✅ 완료
+- `CueItem.tsx`: `kind==='sound'` 큐를 시각 구분(앰버 톤 카드 + 🔊 사운드 배지, CPS 미표시), 편집·삭제 가능. 샘플 편집기에 데모 사운드 큐(♪음악♪) — 가입 전 CC 쇼케이스. 스크린샷 검증.
 
-### m5 — 정책 · QA
-- **게이팅**: 기본 ON·**무료**(CC는 정체성, 프리미엄 게이트 아님 — $0 차별화 유지). 편집기 토글로 사용자가 끌 수 있음.
-- 테스트: `sound-events.spec`(파서·임계·dedup·매핑 순수 단위), 병합 단위, **E2E 1건**(BGM/웃음 실클립→CC 큐 생성).
-- QA 문서 `docs/03-qa/cc-rich-tagging.qa.md`.
+### m5 — 토글 · 정책 · QA ✅ 완료
+- **표시 토글**: `useSubtitleStore.showSoundCues`(기본 true) + CueList 토글 버튼(사운드 큐 있을 때만). **뷰 전용·비파괴** — 숨겨도 데이터·저장·SRT 다운로드·번인엔 그대로 포함(저장 모델상 export 필터는 파괴적이라 채택 안 함). 검증: OFF→리스트 숨김.
+- **정책**: 기본 ON·**무료**(CC는 정체성). 사용자 제어 = per-cue 삭제(개별 제거) + 표시 토글(뷰). 워커 베스트에포트.
+- QA 문서 `docs/03-qa/cc-rich-tagging.qa.md`. 잔여 = 풀 E2E(실영상+이벤트, 수동).
 
 ---
 

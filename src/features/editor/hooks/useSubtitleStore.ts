@@ -32,6 +32,8 @@ interface SubtitleStore {
   saveStatus: SaveStatus;
   lastSaveError: string | null;
   lastSavedAt: number | null;
+  /** 리치 CC — 사운드(비음성) 큐 목록 표시 여부. 뷰 전용(데이터·저장·export 불변). */
+  showSoundCues: boolean;
 
   /** 최초 데이터 로드 */
   setLoaded(params: { jobId: string; cues: Cue[]; speakerMap?: SpeakerMap }): void;
@@ -51,6 +53,8 @@ interface SubtitleStore {
   setSelectedIndex(idx: number | null): void;
   /** 편집 cue idx 설정 (편집 진입/이탈/다음으로 이동) */
   setEditingIndex(idx: number | null): void;
+  /** 사운드 큐 표시 토글 (뷰 전용) */
+  setShowSoundCues(v: boolean): void;
   /** 저장 시작 마킹 */
   markSaving(): void;
   /** 저장 완료 마킹 (signature 갱신) */
@@ -89,6 +93,7 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
   saveStatus: 'idle',
   lastSaveError: null,
   lastSavedAt: null,
+  showSoundCues: true,
 
   setLoaded({ jobId, cues, speakerMap }) {
     const withUid = cues.map((c) => ({ ...c, uid: c.uid ?? crypto.randomUUID() }));
@@ -196,6 +201,10 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
 
   setEditingIndex(idx) {
     set({ editingIndex: idx });
+  },
+
+  setShowSoundCues(v) {
+    set({ showSoundCues: v });
   },
 
   markSaving() {

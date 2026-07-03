@@ -19,6 +19,8 @@ export function CueList({ onSeek, onPlayCue, getCurrentMs }: CueListProps) {
   const selectedIndex = useSubtitleStore((s) => s.selectedIndex);
   const editingIndex = useSubtitleStore((s) => s.editingIndex);
   const addCueAfter = useSubtitleStore((s) => s.addCueAfter);
+  const showSoundCues = useSubtitleStore((s) => s.showSoundCues);
+  const setShowSoundCues = useSubtitleStore((s) => s.setShowSoundCues);
   const containerRef = useRef<HTMLUListElement>(null);
 
   // 키보드 내비게이션: ↑/↓ 선택 이동(+seek), Enter 편집. 편집 중/입력 포커스면 무시.
@@ -75,12 +77,29 @@ export function CueList({ onSeek, onPlayCue, getCurrentMs }: CueListProps) {
   }
 
   const lastCue = cues[cues.length - 1];
+  const soundCueCount = cues.filter((c) => c.kind === 'sound').length;
 
   return (
     <>
+      {/* 리치 CC — 사운드 큐 표시 토글 (뷰 전용, 데이터 불변). 사운드 큐 있을 때만 노출 */}
+      {soundCueCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowSoundCues(!showSoundCues)}
+          className="mb-2 flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-2.5 py-1 text-[11px] font-medium text-amber-500 transition hover:bg-amber-500/[0.12]"
+          aria-pressed={showSoundCues}
+          title="음악·박수·웃음 등 비음성 사운드 자막(CC) 표시/숨김 — 저장·다운로드엔 영향 없음"
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+            <path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2" />
+          </svg>
+          사운드 자막 {showSoundCues ? '표시 중' : '숨김'} ({soundCueCount})
+        </button>
+      )}
       <ul ref={containerRef} className="space-y-2">
         <AnimatePresence initial={false}>
           {cues.map((cue, idx) => {
+            if (!showSoundCues && cue.kind === 'sound') return null;
             const next = cues[idx + 1];
             const canAddAfter = !next || next.startMs - cue.endMs >= MIN_GAP_MS;
             return (
