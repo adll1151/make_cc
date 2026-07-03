@@ -49,11 +49,16 @@ plan_ref: docs/01-plan/features/cc-rich-tagging.plan.md
 
 ## 2. 열린 질문 확정 (Plan §열린 질문)
 
-### Q1. SenseVoice 구동 방식 → **ONNX Runtime(CPU), sherpa-onnx 우선 / funasr 폴백**
-- 워커 env에 **onnxruntime 1.26(CPU) 이미 존재**, funasr/transformers/modelscope 없음. → 무거운 의존성 트리를 피하고 **onnxruntime을 재활용**.
-- **`sherpa-onnx`** (k2-fsa): SenseVoice-Small ONNX 오프라인 인식기를 제공, 자체 onnxruntime 번들, CPU 구동, 설치 단순(단일 wheel). **1순위**.
-- ⚠️ **검증 필요(m2 스파이크)**: sherpa-onnx가 오디오 **이벤트 토큰**(`<|BGM|>`/`<|Applause|>`/`<|Laughter|>` 등)을 출력에 노출하는지 확인. 노출 안 하면 → **funasr**(공식, 리치 트랜스크립션 확실) 로 폴백(의존성 감수).
-- **CPU 선택 근거**: onnxruntime이 CPU 빌드 + SenseVoice NAR라 빠름 → **GPU를 Whisper 전용**으로 비워 경합 제거. (m1의 VRAM 절감은 GPU 헤드룸 확보라는 별도 이득으로 유지.)
+### Q1. 이벤트 감지 방식 → **sherpa-onnx(ONNX·CPU) — m2.0 스파이크로 API 검증 완료(2026-07-03)**
+- 워커 env에 **onnxruntime 1.26(CPU) 이미 존재**, funasr/transformers/modelscope 없음. → onnxruntime 재활용, 무거운 의존성 회피.
+- **`sherpa-onnx` 1.13.3 설치·API 확인 완료.** 이벤트 노출이 **API 레벨에서 확정**됨(funasr 폴백 불필요):
+  - `OfflineRecognitionResult`(SenseVoice)에 **`event`·`emotion`·`lang` 필드 존재** — 이벤트 노출 확인.
+  - 별도 **`AudioTagging`**(Zipformer/AudioSet) 제공: `AudioEvent{name, prob}` + `top_k`/`labels` — **명명된 사운드 이벤트 + confidence** 전용 분류기.
+- **채택 방향(2트랙, m2에서 실측 후 확정)**:
+  - **1순위: AudioTagging(AudioSet)** — 음악/박수/웃음/기침 등 명명 클래스 + 확률을 **시간 윈도잉**으로 감지 → CC 사운드 큐에 최적(명명·confidence·타임라인).
+  - **대안: SenseVoice `.event`** — 세그먼트 단위 coarse 이벤트(더 경량).
+- **CPU 근거**: onnxruntime CPU 빌드 + NAR/경량이라 빠름 → **GPU는 Whisper 전용**(경합 0). m1 VRAM 절감은 GPU 헤드룸으로 유지.
+- ⚠️ **m2 잔여 검증(라이브)**: 모델 가중치 다운로드(~수백MB) + **이벤트 포함 실클립**으로 감지 정확도·라벨 커버리지 확인(API 노출은 확정, 정확도만 남음).
 
 ### Q2. 이벤트 라벨 한글 매핑 → **핵심 6종, 표준 CC 표기**
 | SenseVoice 이벤트 | CC 표기(한국어) | 비고 |
@@ -108,9 +113,9 @@ export function eventsToCues(events: SoundEvent[], opts): Cue[]; // 임계·dedu
 ### m1 — Turbo ✅ 완료
 `WHISPER_MODEL=large-v3-turbo`(enum 추가·실측·채택). 본 Design의 GPU 전제.
 
-### m2 — SenseVoice 이벤트 감지 (워커)
-- **m2.0 스파이크(선행)**: 테스트 클립(BGM/웃음 포함)으로 sherpa-onnx SenseVoice가 이벤트 토큰을 내는지 검증. 성공→sherpa-onnx 채택, 실패→funasr.
-- `worker/scripts/sensevoice.py`: 오디오(또는 VAD 청크) → stdout JSON `events[{startMs,endMs,tag,confidence}]`. whisper.py의 로깅/`emit` 패턴 미러.
+### m2 — 사운드 이벤트 감지 (워커)
+- **m2.0 스파이크**: ✅ API 검증 완료(sherpa-onnx `event`/`AudioTagging` 노출). **잔여** = 모델 다운로드 + 이벤트 실클립으로 정확도·라벨 커버리지 확인 → AudioTagging vs SenseVoice.event 최종 택.
+- `worker/scripts/sound_events.py`: 오디오 → sherpa-onnx AudioTagging(top_k, 시간 윈도잉) → stdout JSON `events[{startMs,endMs,tag,confidence}]`. whisper.py 로깅/`emit` 패턴 미러.
 - `worker/lib/sound-events.ts`: 파이썬 출력 파싱 + 정규화(태그→표기 매핑, `MIN_EVENT_MS`, confidence 임계, 인접 dedup). **순수·테스트 대상**.
 - 의존성: `sherpa-onnx`(wheel) — worker requirements에 추가. 모델은 최초 1회 다운로드.
 
@@ -152,7 +157,7 @@ export function eventsToCues(events: SoundEvent[], opts): Cue[]; // 임계·dedu
 
 | 리스크 | 완화 |
 |--------|------|
-| sherpa-onnx가 이벤트 토큰 미노출 | **m2.0 스파이크로 선검증**, 실패 시 funasr 폴백(설계 분기 준비) |
+| ~~sherpa-onnx 이벤트 미노출~~ | **해소(2026-07-03 API 검증)**: SenseVoice `.event` + 전용 `AudioTagging{name,prob}` 확인. funasr 폴백 불필요. 잔여=라이브 정확도만 |
 | 오탐(잡음→음악, 무음→이벤트) | confidence 임계 + MIN_EVENT_MS + dedup. 보수적 기본값(놓침 < 오탐) |
 | CPU 추론 지연 | SenseVoice NAR(70ms/10s)라 무시 가능. Whisper와 병렬이라 벽시계 영향 ≈0 |
 | 신규 의존성(sherpa-onnx) | 단일 wheel·onnxruntime 재활용. funasr 대비 경량 |
