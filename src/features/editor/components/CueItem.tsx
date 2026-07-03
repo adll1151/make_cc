@@ -105,6 +105,8 @@ export function CueItem({
 
   // CPS (읽기 속도) — caption-signals의 computeCps 단일 출처
   const cps = computeCps(cue.text, cue.endMs - cue.startMs);
+  // 리치 CC — 비음성 사운드 큐(♪음악♪·[웃음]…)는 대사와 시각 구분(앰버 톤·🔊), CPS 미표시
+  const isSound = cue.kind === 'sound';
 
   return (
     <motion.li
@@ -125,7 +127,9 @@ export function CueItem({
           ? 'border-primary/40 bg-primary/5 shadow-[var(--shadow-glow)]'
           : isSelected
             ? 'border-primary/30 bg-primary/[0.03] ring-1 ring-primary/30'
-            : 'border-border/60 bg-card/30 hover:border-border-strong hover:bg-card/60',
+            : isSound
+              ? 'border-amber-500/25 bg-amber-500/[0.05] hover:border-amber-500/40 hover:bg-amber-500/[0.08]'
+              : 'border-border/60 bg-card/30 hover:border-border-strong hover:bg-card/60',
       )}
     >
       <div className="flex items-center justify-between gap-2 text-xs">
@@ -152,7 +156,7 @@ export function CueItem({
               {shortTimecode(cue.endMs)}
             </span>
           </span>
-          <CpsBadge cps={cps} />
+          {isSound ? <SoundBadge /> : <CpsBadge cps={cps} />}
         </div>
 
         {/* 액션 버튼 (호버/선택 시 노출) */}
@@ -347,6 +351,21 @@ function CpsBadge({ cps }: { cps: number }) {
       title="읽기 속도 (공백 제외 글자수/초) · 표준 권장 ≤15, 최대 17"
     >
       {cps.toFixed(1)}자/초
+    </span>
+  );
+}
+
+/** 사운드(비음성 CC) 큐 배지 — 대사와 구분(앰버 톤 + 음파 아이콘). */
+function SoundBadge() {
+  return (
+    <span
+      className="flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-500"
+      title="비음성 사운드 자막 (CC) — 음악·박수·웃음 등"
+    >
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+        <path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2" />
+      </svg>
+      사운드
     </span>
   );
 }
