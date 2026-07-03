@@ -45,6 +45,8 @@ export interface Job {
   speakerMap: SpeakerMap;
   /** 워커가 이 잡에 화자 분리를 시도할지 여부 (기본 true) */
   diarizationEnabled: boolean;
+  /** 리치 CC(비음성 사운드 이벤트 태깅) 활성 여부. false면 대사 자막만. */
+  soundEventsEnabled: boolean;
 
   createdAt: Date;
   startedAt: Date | null;
@@ -81,4 +83,6 @@ export interface CreateJobInput {
   videoSizeBytes: number;
   videoDurationSec: number;
   videoStorageKey: string;
+  /** 리치 CC 활성 여부. 미지정 시 DB 기본값(true). */
+  soundEventsEnabled?: boolean;
 }

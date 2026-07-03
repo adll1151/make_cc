@@ -57,6 +57,7 @@ function finishedJob(over: Partial<Job> = {}): Job {
     errorMessage: null,
     speakerMap: {},
     diarizationEnabled: true,
+    soundEventsEnabled: true,
     createdAt: new Date(),
     startedAt: null,
     finishedAt: null,

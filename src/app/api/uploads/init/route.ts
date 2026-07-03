@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
       videoSizeBytes: intent.fileSize,
       videoDurationSec: intent.durationSec,
       videoStorageKey: storageKey,
+      soundEventsEnabled: intent.richCc,
     });
 
     const ticket = await requestVideoUpload({ jobId: job.id, fileName: intent.fileName });

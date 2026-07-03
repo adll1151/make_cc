@@ -42,6 +42,9 @@ export async function createJob(input: CreateJobInput): Promise<Job> {
     video_storage_key: input.videoStorageKey,
     language: 'ko',
   };
+  if (input.soundEventsEnabled === false) {
+    (insert as { sound_events_enabled?: boolean }).sound_events_enabled = false;
+  }
   if (input.id) insert.id = input.id;
 
   const { data, error } = await admin
@@ -246,6 +249,8 @@ function rowToJob(row: JobRow): Job {
 
   const diarizationEnabled =
     (row as JobRow & { diarization_enabled?: boolean }).diarization_enabled ?? true;
+  const soundEventsEnabled =
+    (row as JobRow & { sound_events_enabled?: boolean }).sound_events_enabled ?? true;
 
   return {
     id: row.id,
@@ -265,6 +270,7 @@ function rowToJob(row: JobRow): Job {
     errorMessage: row.error_message,
     speakerMap,
     diarizationEnabled,
+    soundEventsEnabled,
     createdAt: new Date(row.created_at),
     startedAt: row.started_at ? new Date(row.started_at) : null,
     finishedAt: row.finished_at ? new Date(row.finished_at) : null,

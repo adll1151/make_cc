@@ -87,6 +87,9 @@ export function UploadFlow() {
   const [state, setState] = useState<FlowState>({ phase: 'idle' });
   // null=확인 중, false=게스트, true=회원 (게스트 안내 배너는 게스트에게만)
   const [authed, setAuthed] = useState<boolean | null>(null);
+  // 리치 CC(비음성 사운드 태깅) on/off. ref로도 보관해 onFileSelected 클로저에서 최신값 사용.
+  const [richCc, setRichCc] = useState(true);
+  const richCcRef = useRef(true);
   const uploadAbortRef = useRef<AbortController | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const finishedTrackedRef = useRef(false);
@@ -223,6 +226,7 @@ export function UploadFlow() {
           fileSize: file.size,
           durationSec,
           mimeType: file.type,
+          richCc: richCcRef.current,
         };
         const res = await fetch('/api/uploads/init', {
           method: 'POST',
@@ -332,6 +336,21 @@ export function UploadFlow() {
       <div>
         {authed === false && <GuestCapBanner />}
         <UploadDropzone onFileSelected={onFileSelected} />
+        <label className="mt-4 flex cursor-pointer select-none items-center justify-center gap-2 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={richCc}
+            onChange={(e) => {
+              setRichCc(e.target.checked);
+              richCcRef.current = e.target.checked;
+            }}
+            className="h-4 w-4 rounded border-input accent-foreground"
+          />
+          <span>
+            리치 CC — 음악·웃음·박수 등 소리도 자막에{' '}
+            <span className="text-xs opacity-70">(끄면 대사만)</span>
+          </span>
+        </label>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           영상이 없나요?{' '}
           <Link href="/editor/sample" className="font-medium text-foreground underline-offset-2 hover:underline">

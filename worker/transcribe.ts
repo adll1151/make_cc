@@ -92,13 +92,17 @@ export async function processTranscribe(jobId: string): Promise<{
     await updateProgress(jobId, 18);
 
     // 2b. 리치 CC — 오디오 이벤트 감지를 CPU에서 Whisper(GPU)와 **병렬** 시작.
+    //     잡 설정(soundEventsEnabled=false)이면 건너뛰고 대사 자막만 생성.
     //     베스트에포트: 실패해도 [] 반환(STT 무영향). 결과는 SRT 빌드 전에 await.
-    const soundEventsPromise: Promise<RawSoundEvent[]> = runSoundEvents(audioPath, {
-      device: 'cpu',
-      // 오디오 길이에 비례한 타임아웃(초당 0.8s, 최소 60s) — 행 방지, 베스트에포트.
-      timeoutMs: Math.max(60_000, Math.round((job.videoDurationSec ?? 60) * 800)),
-      onInfo: (msg) => log.info({ soundEvents: msg }, 'sound-events info'),
-    });
+    const soundEventsPromise: Promise<RawSoundEvent[]> = job.soundEventsEnabled
+      ? runSoundEvents(audioPath, {
+          device: 'cpu',
+          // 오디오 길이에 비례한 타임아웃(초당 0.8s, 최소 60s) — 행 방지, 베스트에포트.
+          timeoutMs: Math.max(60_000, Math.round((job.videoDurationSec ?? 60) * 800)),
+          onInfo: (msg) => log.info({ soundEvents: msg }, 'sound-events info'),
+        })
+      : Promise.resolve([]);
+    if (!job.soundEventsEnabled) log.info('리치 CC 비활성(잡 설정) — 사운드 이벤트 생략');
 
     // 3. Whisper STT (스트리밍)
     const modelName = process.env.WHISPER_MODEL ?? 'small';
