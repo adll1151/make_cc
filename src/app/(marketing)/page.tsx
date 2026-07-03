@@ -224,7 +224,7 @@ export default function LandingPage() {
               만들기
             </h2>
             <p className="relative mx-auto mt-4 max-w-md text-white/60">
-              영상 하나면 됩니다. 5분 안에 결과를 받아보세요.
+              영상 하나면 됩니다. 업로드하고 잠깐이면 자막이 나와요.
             </p>
 
             <div className="relative mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">

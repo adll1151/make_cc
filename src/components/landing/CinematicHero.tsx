@@ -42,7 +42,7 @@ const SCENES: Scene[] = [
     stage: '듣기',
     head1: '영상의 목소리를,',
     accent: '듣습니다',
-    sub: '한국어 음성을 실시간으로 포착합니다. 설치도, 로그인도 없이.',
+    sub: '업로드하면 자막(SRT)을 자동으로 만들어요 — 편집·번역·번인까지. 설치·로그인 없이 무료.',
     metricLabel: 'AUDIO LEVEL',
     metricValue: '−6 dB',
     caption: '안녕하세요, make_cc입니다',
@@ -55,8 +55,8 @@ const SCENES: Scene[] = [
     head1: '말을,',
     accent: '자막으로',
     sub: 'Whisper가 한국어를 인식해 타임코드까지 자동으로 정렬합니다.',
-    metricLabel: 'WER',
-    metricValue: '< 15%',
+    metricLabel: 'MODEL',
+    metricValue: 'large-v3',
     caption: '영상의 한국어 음성을 자동으로',
     en: 'Korean speech, transcribed automatically',
   },
@@ -122,7 +122,7 @@ const CBARS = Array.from({ length: 30 }, (_, i) => ({
 
 const FRAGMENTS = [
   { pos: 'left-[4%] top-[24%] sm:left-[7%]', px: 2.2, tag: 'ENGINE', title: 'Whisper large-v3', meta: 'self-hosted GPU · ko-KR', hideMobile: false },
-  { pos: 'right-[4%] top-[30%] sm:right-[8%]', px: 1.4, tag: 'SPEED', title: '5분 영상 ≈ 3분 처리', meta: '평균 처리 시간', hideMobile: true },
+  { pos: 'right-[4%] top-[30%] sm:right-[8%]', px: 1.4, tag: 'SPEED', title: '1분 영상 ≈ 1분 30초', meta: '평균 처리 시간', hideMobile: true },
   { pos: 'left-[6%] bottom-[20%] sm:left-[11%]', px: 3.0, tag: 'OUTPUT', title: 'SRT · 번인 MP4 · 공유', meta: '표준 자막 그대로 사용', hideMobile: true },
   { pos: 'right-[5%] bottom-[24%] sm:right-[10%]', px: 2.6, tag: 'PRIVACY', title: '처리 후 자동 삭제', meta: '게스트 1시간 · 회원 30일', hideMobile: false },
 ] as const;
@@ -414,7 +414,12 @@ export function CinematicHero() {
         <div className="relative z-10 flex w-full max-w-4xl flex-col items-center px-6 text-center">
           <CaptionStage reduce={reduce} playing={playing} onToggle={togglePlay} capRef={capRef} transRef={transRef} />
 
-          <div key={`chip-${active}`} className="enter-fade-up mt-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs tracking-wider text-white/70 backdrop-blur-sm sm:mt-9">
+          {/* 고정 가치 태그라인 — 씬과 무관하게 항상 노출(스크롤 안 해도 '무엇'을 즉시 전달) */}
+          <p className="mt-6 text-balance text-sm font-semibold text-white/85 sm:mt-9 sm:text-base">
+            한국어 영상 자막, 올리면 자동으로 <span className="text-white/55">— 편집·번역·번인까지 무료</span>
+          </p>
+
+          <div key={`chip-${active}`} className="enter-fade-up mt-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs tracking-wider text-white/70 backdrop-blur-sm sm:mt-4">
             <span className="size-1.5 animate-pulse-glow rounded-full" style={{ background: 'var(--sa)' }} />
             STEP {String(active + 1).padStart(2, '0')} / 0{N} · {scene.stage}
           </div>
