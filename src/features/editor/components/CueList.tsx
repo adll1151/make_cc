@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useSubtitleStore } from '../hooks/useSubtitleStore';
+import { summarizeSoundCues } from '../lib/sound-summary';
 import { CueItem } from './CueItem';
 
 interface CueListProps {
@@ -85,23 +86,36 @@ export function CueList({ onSeek, onPlayCue, getCurrentMs }: CueListProps) {
 
   const lastCue = cues[cues.length - 1];
   const soundCueCount = cues.filter((c) => c.kind === 'sound').length;
+  const soundSummary = soundCueCount > 0 ? summarizeSoundCues(cues) : [];
 
   return (
     <>
-      {/* 리치 CC — 사운드 큐 표시 토글 (뷰 전용, 데이터 불변). 사운드 큐 있을 때만 노출 */}
+      {/* 리치 CC — 사운드 큐 표시 토글 + 감지 요약 (뷰 전용, 데이터 불변). 사운드 큐 있을 때만 노출 */}
       {soundCueCount > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowSoundCues(!showSoundCues)}
-          className="mb-2 flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-2.5 py-1 text-[11px] font-medium text-amber-500 transition hover:bg-amber-500/[0.12]"
-          aria-pressed={showSoundCues}
-          title="음악·박수·웃음 등 비음성 사운드 자막(CC) 표시/숨김 — 저장·다운로드엔 영향 없음"
-        >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
-            <path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2" />
-          </svg>
-          사운드 자막 {showSoundCues ? '표시 중' : '숨김'} ({soundCueCount})
-        </button>
+        <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <button
+            type="button"
+            onClick={() => setShowSoundCues(!showSoundCues)}
+            className="flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-2.5 py-1 text-[11px] font-medium text-amber-500 transition hover:bg-amber-500/[0.12]"
+            aria-pressed={showSoundCues}
+            title="음악·박수·웃음 등 비음성 사운드 자막(CC) 표시/숨김 — 저장·다운로드엔 영향 없음"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+              <path d="M4 10v4M8 6v12M12 3v18M16 8v8M20 11v2" />
+            </svg>
+            사운드 자막 {showSoundCues ? '표시 중' : '숨김'} ({soundCueCount})
+          </button>
+          {/* 감지 요약 — 어떤 소리가 몇 곳 */}
+          <span className="text-[11px] text-muted-foreground" title="이 영상에서 감지된 비음성 사운드">
+            감지:{' '}
+            {soundSummary.map((e, i) => (
+              <span key={e.label}>
+                {i > 0 && <span className="opacity-40"> · </span>}
+                <span className="text-amber-500/90">{e.label}</span> {e.count}
+              </span>
+            ))}
+          </span>
+        </div>
       )}
       <ul ref={containerRef} className="space-y-2">
         <AnimatePresence initial={false}>
