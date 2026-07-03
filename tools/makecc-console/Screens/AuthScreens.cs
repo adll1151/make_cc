@@ -36,6 +36,7 @@ public static class LoginScreen
         var choice = AnsiConsole.Prompt(new SelectionPrompt<string>()
             .Title($"[{Theme.CAccent}]계정[/]")
             .HighlightStyle(new Style(Theme.Accent))
+            .UseConverter(Theme.Esc) // 라벨의 [뷰어]/[운영자] 대괄호를 Spectre 마크업으로 오인해 크래시하는 것 방지
             .AddChoices(byLabel.Keys));
         var acc = byLabel[choice];
 
@@ -133,6 +134,7 @@ public static class OperatorAdminScreen
                 var pick = AnsiConsole.Prompt(new SelectionPrompt<string>()
                     .Title($"[{Theme.CAccent}]삭제할 계정[/]")
                     .HighlightStyle(new Style(Theme.Accent))
+                    .UseConverter(Theme.Esc) // 대괄호 라벨 마크업 크래시 방지
                     .AddChoices(labels));
                 if (pick == CloseLabel) continue;
 
