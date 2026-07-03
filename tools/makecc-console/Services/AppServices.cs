@@ -27,8 +27,14 @@ public sealed class AppServices
     /// <summary>자동 복구 워치독(#14).</summary>
     public Watchdog Watchdog { get; }
 
-    /// <summary>Discord 운영 알림(#15).</summary>
-    public DiscordNotifier Notifier { get; }
+    /// <summary>Discord 운영 알림(#15). Config Editor(#22)에서 재구성 가능.</summary>
+    public DiscordNotifier Notifier { get; private set; }
+
+    /// <summary>점검 모드(#18).</summary>
+    public MaintenanceService Maintenance { get; }
+
+    /// <summary>Queue 관리(#19) — Supabase jobs 테이블.</summary>
+    public SupabaseQueueService Queue { get; }
 
     public AppServices()
     {
@@ -65,10 +71,15 @@ public sealed class AppServices
 
         // 워치독(#14) + Discord 알림(#15). 웹훅은 config 우선, 없으면 .env 폴백.
         Watchdog = new Watchdog(Config.Watchdog);
-        var webhook = !string.IsNullOrWhiteSpace(Config.Notify.DiscordWebhookUrl)
-            ? Config.Notify.DiscordWebhookUrl
-            : ReadEnv("DISCORD_WORKER_ALERT_WEBHOOK") ?? "";
-        Notifier = new DiscordNotifier(webhook, Config.Notify.CooldownSeconds, Logs);
+        Notifier = BuildNotifier();
+
+        // 점검 모드(#18) — 저장소 루트 maintenance.lock. 이전 세션 잔존 lock은 자동 복원.
+        Maintenance = new MaintenanceService(
+            Path.Combine(Paths.Root, "maintenance.lock"), State, () => Notifier);
+
+        // Queue 관리(#19) — Supabase service role 로 jobs 테이블 접근.
+        Queue = new SupabaseQueueService(
+            SupabaseUrl, ReadEnv("SUPABASE_SERVICE_ROLE_KEY") ?? "", Logs);
 
         // 좌측 Service 패널 초기 항목 = 모니터 목록에서 파생
         State.SetServices(Monitors.Select(m => new ServiceInfo { Name = m.Name }));
@@ -80,6 +91,17 @@ public sealed class AppServices
         Audit.Record(action);
         State.Events.Publish($"USER {action}", EventSeverity.Info, userAction: true, source: "user");
         Logs.Info($"[audit] {action}");
+    }
+
+    /// <summary>알림 설정 변경 반영(#22 Config Editor) — Notifier 재구성.</summary>
+    public void ReloadNotifier() => Notifier = BuildNotifier();
+
+    private DiscordNotifier BuildNotifier()
+    {
+        var webhook = !string.IsNullOrWhiteSpace(Config.Notify.DiscordWebhookUrl)
+            ? Config.Notify.DiscordWebhookUrl
+            : ReadEnv("DISCORD_WORKER_ALERT_WEBHOOK") ?? "";
+        return new DiscordNotifier(webhook, Config.Notify.CooldownSeconds, Logs);
     }
 
     public void OpenBrowser(string url = "http://localhost:3000")
@@ -153,6 +175,7 @@ public sealed class MonitorLoop
             catch { r = new HealthResult(HealthState.Unknown, "Error", "check 예외"); }
 
             _state.UpdateService(mon.Name, r.State, r.Label, r.Detail);
+            _state.Health.Sample(mon.Name, r.State); // Health History(#21)
             DetectTransition(mon.Name, r);
         }
 
@@ -164,9 +187,28 @@ public sealed class MonitorLoop
         _state.Metrics.LatencyMs = _svc.Api.LastLatencyMs;
         _state.MetricHistory.AddLatency(_svc.Api.LastLatencyMs);
 
+        // Queue(#19) — 6초 주기(4틱)로 Supabase jobs 조회. 실 큐 깊이로 Telemetry 대체.
+        _state.QueueAvailable = _svc.Queue.Configured;
+        if (_svc.Queue.Configured && _tick % 4 == 0)
+        {
+            var jobs = await _svc.Queue.ListAsync();
+            if (jobs is not null)
+            {
+                _state.SetQueueJobs(jobs);
+                _state.Metrics.Queue = jobs.Count(j => j.Status is "queued" or "pending");
+            }
+        }
+        _tick++;
+
+        // 점검 모드(#18) — 드레인 완료 판정(진행 중 잡 0)
+        int active = _state.QueueJobs.Count(j => j.Status == "transcribing");
+        _svc.Maintenance.Tick(active);
+
         // 워치독(#14) — 이 세션에서 기동한 프로세스가 죽으면 자동 재기동
         if (_svc.Watchdog.Enabled) TryAutoRecover();
     }
+
+    private int _tick;
 
     private void TryAutoRecover()
     {

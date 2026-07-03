@@ -90,5 +90,27 @@ public static class SelfTest
 
         // Update Checker (#8)
         s.Update = new UpdateInfo { Current = "0.5.0", Latest = "0.6.0", UpdateAvailable = true };
+
+        // Queue (#19)
+        s.QueueAvailable = true;
+        var now = DateTimeOffset.Now;
+        s.SetQueueJobs(new[]
+        {
+            new QueueJob("j-001", "transcribing", "회사소개_최종v2.mp4", 62, now.AddMinutes(-9), null),
+            new QueueJob("j-002", "queued", "인터뷰_풀버전.mov", 0, now.AddMinutes(-6), null),
+            new QueueJob("j-003", "queued", "유튜브_쇼츠_모음.mp4", 0, now.AddMinutes(-3), null),
+            new QueueJob("j-004", "failed", "웨비나_녹화_0701.mp4", 0, now.AddMinutes(-31), "WHISPER_OOM"),
+        });
+
+        // Health History (#21)
+        foreach (var (name, failAt) in new (string, int)[]
+                 { ("Docker", -1), ("Worker", -1), ("API", 40), ("Redis", -1), ("Database", -1) })
+        {
+            for (int i = 0; i < 60; i++)
+            {
+                var st = (failAt >= 0 && i >= failAt && i < failAt + 4) ? HealthState.Error : HealthState.Ok;
+                s.Health.Sample(name, st);
+            }
+        }
     }
 }

@@ -15,6 +15,7 @@ public static class DashboardScreen
         public bool Exit;
         public bool Palette;
         public bool Diagnostics;
+        public bool ConfigEditor;
     }
 
     public static async Task RunAsync(AppServices svc, CancellationToken ct)
@@ -42,7 +43,7 @@ public static class DashboardScreen
                             ctx.Refresh();
 
                             HandleKeys(svc, view);
-                            if (view.Exit || view.Palette || view.Diagnostics) return;
+                            if (view.Exit || view.Palette || view.Diagnostics || view.ConfigEditor) return;
 
                             try { await Task.Delay(250, ct); } catch { return; }
                         }
@@ -63,6 +64,11 @@ public static class DashboardScreen
                 await CommandPalette.RunAsync(cctx);
                 if (cctx.RequestExit) return;
                 if (cctx.RequestDiagnostics) await DiagnosticsScreen.RunAsync(svc);
+                if (cctx.RequestConfigEditor)
+                {
+                    await ConfigEditorScreen.RunAsync(svc);
+                    view.Opt.WatchdogEnabled = svc.Watchdog.Enabled;
+                }
                 AnsiConsole.Clear();
                 continue;
             }
@@ -71,6 +77,15 @@ public static class DashboardScreen
             {
                 view.Diagnostics = false;
                 await DiagnosticsScreen.RunAsync(svc);
+                AnsiConsole.Clear();
+                continue;
+            }
+
+            if (view.ConfigEditor)
+            {
+                view.ConfigEditor = false;
+                await ConfigEditorScreen.RunAsync(svc);
+                view.Opt.WatchdogEnabled = svc.Watchdog.Enabled; // 에디터 반영분 동기화
                 AnsiConsole.Clear();
                 continue;
             }
@@ -111,6 +126,67 @@ public static class DashboardScreen
                         break;
                     case ConsoleKey.F7: // Logs 뷰(#17)
                         view.Tab = DashboardTab.Logs;
+                        break;
+                    case ConsoleKey.Q: // Queue 뷰(#19)
+                        view.Tab = DashboardTab.Queue;
+                        break;
+                    case ConsoleKey.F5: // 점검 모드 토글(#18)
+                        if (svc.Maintenance.Active)
+                        {
+                            svc.RecordUserAction("Maintenance EXIT");
+                            svc.Maintenance.Exit();
+                        }
+                        else
+                        {
+                            svc.RecordUserAction("Maintenance ENTER");
+                            svc.Maintenance.Enter();
+                        }
+                        break;
+                    case ConsoleKey.S: // System Snapshot Export(#20) — 비차단
+                        svc.RecordUserAction("Snapshot Export");
+                        s.Events.Publish("Snapshot export started…", EventSeverity.Info, source: "snapshot");
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                var path = await SnapshotExporter.ExportAsync(svc);
+                                s.Events.Publish($"Snapshot exported: {Path.GetFileName(path)}",
+                                    EventSeverity.Success, source: "snapshot");
+                                s.Logs.Success($"Snapshot: {path}");
+                            }
+                            catch (Exception ex)
+                            {
+                                s.Events.Publish("Snapshot export failed", EventSeverity.Error, source: "snapshot");
+                                s.Logs.Error($"Snapshot failed: {ex.Message}");
+                            }
+                        });
+                        break;
+                    case ConsoleKey.E: // Config Editor(#22)
+                        view.ConfigEditor = true;
+                        return;
+                    case ConsoleKey.UpArrow when view.Tab == DashboardTab.Queue:
+                        view.Opt.QueueSelected = Math.Max(0, view.Opt.QueueSelected - 1);
+                        break;
+                    case ConsoleKey.DownArrow when view.Tab == DashboardTab.Queue:
+                        view.Opt.QueueSelected = Math.Min(
+                            Math.Max(0, s.QueueJobs.Count - 1), view.Opt.QueueSelected + 1);
+                        break;
+                    case ConsoleKey.R when view.Tab == DashboardTab.Queue:
+                        QueueAction(svc, view, "Retry",
+                            j => j.Status == "failed", (q, j, _) => q.RetryAsync(j.Id));
+                        break;
+                    case ConsoleKey.C when view.Tab == DashboardTab.Queue:
+                        QueueAction(svc, view, "Cancel",
+                            j => j.Status is "queued" or "pending", (q, j, _) => q.CancelAsync(j.Id));
+                        break;
+                    case ConsoleKey.P when view.Tab == DashboardTab.Queue
+                                        && !key.Modifiers.HasFlag(ConsoleModifiers.Control):
+                        QueueAction(svc, view, "Promote",
+                            j => j.Status == "queued", (q, j, head) => q.PromoteAsync(j.Id, head));
+                        break;
+                    case ConsoleKey.B when view.Tab == DashboardTab.Queue:
+                        QueueAction(svc, view, "Demote",
+                            j => j.Status == "queued", (q, j, _) => q.DemoteAsync(j.Id));
                         break;
                     case ConsoleKey.F8: // 워치독 토글(#14)
                         svc.Watchdog.Enabled = !svc.Watchdog.Enabled;
@@ -161,6 +237,43 @@ public static class DashboardScreen
         }
         catch { /* 입력 리다이렉트 등 — 무시 */ }
     }
+
+    /// <summary>Queue 조작(#19) — 선택 잡 검증 후 비차단 실행, 결과 이벤트 발행.</summary>
+    private static void QueueAction(AppServices svc, ViewState view, string action,
+        Func<QueueJob, bool> eligible,
+        Func<SupabaseQueueService, QueueJob, DateTimeOffset, Task<bool>> run)
+    {
+        var s = svc.State;
+        var jobs = s.QueueJobs;
+        if (jobs.Count == 0) return;
+
+        int sel = Math.Clamp(view.Opt.QueueSelected, 0, jobs.Count - 1);
+        var job = jobs[sel];
+        if (!eligible(job))
+        {
+            s.Logs.Warn($"Queue {action}: '{job.Status}' 상태에는 적용할 수 없음");
+            return;
+        }
+
+        // Promote 기준점 — 현재 대기열(queued) 맨 앞의 created_at
+        var head = jobs.Where(j => j.Status == "queued")
+                       .Select(j => j.CreatedAt)
+                       .DefaultIfEmpty(DateTimeOffset.Now)
+                       .Min();
+
+        svc.RecordUserAction($"Queue {action}: {job.Name}");
+        _ = Task.Run(async () =>
+        {
+            bool ok = await run(svc.Queue, job, head);
+            s.Events.Publish(
+                ok ? $"Queue {action} OK — {Trunc(job.Name, 24)}"
+                   : $"Queue {action} FAILED — {Trunc(job.Name, 24)}",
+                ok ? EventSeverity.Success : EventSeverity.Error, source: "queue");
+        });
+    }
+
+    private static string Trunc(string s, int max) =>
+        s.Length <= max ? s : s[..(max - 1)] + "…";
 
     private static bool IsTooSmall()
     {

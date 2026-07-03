@@ -4,7 +4,7 @@ using Spectre.Console.Rendering;
 
 namespace MakeccConsole;
 
-public enum DashboardTab { Main, History, Logs }
+public enum DashboardTab { Main, History, Logs, Queue }
 
 /// <summary>Logs 뷰(#17)의 레벨 필터 — L 키로 순환.</summary>
 public enum LogFilter { All, WarnPlus, ErrorOnly }
@@ -16,6 +16,9 @@ public sealed class ViewOptions
     public bool LogsPaused { get; set; }
     public IReadOnlyList<LogEntry>? FrozenLogs { get; set; }
     public bool WatchdogEnabled { get; set; } = true;
+
+    /// <summary>Queue 뷰(#19) 선택 커서(0-base).</summary>
+    public int QueueSelected { get; set; }
 }
 
 /// <summary>
@@ -34,6 +37,7 @@ public static class DashboardView
         {
             DashboardTab.History => BuildHistory(s, opt),
             DashboardTab.Logs => BuildLogs(s, opt),
+            DashboardTab.Queue => BuildQueue(s, opt),
             _ => BuildMain(s, opt),
         };
     }
@@ -61,13 +65,15 @@ public static class DashboardView
         return layout;
     }
 
-    // ── History 뷰 (배포 이력) ────────────────────────────
+    // ── History 뷰 (배포 이력 + Health History #21) ──────
     private static Layout BuildHistory(AppState s, ViewOptions opt)
     {
         var layout = new Layout("root").SplitRows(
             new Layout("header").Size(3),
             new Layout("body").SplitColumns(
-                new Layout("containers").Ratio(2),
+                new Layout("left").Ratio(2).SplitRows(
+                    new Layout("containers"),
+                    new Layout("health")),
                 new Layout("right").SplitRows(
                     new Layout("latest"),
                     new Layout("recent"),
@@ -76,10 +82,25 @@ public static class DashboardView
 
         layout["header"].Update(Header(s, DashboardTab.History, opt));
         layout["containers"].Update(Containers(s));
+        layout["health"].Update(HealthHistory(s));
         layout["latest"].Update(Deployment(s));
         layout["recent"].Update(Recent(s));
         layout["failed"].Update(Failed(s));
         layout["footer"].Update(KeyBar(DashboardTab.History, opt));
+        return layout;
+    }
+
+    // ── Queue 뷰 (#19, Q) — 대기열 관리 ──────────────────
+    private static Layout BuildQueue(AppState s, ViewOptions opt)
+    {
+        var layout = new Layout("root").SplitRows(
+            new Layout("header").Size(3),
+            new Layout("body"),
+            new Layout("footer").Size(1));
+
+        layout["header"].Update(Header(s, DashboardTab.Queue, opt));
+        layout["body"].Update(QueuePanel(s, opt));
+        layout["footer"].Update(KeyBar(DashboardTab.Queue, opt));
         return layout;
     }
 
@@ -105,14 +126,20 @@ public static class DashboardView
             : $"[{Theme.CMuted}] {label} [/]";
 
         var left =
-            $"[bold {Theme.CAccent}]▎MAKECC[/][{Theme.CMuted}] ctl[/]  " +
+            $"[bold {Theme.CAccent}]▎MAKECC[/]  " +
             TabMark(DashboardTab.Main, "F1 Main") +
-            TabMark(DashboardTab.History, "F6 History") +
-            TabMark(DashboardTab.Logs, "F7 Logs");
+            TabMark(DashboardTab.History, "F6 Hist") +
+            TabMark(DashboardTab.Logs, "F7 Logs") +
+            TabMark(DashboardTab.Queue, "Q Queue");
 
-        string online = s.Online
-            ? $"[{Theme.COk}]● ONLINE[/]"
-            : $"[{Theme.CWarn}]● DEGRADED[/]";
+        string online = s.Maintenance switch
+        {
+            MaintenanceState.Draining => $"[black on {Theme.CWarn}] MAINT·DRAIN [/]",
+            MaintenanceState.Idle => $"[black on {Theme.CWarn}] MAINT·IDLE [/]",
+            _ => s.Online
+                ? $"[{Theme.COk}]● ONLINE[/]"
+                : $"[{Theme.CWarn}]● DEGRADED[/]",
+        };
         string docker = s.Env.DockerAvailable
             ? $"[{Theme.COk}]docker ✓[/]"
             : $"[{Theme.CErr}]docker ✗[/]";
@@ -362,6 +389,117 @@ public static class DashboardView
         return Card("Failed Launches", new Rows(rows));
     }
 
+    // ── Queue 패널 (#19) ─────────────────────────────────
+    private static IRenderable QueuePanel(AppState s, ViewOptions opt)
+    {
+        if (!s.QueueAvailable)
+        {
+            var guide = new Rows(
+                new Markup($"[{Theme.CWarn}]Queue 관리를 사용할 수 없습니다.[/]"),
+                new Markup(""),
+                new Markup($"[{Theme.CMuted}].env 에 다음 키가 필요합니다:[/]"),
+                new Markup($"[{Theme.CText}]  NEXT_PUBLIC_SUPABASE_URL[/]"),
+                new Markup($"[{Theme.CText}]  SUPABASE_SERVICE_ROLE_KEY[/]"),
+                new Markup(""),
+                new Markup($"[{Theme.CMuted}]설정 후 콘솔을 재시작하면 jobs 테이블 대기열이 표시됩니다.[/]"));
+            return Card("Queue · 미설정", guide);
+        }
+
+        var jobs = s.QueueJobs;
+        int sel = jobs.Count == 0 ? -1 : Math.Clamp(opt.QueueSelected, 0, jobs.Count - 1);
+
+        var t = new Table { Border = TableBorder.Rounded, Expand = true };
+        t.BorderStyle = new Style(Theme.Accent2);
+        t.Title = new TableTitle(
+            $"[{Theme.CAccent}]Queue[/] [{Theme.CMuted}]· {jobs.Count(j => j.Status is "queued" or "pending")} waiting " +
+            $"· {jobs.Count(j => j.Status == "transcribing")} active " +
+            $"· {jobs.Count(j => j.Status == "failed")} failed[/]");
+        t.AddColumn($"[{Theme.CMuted}] [/]");
+        t.AddColumn($"[{Theme.CMuted}]#[/]");
+        t.AddColumn($"[{Theme.CMuted}]JOB[/]");
+        t.AddColumn($"[{Theme.CMuted}]STATUS[/]");
+        t.AddColumn($"[{Theme.CMuted}]PROG[/]");
+        t.AddColumn($"[{Theme.CMuted}]AGE[/]");
+        t.AddColumn($"[{Theme.CMuted}]ERROR[/]");
+
+        if (jobs.Count == 0)
+        {
+            t.AddRow(new Markup(""), new Markup(""),
+                new Markup($"[{Theme.CMuted}]대기 중인 잡 없음[/]"),
+                new Markup(""), new Markup(""), new Markup(""), new Markup(""));
+        }
+        else
+        {
+            for (int i = 0; i < jobs.Count; i++)
+            {
+                var j = jobs[i];
+                bool isSel = i == sel;
+                string cursor = isSel ? $"[{Theme.CAccent}]▶[/]" : " ";
+                string rowText = isSel ? $"bold {Theme.CText}" : Theme.CText;
+                string stCol = j.Status switch
+                {
+                    "transcribing" => Theme.CInfo,
+                    "queued" => Theme.COk,
+                    "pending" => Theme.CMuted,
+                    "failed" => Theme.CErr,
+                    _ => Theme.CMuted,
+                };
+                t.AddRow(
+                    new Markup(cursor),
+                    new Markup($"[{Theme.CMuted}]{i + 1}[/]"),
+                    new Markup($"[{rowText}]{Theme.Esc(Trunc(j.Name, 34))}[/]"),
+                    new Markup($"[{stCol}]{Theme.Esc(j.Status)}[/]"),
+                    new Markup($"[{Theme.CText}]{j.Progress,3}%[/]"),
+                    new Markup($"[{Theme.CMuted}]{Age(j.CreatedAt)}[/]"),
+                    new Markup($"[{Theme.CErr}]{Theme.Esc(Trunc(j.ErrorCode ?? "", 16))}[/]"));
+            }
+        }
+
+        var hint = new Markup(
+            $"[{Theme.CMuted}]워커는 created_at 오래된 순으로 처리 — " +
+            $"[{Theme.CText}]R[/] Retry(failed) · [{Theme.CText}]C[/] Cancel(queued) · " +
+            $"[{Theme.CText}]P[/] 맨 앞 · [{Theme.CText}]B[/] 맨 뒤 · 6초 주기 자동 갱신[/]");
+
+        return Card("Queue Manager", new Rows(t, new Markup(""), hint), rawTitle: false);
+    }
+
+    private static string Age(DateTimeOffset created)
+    {
+        if (created == DateTimeOffset.MinValue) return "-";
+        var d = DateTimeOffset.Now - created;
+        if (d.TotalMinutes < 1) return $"{(int)d.TotalSeconds}s";
+        if (d.TotalHours < 1) return $"{(int)d.TotalMinutes}m";
+        if (d.TotalDays < 1) return $"{(int)d.TotalHours}h {d.Minutes:00}m";
+        return $"{(int)d.TotalDays}d";
+    }
+
+    // ── Health History 패널 (#21, History 뷰) ────────────
+    private static IRenderable HealthHistory(AppState s)
+    {
+        var rows = new List<IRenderable>
+        {
+            new Markup($"[{Theme.CMuted}]{"SERVICE",-9} {"UPTIME",7}  {"FAIL",4}  RECENT (90s)[/]"),
+        };
+        var snaps = s.Health.Snapshot();
+        if (snaps.Count == 0)
+            rows.Add(new Markup($"[{Theme.CMuted}]표본 수집 중…[/]"));
+        foreach (var h in snaps)
+        {
+            string upCol = h.UptimePct >= 99 ? Theme.COk : h.UptimePct >= 90 ? Theme.CWarn : Theme.CErr;
+            var strip = new StringBuilder();
+            foreach (var st in h.Strip)
+            {
+                string c = DotColor(st);
+                strip.Append($"[{c}]▮[/]");
+            }
+            string down = h.LastDownAt is null ? "" : $" [{Theme.CMuted}]last down {h.LastDownAt:HH:mm:ss}[/]";
+            rows.Add(new Markup(
+                $"[{Theme.CText}]{Theme.Esc(h.Name),-9}[/] [{upCol}]{h.UptimePct,6:0.0}%[/]  " +
+                $"[{(h.FailCount > 0 ? Theme.CErr : Theme.CMuted)}]{h.FailCount,4}[/]  {strip}{down}"));
+        }
+        return Card("Service Health · session", new Rows(rows));
+    }
+
     // ── Live Log (Main 하단 미니 패널) ───────────────────
     private static IRenderable LiveLog(AppState s)
     {
@@ -429,26 +567,33 @@ public static class DashboardView
         string k(string key, string label) =>
             $"[black on {Theme.CAccent2}] {key} [/][{Theme.CMuted}] {label}[/]";
 
-        var keys = new List<string>
-        {
-            k("F1", "Main"), k("F6", "History"), k("F7", "Logs"),
-        };
+        var keys = new List<string>();
 
         if (tab == DashboardTab.Logs)
         {
             keys.Add(k("L", "Filter"));
             keys.Add(k("Spc", opt.LogsPaused ? "Resume" : "Pause"));
         }
+        else if (tab == DashboardTab.Queue)
+        {
+            keys.Add(k("↑↓", "Select"));
+            keys.Add(k("R", "Retry"));
+            keys.Add(k("C", "Cancel"));
+            keys.Add(k("P", "Front"));
+            keys.Add(k("B", "Back"));
+        }
         else
         {
             keys.Add(k("F2", "Restart"));
+            keys.Add(k("F5", "Maint"));
             keys.Add(k("F8", opt.WatchdogEnabled ? "WD off" : "WD on"));
         }
 
+        keys.Add(k("S", "Snapshot"));
+        keys.Add(k("E", "Config"));
         keys.Add(k("F9", "Diag"));
         keys.Add(k("T", "Theme"));
         keys.Add(k("^P", "Palette"));
-        keys.Add(k("F4", "Browser"));
         keys.Add(k("ESC", "Exit"));
 
         return new Align(new Markup(string.Join("  ", keys)), HorizontalAlignment.Center);

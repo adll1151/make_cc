@@ -25,12 +25,16 @@ dotnet run -c Release --project tools\makecc-console\MakeccConsole.csproj
 - **Main 뷰** (`F1`) — 컴팩트 헤더(브랜드·탭·상태 클러스터) / Services / System(**Sparkline**·**API Latency**) / **Event Timeline** / **Session** / Live Log
 - **History 뷰** (`F6`) — Containers / Latest Deployment / Recent / Failed Launches
 - **Logs 뷰** (`F7`) — 로그 브라우저. `L` 레벨 필터(ALL→WARN+→ERROR) · `Space` 일시정지/재개
+- **Queue 뷰** (`Q`) — Supabase `jobs` 대기열 관리. `↑↓` 선택 · `R` Retry(failed) · `C` Cancel(queued) · `P` 맨 앞 · `B` 맨 뒤
+- **Config Editor** (`E`) — 설정 파일을 화면에서 편집(테마·워치독·알림·로그 보관·업데이트). 저장 시 즉시 반영
+- **Maintenance Mode** (`F5`) — 점검 모드: `maintenance.lock` 생성 → 신규 요청 차단 신호 → 잔여 작업 드레인 → Idle → 해제 시 재개
+- **System Snapshot** (`S`) — 설정+진단+상태+당일 로그+크래시 리포트+이력을 `logs/snapshots/*.zip` 으로 패키징
 - **Diagnostics** (`F9`) — 서비스+환경 11종 점검(✓/✗ + 원인)
 - **Command Palette** (`Ctrl+Shift+P`) — 모달, 타이핑 필터. 재시작·로그·리포트·진단·업데이트·종료 등
 - **Shutdown** — 서비스 역순 정지 애니메이션
 
 ### 단축키
-`F1` Main · `F6` History · `F7` Logs · `F2` Restart · `F8` Watchdog on/off · `F9` Diagnostics · `T` Theme 순환 · `Ctrl+Shift+P` Palette · `F4` Browser · `ESC` Exit
+`F1` Main · `F6` History · `F7` Logs · `Q` Queue · `F2` Restart · `F5` Maintenance · `F8` Watchdog · `S` Snapshot · `E` Config Editor · `F9` Diagnostics · `T` Theme · `Ctrl+Shift+P` Palette · `F4` Browser · `ESC` Exit
 
 ### 헤드리스 CLI (서버/CI)
 ```bat
@@ -88,6 +92,10 @@ logs/
 | 명령 | `Commands/Commands` | **CommandRegistry** — 팔레트/단축키 공유 |
 | 워치독 | `Services/Watchdog` | 자동 복구 + 윈도우 한도(#14) |
 | 알림 | `Services/DiscordNotifier` | Discord 웹훅 통보(#15) |
+| 점검 | `Services/MaintenanceService` | maintenance.lock + 드레인(#18) |
+| 큐 | `Services/SupabaseQueueService` | jobs 조회/Retry/Cancel/순서(#19) |
+| 스냅샷 | `Services/SnapshotExporter` | 장애 분석 패키지(#20) |
+| 건강이력 | `Services/HealthHistory` | 가동률·장애 스트립(#21) |
 | 업데이트 | `Update/UpdateChecker` | GitHub Releases 비교 |
 | 리포트 | `Reports/CrashReport` | Markdown 보고서 |
 | 테마 | `Theme` | 교체 가능한 Palette |
@@ -100,6 +108,8 @@ logs/
 
 ## 참고
 
+- **Maintenance Mode API 연동**: 콘솔이 저장소 루트에 `maintenance.lock` 을 생성/삭제합니다. Next.js 신규 업로드/잡 생성 핸들러에서 `fs.existsSync('maintenance.lock')` 체크 후 503 응답 1줄만 추가하면 신규 요청 차단이 완성됩니다(파일 기반 — 프레임워크 무관).
+- **Queue 관리 동작 원리**: 워커(poll-loop)가 `status='queued'` 중 `created_at` 오래된 순으로 처리하므로, 순서 변경은 `created_at` 조정으로 구현(맨앞=대기열 head−1초, 맨뒤=now). Retry는 `failed→queued`(에러/진행률 리셋), Cancel은 `queued/pending→cancelled` 로 상태 가드가 걸려 있어 진행 중 잡은 건드리지 않습니다.
 - 헤더의 Notification Center 는 UI 개편으로 **Event Timeline 에 통합**되었습니다(같은 EventHub 스트림, source 태그 표시).
 - **API Latency** 는 `:3000` TCP 연결 시간 실측(스파크라인 포함). 임계: <100ms 정상 · <300ms 경고 · 이상 위험.
 - Queue / Request / Success Rate 는 `Telemetry` 플레이스홀더(코드 TODO) — 실제 BullMQ/API 메트릭으로 교체 예정.

@@ -8,6 +8,7 @@ public sealed class CommandContext
     public required AppServices Svc { get; init; }
     public bool RequestExit { get; set; }
     public bool RequestDiagnostics { get; set; }
+    public bool RequestConfigEditor { get; set; }
 }
 
 public sealed record LauncherCommand(string Id, string Title, Func<CommandContext, Task> Run);
@@ -88,6 +89,37 @@ public static class CommandRegistry
             else
                 c.Svc.State.Events.Publish("Up to date", EventSeverity.Success, source: "update");
         }),
+        new("maintenance-toggle", "Maintenance Mode (enter/exit)", c =>
+        {
+            if (c.Svc.Maintenance.Active)
+            {
+                c.Svc.RecordUserAction("Maintenance EXIT");
+                c.Svc.Maintenance.Exit();
+            }
+            else
+            {
+                c.Svc.RecordUserAction("Maintenance ENTER");
+                c.Svc.Maintenance.Enter();
+            }
+            return Task.CompletedTask;
+        }),
+        new("export-snapshot", "Export System Snapshot (zip)", async c =>
+        {
+            c.Svc.RecordUserAction("Snapshot Export");
+            try
+            {
+                var p = await SnapshotExporter.ExportAsync(c.Svc);
+                c.Svc.State.Events.Publish($"Snapshot exported: {Path.GetFileName(p)}",
+                    EventSeverity.Success, source: "snapshot");
+                c.Svc.Logs.Success($"Snapshot: {p}");
+            }
+            catch (Exception ex)
+            {
+                c.Svc.State.Events.Publish("Snapshot export failed", EventSeverity.Error, source: "snapshot");
+                c.Svc.Logs.Error($"Snapshot failed: {ex.Message}");
+            }
+        }),
+        new("config-editor", "Config Editor", c => { c.RequestConfigEditor = true; return Task.CompletedTask; }),
         new("toggle-watchdog", "Toggle Watchdog (auto-recover)", c =>
         {
             c.Svc.Watchdog.Enabled = !c.Svc.Watchdog.Enabled;

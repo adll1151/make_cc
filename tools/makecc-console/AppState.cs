@@ -20,6 +20,16 @@ public sealed class AppState
     // 업데이트 확인 결과(#8)
     public UpdateInfo? Update { get; set; }
 
+    // 점검 모드 미러(#18) — MaintenanceService가 갱신, 화면이 읽음
+    public MaintenanceState Maintenance { get; set; } = MaintenanceState.Off;
+    public DateTime? MaintenanceSince { get; set; }
+
+    // Health History(#21)
+    public ServiceHealthTracker Health { get; } = new();
+
+    // Queue 관리(#19)
+    public bool QueueAvailable { get; set; }
+
     public LaunchRecord? Latest { get; set; }
     public List<LaunchRecord> RecentLaunches { get; set; } = new();
     public List<LaunchRecord> FailedLaunches { get; set; } = new();
@@ -27,6 +37,7 @@ public sealed class AppState
     private readonly object _lock = new();
     private List<ServiceInfo> _services = new();
     private List<ContainerInfo> _containers = new();
+    private List<QueueJob> _queueJobs = new();
 
     public AppState(LogBus logs) => Logs = logs;
 
@@ -65,5 +76,15 @@ public sealed class AppState
     public void SetContainers(IEnumerable<ContainerInfo> c)
     {
         lock (_lock) _containers = c.ToList();
+    }
+
+    public IReadOnlyList<QueueJob> QueueJobs
+    {
+        get { lock (_lock) return _queueJobs.ToList(); }
+    }
+
+    public void SetQueueJobs(IEnumerable<QueueJob> jobs)
+    {
+        lock (_lock) _queueJobs = jobs.ToList();
     }
 }

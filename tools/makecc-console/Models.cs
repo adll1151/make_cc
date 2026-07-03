@@ -36,3 +36,15 @@ public sealed class SystemMetrics
     /// <summary>API TCP 연결 지연(ms). null = API down/미측정. (#16)</summary>
     public double? LatencyMs { get; set; }
 }
+
+/// <summary>점검 모드 상태(#18). Off → Draining(잔여 작업 처리) → Idle(점검 중) → Off.</summary>
+public enum MaintenanceState { Off, Draining, Idle }
+
+/// <summary>Queue 뷰(#19) 한 행 — Supabase jobs 테이블 스냅샷.</summary>
+public sealed record QueueJob(
+    string Id,
+    string Status,
+    string Name,
+    int Progress,
+    DateTimeOffset CreatedAt,
+    string? ErrorCode);

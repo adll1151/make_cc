@@ -42,3 +42,17 @@ dotnet build tools\makecc-console\MakeccConsole.csproj
 dotnet test  tools\makecc-console.Tests\MakeccConsole.Tests.csproj
 makecc --selftest    :: 새 대시보드 1프레임 렌더 확인
 ```
+
+---
+
+# 2차 — 클라이언트 요구 5건 (2026-07-03)
+
+| # | 요구사항 | 키 | 구현 |
+|---|---------|----|------|
+| 1 | **Maintenance Mode** (#18) | `F5` | 저장소 루트 `maintenance.lock` 생성(신규 요청 차단 신호) → Draining(진행 중 잡 완료 대기, Queue의 transcribing=0 판정) → Idle(안전 정지 가능) → 해제 시 lock 삭제·재개. 각 단계 이벤트+Discord 통보. 이전 세션 lock 잔존 시 시작할 때 점검 상태 자동 복원. **API 연동 지점**: Next.js 잡 생성 핸들러에서 lock 파일 존재 시 503 — 1줄 |
+| 2 | **Queue 관리** (#19) | `Q` 뷰 | Supabase PostgREST(service role)로 `jobs` 테이블 직접 관리. `↑↓` 선택, `R` Retry(failed→queued, 에러 리셋), `C` Cancel(queued/pending→cancelled), `P` 맨 앞(created_at=head−1s), `B` 맨 뒤(now). 상태 가드로 진행 중 잡 보호. 6초 주기 자동 갱신, 실제 대기 수가 System 패널 Queue 지표 대체(기존 placeholder 제거). `.env` 미설정 시 안내 패널로 degrade |
+| 3 | **System Snapshot Export** (#20) | `S` | `logs/snapshots/snapshot-*.zip` — makecc.config.json + 전체 진단 실행 결과 + state.json(서비스/컨테이너/지표/세션/큐/이벤트 50건/건강이력) + 당일 runtime·error·audit 로그 + 최신 startup 로그 + 최근 리포트 3건 + history.json. 비차단 실행 |
+| 4 | **Health History** (#21) | `F6` 뷰 내 | Service Health 패널 — 서비스별 세션 가동률 %, Ok→Error 전이 횟수, 최근 90초 상태 스트립(틱당 1칸 색상), 마지막 다운 시각. Restart/Recovery 는 기존 Session 바와 병행 |
+| 5 | **Config Editor** (#22) | `E` | 모달 편집기 — Theme(선택)·Watchdog(on/off, 한도, 윈도우)·Discord Webhook·쿨다운·로그 보관 2종·업데이트 2종. 작업 사본 편집 → Save 시에만 파일 저장+런타임 즉시 반영(테마/워치독/Notifier 재구성), Cancel 시 파기 |
+
+추가 테스트: UT-024(점검 5), UT-025(건강이력 3), UT-026(큐 가드 2) — 누적 22케이스.
