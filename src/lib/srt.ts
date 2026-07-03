@@ -55,6 +55,15 @@ export interface SrtBuildOptions {
 }
 
 /** SRT 텍스트 → Cue[] */
+/**
+ * 리치 CC — 비음성 사운드 큐 표기 판별. `♪ … ♪`(음악) 또는 `[ … ]`(박수·웃음 등).
+ * SRT엔 kind 필드가 없어 텍스트 패턴으로 kind='sound'를 복원하는 데 사용.
+ */
+export function isSoundCueText(text: string): boolean {
+  const t = text.trim();
+  return /^♪.*♪$/.test(t) || /^\[.+\]$/.test(t);
+}
+
 export function parseSrt(input: string, opts: SrtParseOptions = {}): Cue[] {
   const { reindex = true, maxTextLength = 200, extractLabels = false, speakerMap } = opts;
 
@@ -107,6 +116,9 @@ export function parseSrt(input: string, opts: SrtParseOptions = {}): Cue[] {
       startMs,
       endMs,
       text: joinedText,
+      // SRT엔 kind 필드가 없으므로, CC 사운드 표기(♪…♪ / […])는 텍스트 패턴으로 복원.
+      // (리치 CC — 편집기 시각 구분·토글이 실제 잡에서도 동작하도록)
+      ...(isSoundCueText(joinedText) ? { kind: 'sound' as const } : {}),
     });
   }
 

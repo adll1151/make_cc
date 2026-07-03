@@ -193,3 +193,32 @@ describe('normalizeCues', () => {
     expect(out[1]?.index).toBe(2);
   });
 });
+
+describe('parseSrt — 리치 CC kind 복원 (SRT엔 kind 없음)', () => {
+  const srt = `1
+00:00:00,000 --> 00:00:10,000
+♪ 음악 ♪
+
+2
+00:00:01,700 --> 00:00:11,800
+안녕하세요. 오늘은
+
+3
+00:00:12,000 --> 00:00:14,000
+[웃음]`;
+
+  it('♪…♪·[…] 표기 → kind=sound 복원, 대사는 speech(미지정)', () => {
+    const cues = parseSrt(srt);
+    expect(cues[0]!.kind).toBe('sound'); // ♪ 음악 ♪
+    expect(cues[1]!.kind).toBeUndefined(); // 대사
+    expect(cues[2]!.kind).toBe('sound'); // [웃음]
+  });
+
+  it('isSoundCueText', async () => {
+    const { isSoundCueText } = await import('@/lib/srt');
+    expect(isSoundCueText('♪ 음악 ♪')).toBe(true);
+    expect(isSoundCueText('[박수]')).toBe(true);
+    expect(isSoundCueText('안녕하세요')).toBe(false);
+    expect(isSoundCueText('[중요] 라고 말했다')).toBe(false); // 부분 대괄호는 대사
+  });
+});
