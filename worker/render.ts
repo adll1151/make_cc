@@ -75,8 +75,20 @@ async function loadCuesForLang(jobId: string, lang: string, log: Logger): Promis
   const wordsPayload = await getWordsJson(jobId);
   const fromWords = wordsPayload ? normalizeWords(wordsPayload) : null;
   if (fromWords) {
-    log.info({ cues: fromWords.length }, 'cues from words.json (karaoke 가능)');
-    return fromWords;
+    // words.json은 대사(단어 타이밍)만 담아 사운드 CC 큐가 없다. 원본 SRT에서
+    // 사운드 큐만 뽑아 시간순 병합해야 카라오케를 유지하면서 CC 사운드도 번인된다.
+    const soundCues = await getSubtitleText(jobId)
+      .then((srt) => parseSrt(srt).filter((c) => c.kind === 'sound'))
+      .catch(() => [] as Cue[]);
+    if (soundCues.length === 0) {
+      log.info({ cues: fromWords.length }, 'cues from words.json (karaoke 가능)');
+      return fromWords;
+    }
+    const merged = [...fromWords, ...soundCues]
+      .sort((a, b) => a.startMs - b.startMs || (a.kind === 'sound' ? 1 : 0) - (b.kind === 'sound' ? 1 : 0))
+      .map((c, i) => ({ ...c, index: i + 1 }));
+    log.info({ speech: fromWords.length, sound: soundCues.length }, 'cues: words.json + SRT 사운드 병합');
+    return merged;
   }
   const srt = await getSubtitleText(jobId);
   const cues = parseSrt(srt);

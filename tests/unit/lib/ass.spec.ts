@@ -131,6 +131,30 @@ describe('buildAss', () => {
     expect(ass).toContain(',,안녕하세요');
   });
 
+  it('사운드 큐(kind=sound) → 이탤릭 + 카라오케 미적용 (CC 관례)', () => {
+    const c: Cue[] = [
+      { index: 1, startMs: 0, endMs: 2000, text: '♪ 음악 ♪', kind: 'sound' },
+      // words가 있어도 사운드 큐면 \k 대신 이탤릭
+      {
+        index: 2,
+        startMs: 2000,
+        endMs: 4000,
+        text: '[웃음]',
+        kind: 'sound',
+        words: [{ text: '[웃음]', startMs: 2000, endMs: 4000 }],
+      },
+    ];
+    const ass = buildAss(c, { ...baseStyle, karaoke: true }, RES);
+    expect(ass).toContain('{\\i1}♪ 음악 ♪{\\i0}');
+    expect(ass).toContain('{\\i1}[웃음]{\\i0}');
+    expect(ass).not.toContain('\\k'); // 사운드 큐는 카라오케 대상 아님
+  });
+
+  it('대사 큐는 이탤릭 없음', () => {
+    const ass = buildAss(cues, baseStyle, RES);
+    expect(ass).not.toContain('{\\i1}');
+  });
+
   it('텍스트 이스케이프 — 중괄호 주입 차단', () => {
     const c: Cue[] = [{ index: 1, startMs: 0, endMs: 1000, text: '{\\fs99}해킹' }];
     const ass = buildAss(c, baseStyle, RES);

@@ -108,6 +108,11 @@ function stylesSection(style: CaptionStyle, res: AssResolution): string {
 }
 
 function dialogueText(cue: Cue, style: CaptionStyle): string {
+  // 리치 CC — 비음성 사운드 큐(♪음악♪·[웃음]…)는 카라오케 대상 아니며, CC 관례에
+  // 따라 이탤릭으로 대사와 구분한다. (override는 escape 뒤에 붙여 주입 차단 유지)
+  if (cue.kind === 'sound') {
+    return `{\\i1}${escapeAssText(cue.text)}{\\i0}`;
+  }
   if (style.karaoke && cue.words && cue.words.length > 0) {
     return cue.words
       .map((w) => {
