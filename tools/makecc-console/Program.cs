@@ -65,6 +65,12 @@ if (args.Contains("--check-updates"))
 Console.CursorVisible = false;
 try
 {
+    // RBAC(#23) — 계정이 등록돼 있으면 로그인. 3회 실패 시 종료.
+    // (--selftest 등 헤드리스 모드는 위에서 이미 return — 로그인 불필요)
+    Console.CursorVisible = true;
+    if (!await LoginScreen.RunAsync(svc)) return 1;
+    Console.CursorVisible = false;
+
     await SplashScreen.RunAsync(svc);
 
     // 업데이트 확인(#8) — 비차단 백그라운드

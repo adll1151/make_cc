@@ -266,3 +266,102 @@ public class QueueServiceTests
         Assert.False(await q.DemoteAsync("x"));
     }
 }
+
+// UT-027 RolePolicy(#23) — 역할별 권한 매트릭스
+public class RolePolicyTests
+{
+    [Theory] // UT-027a — 운영자=전체 / 관리자=설정까지 / 일반=조회·다운로드
+    [InlineData(Role.Viewer, Permission.View, true)]
+    [InlineData(Role.Viewer, Permission.Export, true)]
+    [InlineData(Role.Viewer, Permission.ConfigEdit, false)]
+    [InlineData(Role.Viewer, Permission.ServiceControl, false)]
+    [InlineData(Role.Admin, Permission.ConfigEdit, true)]
+    [InlineData(Role.Admin, Permission.ServiceControl, false)]
+    [InlineData(Role.Operator, Permission.ConfigEdit, true)]
+    [InlineData(Role.Operator, Permission.ServiceControl, true)]
+    public void Matrix(Role role, Permission perm, bool expected)
+        => Assert.Equal(expected, RolePolicy.Can(role, perm));
+}
+
+// UT-028 OperatorStore(#23) — PIN 해시/검증 + 저장 왕복 + 잠금 방지
+public class OperatorStoreTests
+{
+    [Fact] // UT-028a — 올바른 PIN만 통과, salt 로 동일 PIN도 해시 상이
+    public void Verify_Pin_And_Salt_Uniqueness()
+    {
+        var a = OperatorStore.Create("kim", Role.Operator, "1234");
+        var b = OperatorStore.Create("lee", Role.Viewer, "1234");
+
+        Assert.True(OperatorStore.Verify(a, "1234"));
+        Assert.False(OperatorStore.Verify(a, "0000"));
+        Assert.NotEqual(a.PinHash, b.PinHash); // salt 차이
+    }
+
+    [Fact] // UT-028b — save/load 왕복 (역할 enum 문자열 직렬화 포함)
+    public void Save_Load_Roundtrip()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"makecc-ops-{Guid.NewGuid():N}.json");
+        try
+        {
+            var list = new List<OperatorAccount>
+            {
+                OperatorStore.Create("kim", Role.Operator, "1234"),
+                OperatorStore.Create("lee", Role.Viewer, "5678"),
+            };
+            Assert.True(OperatorStore.Save(path, list));
+
+            var loaded = OperatorStore.Load(path);
+            Assert.Equal(2, loaded.Count);
+            Assert.Equal(Role.Operator, loaded[0].Role);
+            Assert.True(OperatorStore.Verify(loaded[0], "1234"));
+            Assert.False(OperatorStore.Verify(loaded[1], "1234"));
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact] // UT-028c — 마지막 운영자 삭제 차단
+    public void Blocks_Removing_Last_Operator()
+    {
+        var list = new List<OperatorAccount>
+        {
+            OperatorStore.Create("op1", Role.Operator, "1111"),
+            OperatorStore.Create("vw1", Role.Viewer, "2222"),
+        };
+        Assert.False(OperatorStore.CanRemove(list, 0)); // 유일한 운영자
+        Assert.True(OperatorStore.CanRemove(list, 1));  // 뷰어는 삭제 가능
+
+        list.Add(OperatorStore.Create("op2", Role.Operator, "3333"));
+        Assert.True(OperatorStore.CanRemove(list, 0));  // 운영자 2명이면 가능
+    }
+}
+
+// UT-029 AuthService(#23) — 단독 모드 + 거부 이벤트
+public class AuthServiceTests
+{
+    [Fact] // UT-029a — 계정 파일 없음 → 단독 사용자 모드(전체 권한)
+    public void No_Store_Means_SingleUser_Full_Access()
+    {
+        var state = new AppState(new LogBus());
+        var auth = new AuthService(
+            Path.Combine(Path.GetTempPath(), $"none-{Guid.NewGuid():N}.json"), state);
+
+        Assert.True(auth.SingleUserMode);
+        Assert.True(auth.Can(Permission.ServiceControl));
+    }
+
+    [Fact] // UT-029b — 권한 부족 시 Require=false + rbac 거부 이벤트 발행
+    public void Require_Publishes_Denial_Event()
+    {
+        var state = new AppState(new LogBus());
+        var auth = new AuthService(
+            Path.Combine(Path.GetTempPath(), $"none-{Guid.NewGuid():N}.json"), state);
+        auth.SetUser("guest", Role.Viewer);
+
+        Assert.False(auth.Require(Permission.ServiceControl, "Restart"));
+        var last = state.Events.Timeline(1)[0];
+        Assert.Equal("rbac", last.Source);
+        Assert.Equal(EventSeverity.Warning, last.Severity);
+
+        Assert.True(auth.Require(Permission.Export, "Snapshot")); // 뷰어도 다운로드 가능
+    }
+}

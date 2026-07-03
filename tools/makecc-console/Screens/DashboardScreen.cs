@@ -69,6 +69,8 @@ public static class DashboardScreen
                     await ConfigEditorScreen.RunAsync(svc);
                     view.Opt.WatchdogEnabled = svc.Watchdog.Enabled;
                 }
+                if (cctx.RequestOperatorAdmin)
+                    await OperatorAdminScreen.RunAsync(svc);
                 AnsiConsole.Clear();
                 continue;
             }
@@ -130,7 +132,8 @@ public static class DashboardScreen
                     case ConsoleKey.Q: // Queue 뷰(#19)
                         view.Tab = DashboardTab.Queue;
                         break;
-                    case ConsoleKey.F5: // 점검 모드 토글(#18)
+                    case ConsoleKey.F5: // 점검 모드 토글(#18) — 운영자 전용(#23)
+                        if (!svc.Auth.Require(Permission.ServiceControl, "Maintenance")) break;
                         if (svc.Maintenance.Active)
                         {
                             svc.RecordUserAction("Maintenance EXIT");
@@ -142,7 +145,8 @@ public static class DashboardScreen
                             svc.Maintenance.Enter();
                         }
                         break;
-                    case ConsoleKey.S: // System Snapshot Export(#20) — 비차단
+                    case ConsoleKey.S: // System Snapshot Export(#20) — 비차단 (다운로드 권한 #23)
+                        if (!svc.Auth.Require(Permission.Export, "Snapshot Export")) break;
                         svc.RecordUserAction("Snapshot Export");
                         s.Events.Publish("Snapshot export started…", EventSeverity.Info, source: "snapshot");
                         _ = Task.Run(async () =>
@@ -161,7 +165,8 @@ public static class DashboardScreen
                             }
                         });
                         break;
-                    case ConsoleKey.E: // Config Editor(#22)
+                    case ConsoleKey.E: // Config Editor(#22) — 관리자 이상(#23)
+                        if (!svc.Auth.Require(Permission.ConfigEdit, "Config Editor")) break;
                         view.ConfigEditor = true;
                         return;
                     case ConsoleKey.UpArrow when view.Tab == DashboardTab.Queue:
@@ -188,7 +193,8 @@ public static class DashboardScreen
                         QueueAction(svc, view, "Demote",
                             j => j.Status == "queued", (q, j, _) => q.DemoteAsync(j.Id));
                         break;
-                    case ConsoleKey.F8: // 워치독 토글(#14)
+                    case ConsoleKey.F8: // 워치독 토글(#14) — 관리자 이상(#23)
+                        if (!svc.Auth.Require(Permission.ConfigEdit, "Watchdog Toggle")) break;
                         svc.Watchdog.Enabled = !svc.Watchdog.Enabled;
                         view.Opt.WatchdogEnabled = svc.Watchdog.Enabled;
                         svc.RecordUserAction(svc.Watchdog.Enabled ? "Watchdog ON" : "Watchdog OFF");
@@ -196,10 +202,13 @@ public static class DashboardScreen
                             svc.Watchdog.Enabled ? EventSeverity.Success : EventSeverity.Warning,
                             source: "watchdog");
                         break;
-                    case ConsoleKey.T: // 테마 순환(#13) — 설정에 저장
+                    case ConsoleKey.T: // 테마 순환(#13) — 전환은 전원, 저장은 관리자 이상(#23)
                         var themeName = Theme.CycleNext();
-                        svc.Config.Theme = themeName;
-                        svc.Config.Save(svc.ConfigPath);
+                        if (svc.Auth.Can(Permission.ConfigEdit))
+                        {
+                            svc.Config.Theme = themeName;
+                            svc.Config.Save(svc.ConfigPath);
+                        }
                         svc.RecordUserAction($"Theme → {themeName}");
                         s.Events.Publish($"Theme changed: {themeName}", EventSeverity.Info, source: "user");
                         break;
@@ -221,7 +230,8 @@ public static class DashboardScreen
                     case ConsoleKey.F4:
                         svc.OpenBrowser();
                         break;
-                    case ConsoleKey.F2:
+                    case ConsoleKey.F2: // 서비스 제어 — 운영자 전용(#23)
+                        if (!svc.Auth.Require(Permission.ServiceControl, "Restart Worker + API")) break;
                         svc.RecordUserAction("Restart Worker + API");
                         s.Session.RestartCount++;
                         svc.Process.Start("worker", "worker");
@@ -238,11 +248,13 @@ public static class DashboardScreen
         catch { /* 입력 리다이렉트 등 — 무시 */ }
     }
 
-    /// <summary>Queue 조작(#19) — 선택 잡 검증 후 비차단 실행, 결과 이벤트 발행.</summary>
+    /// <summary>Queue 조작(#19) — 권한(#23)·선택 잡 검증 후 비차단 실행, 결과 이벤트 발행.</summary>
     private static void QueueAction(AppServices svc, ViewState view, string action,
         Func<QueueJob, bool> eligible,
         Func<SupabaseQueueService, QueueJob, DateTimeOffset, Task<bool>> run)
     {
+        if (!svc.Auth.Require(Permission.ServiceControl, $"Queue {action}")) return;
+
         var s = svc.State;
         var jobs = s.QueueJobs;
         if (jobs.Count == 0) return;

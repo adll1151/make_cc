@@ -14,7 +14,10 @@ public static class CommandPalette
     {
         AnsiConsole.Clear();
 
-        var commands = CommandRegistry.All();
+        // RBAC(#23) — 현재 역할로 실행 불가한 명령은 목록에서 제외
+        var commands = CommandRegistry.All()
+            .Where(c => ctx.Svc.Auth.Can(CommandRegistry.NeedOf(c.Id)))
+            .ToList();
         var byTitle = commands.ToDictionary(c => c.Title);
 
         var choices = new List<string> { CancelLabel };

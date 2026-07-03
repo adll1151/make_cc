@@ -36,6 +36,9 @@ public sealed class AppServices
     /// <summary>Queue 관리(#19) — Supabase jobs 테이블.</summary>
     public SupabaseQueueService Queue { get; }
 
+    /// <summary>RBAC 세션 인증(#23).</summary>
+    public AuthService Auth { get; }
+
     public AppServices()
     {
         Paths = RepoPaths.Discover();
@@ -81,16 +84,19 @@ public sealed class AppServices
         Queue = new SupabaseQueueService(
             SupabaseUrl, ReadEnv("SUPABASE_SERVICE_ROLE_KEY") ?? "", Logs);
 
+        // RBAC(#23) — makecc.operators.json. 계정 없으면 단독 사용자 모드(전체 권한).
+        Auth = new AuthService(Path.Combine(Paths.Root, "makecc.operators.json"), State);
+
         // 좌측 Service 패널 초기 항목 = 모니터 목록에서 파생
         State.SetServices(Monitors.Select(m => new ServiceInfo { Name = m.Name }));
     }
 
-    /// <summary>사용자 작업 기록(#4) — 감사 로그 + 이벤트(Timeline/Notification).</summary>
+    /// <summary>사용자 작업 기록(#4) — 감사 로그 + 이벤트. RBAC(#23) 도입 후 실행자 명시.</summary>
     public void RecordUserAction(string action)
     {
-        Audit.Record(action);
+        Audit.Record($"[{Auth.UserName}] {action}");
         State.Events.Publish($"USER {action}", EventSeverity.Info, userAction: true, source: "user");
-        Logs.Info($"[audit] {action}");
+        Logs.Info($"[audit] [{Auth.UserName}] {action}");
     }
 
     /// <summary>알림 설정 변경 반영(#22 Config Editor) — Notifier 재구성.</summary>

@@ -24,6 +24,10 @@ public sealed class AppState
     public MaintenanceState Maintenance { get; set; } = MaintenanceState.Off;
     public DateTime? MaintenanceSince { get; set; }
 
+    // RBAC(#23) — 현재 세션 사용자 미러
+    public string OperatorName { get; set; } = "local";
+    public Role OperatorRole { get; set; } = Role.Operator;
+
     // Health History(#21)
     public ServiceHealthTracker Health { get; } = new();
 

@@ -9,6 +9,7 @@ public sealed class CommandContext
     public bool RequestExit { get; set; }
     public bool RequestDiagnostics { get; set; }
     public bool RequestConfigEditor { get; set; }
+    public bool RequestOperatorAdmin { get; set; }
 }
 
 public sealed record LauncherCommand(string Id, string Title, Func<CommandContext, Task> Run);
@@ -19,6 +20,22 @@ public sealed record LauncherCommand(string Id, string Title, Func<CommandContex
 /// </summary>
 public static class CommandRegistry
 {
+
+    /// <summary>명령별 필요 권한(#23) — 팔레트가 역할에 맞게 필터링.
+    /// 'shutdown'(콘솔 종료)은 ESC와 동일하게 전원 허용 — 뷰어를 앱에 가두지 않기 위함.</summary>
+    public static Permission NeedOf(string id) => id switch
+    {
+        "restart-worker" or "restart-api" or "restart-docker"
+            or "stop-worker" or "stop-api"
+            or "maintenance-toggle" or "manage-operators"
+            => Permission.ServiceControl,
+        "toggle-watchdog" or "cycle-theme" or "config-editor"
+            => Permission.ConfigEdit,
+        "export-report" or "export-snapshot"
+            => Permission.Export,
+        _ => Permission.View,
+    };
+
     public static IReadOnlyList<LauncherCommand> All() => new LauncherCommand[]
     {
         new("restart-worker", "Restart Worker", c =>
@@ -135,6 +152,11 @@ public static class CommandRegistry
             c.Svc.Config.Save(c.Svc.ConfigPath);
             c.Svc.RecordUserAction($"Theme → {name}");
             c.Svc.State.Events.Publish($"Theme changed: {name}", EventSeverity.Info, source: "user");
+            return Task.CompletedTask;
+        }),
+        new("manage-operators", "Manage Operators (RBAC)", c =>
+        {
+            c.RequestOperatorAdmin = true;
             return Task.CompletedTask;
         }),
         new("shutdown", "Shutdown", c => { c.RequestExit = true; return Task.CompletedTask; }),

@@ -140,22 +140,14 @@ public static class DashboardView
                 ? $"[{Theme.COk}]● ONLINE[/]"
                 : $"[{Theme.CWarn}]● DEGRADED[/]",
         };
-        string docker = s.Env.DockerAvailable
-            ? $"[{Theme.COk}]docker ✓[/]"
-            : $"[{Theme.CErr}]docker ✗[/]";
-        string wd = opt.WatchdogEnabled
-            ? $"[{Theme.COk}]wd on[/]"
-            : $"[{Theme.CMuted}]wd off[/]";
 
-        var right = string.Join($"  [{Theme.CMuted}]│[/]  ", new[]
+        // 폭 절약: docker→Services 패널, watchdog→Session 바/키바에 이미 표시되므로 헤더에서 제외
+        var right = string.Join($" [{Theme.CMuted}]│[/] ", new[]
         {
             online,
-            $"[{Theme.CText}]v{Theme.Esc(s.Env.Version)}[/]",
-            $"[{Theme.CMuted}]{Theme.Esc(s.Env.Branch)}@{Theme.Esc(s.Env.Commit)}[/]",
-            docker,
-            wd,
+            $"[{Theme.CText}]{Theme.Esc(Trunc(s.OperatorName, 10))}[/][{Theme.CAccent2}]·{RolePolicy.Badge(s.OperatorRole)}[/]",
+            $"[{Theme.CMuted}]v{Theme.Esc(s.Env.Version)} {Theme.Esc(s.Env.Branch)}@{Theme.Esc(s.Env.Commit)}[/]",
             UpdateMarkup(s.Update),
-            $"[{Theme.CMuted}]{DateTime.Now:HH:mm:ss}[/]",
         });
 
         var g = new Grid();

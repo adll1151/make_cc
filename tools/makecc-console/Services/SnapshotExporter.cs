@@ -73,6 +73,7 @@ public static class SnapshotExporter
         var snapshot = new
         {
             capturedAt = DateTime.Now.ToString("o"),
+            @operator = new { name = s.OperatorName, role = s.OperatorRole.ToString() },
             env = s.Env,
             online = s.Online,
             maintenance = new { state = s.Maintenance.ToString(), since = s.MaintenanceSince },

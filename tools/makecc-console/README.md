@@ -29,6 +29,7 @@ dotnet run -c Release --project tools\makecc-console\MakeccConsole.csproj
 - **Config Editor** (`E`) — 설정 파일을 화면에서 편집(테마·워치독·알림·로그 보관·업데이트). 저장 시 즉시 반영
 - **Maintenance Mode** (`F5`) — 점검 모드: `maintenance.lock` 생성 → 신규 요청 차단 신호 → 잔여 작업 드레인 → Idle → 해제 시 재개
 - **System Snapshot** (`S`) — 설정+진단+상태+당일 로그+크래시 리포트+이력을 `logs/snapshots/*.zip` 으로 패키징
+- **RBAC 로그인** — `makecc.operators.json` 에 계정이 있으면 부팅 전 계정 선택+PIN(3회 실패 시 종료). 계정 없으면 단독 사용자 모드(전체 권한, 기존 동작). 계정 관리는 팔레트 `Manage Operators`(운영자 전용)
 - **Diagnostics** (`F9`) — 서비스+환경 11종 점검(✓/✗ + 원인)
 - **Command Palette** (`Ctrl+Shift+P`) — 모달, 타이핑 필터. 재시작·로그·리포트·진단·업데이트·종료 등
 - **Shutdown** — 서비스 역순 정지 애니메이션
@@ -96,6 +97,7 @@ logs/
 | 큐 | `Services/SupabaseQueueService` | jobs 조회/Retry/Cancel/순서(#19) |
 | 스냅샷 | `Services/SnapshotExporter` | 장애 분석 패키지(#20) |
 | 건강이력 | `Services/HealthHistory` | 가동률·장애 스트립(#21) |
+| 인증 | `Services/Rbac` | 역할·권한·계정 저장소(#23) |
 | 업데이트 | `Update/UpdateChecker` | GitHub Releases 비교 |
 | 리포트 | `Reports/CrashReport` | Markdown 보고서 |
 | 테마 | `Theme` | 교체 가능한 Palette |
@@ -108,6 +110,7 @@ logs/
 
 ## 참고
 
+- **RBAC 역할**: `운영자`=전체 기능 / `관리자`=설정 변경까지(Config Editor·워치독·테마 저장) / `일반`=조회+Snapshot 다운로드. 서비스 제어(Restart·Stop·Maintenance·Queue 조작·계정 관리)는 운영자 전용. 거부 시 이벤트/로그 기록, 감사 로그에 실행자 `[이름]` 명시. 팔레트는 역할에 맞는 명령만 노출. PIN은 salt+SHA-256 해시 저장. ⚠️ 로컬 파일 기반 접근 통제로 목적은 '공용 운영 PC 실수 방지+감사 추적'이며, 디스크 접근 가능한 사용자를 막는 보안 경계가 아닙니다. 콘솔 종료(ESC)는 뷰어를 앱에 가두지 않기 위해 전원 허용.
 - **Maintenance Mode API 연동**: 콘솔이 저장소 루트에 `maintenance.lock` 을 생성/삭제합니다. Next.js 신규 업로드/잡 생성 핸들러에서 `fs.existsSync('maintenance.lock')` 체크 후 503 응답 1줄만 추가하면 신규 요청 차단이 완성됩니다(파일 기반 — 프레임워크 무관).
 - **Queue 관리 동작 원리**: 워커(poll-loop)가 `status='queued'` 중 `created_at` 오래된 순으로 처리하므로, 순서 변경은 `created_at` 조정으로 구현(맨앞=대기열 head−1초, 맨뒤=now). Retry는 `failed→queued`(에러/진행률 리셋), Cancel은 `queued/pending→cancelled` 로 상태 가드가 걸려 있어 진행 중 잡은 건드리지 않습니다.
 - 헤더의 Notification Center 는 UI 개편으로 **Event Timeline 에 통합**되었습니다(같은 EventHub 스트림, source 태그 표시).
