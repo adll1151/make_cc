@@ -9,6 +9,18 @@ make_cc의 버전별 작업 기록입니다. 형식은 [Keep a Changelog](https:
 
 ---
 
+## [0.6.1] · 자막 어시 Tier 2 실동작 수정
+<!-- date: 2026-07-03 -->
+
+v0.6.0의 자막 스타일 어시 Tier 2(프레임 인지형 보정)가 실제 브라우저에서 완전히 미작동했던 문제를 수정. 단위 테스트는 통과했으나 통합 경로에 3대 버그가 있었고, 흰 배경 실영상 **headed E2E**(업로드→GPU STT→편집기)로 근본원인을 잡아 `◆ 배경이 밝아요 → 박스` 보정이 정상 렌더됨을 확인.
+
+### Fixed
+- **dims 읽기 레이스** — 편집기 로딩 중 `videoUrl`이 null이라 `<video>`가 아직 DOM에 없어 `querySelector`가 null→조기 탈출(effect deps `[]`). video 요소 자체를 폴링하도록 수정해 늦게 나타나도 종횡비를 얻음. (dims 없으면 프레임 샘플링이 게이트에 막혀 Tier 2가 아예 미작동.)
+- **CORS 캐시 오염** — 메인 `<video>`(crossOrigin 없음)가 signed URL을 먼저 캐시 → 샘플러의 `crossOrigin=anonymous` 요청이 그 캐시를 재사용해 canvas taint. VideoPlayer에 `crossOrigin="anonymous"` 추가(Supabase signed URL은 ACAO:*라 재생 무영향).
+- **프레임 대기 무한 정지** — 오프스크린 히든 비디오는 컴포지터에 프레임을 표시하지 않아 `requestVideoFrameCallback`이 영영 발화하지 않음 → 샘플러가 완료를 못 함. `waitForFrame`에 250ms 타임아웃 폴백 추가.
+
+---
+
 ## [0.6.0] · 자막 스타일 어시 + 퍼널 분석
 <!-- date: 2026-07-03 -->
 

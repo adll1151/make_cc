@@ -1,6 +1,6 @@
 {
   "name": "make-cc",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "description": "영상을 업로드하면 한국어 CC(폐쇄형 자막)를 자동 생성하는 웹 서비스",
   "scripts": {
