@@ -10,7 +10,10 @@ const CUES = [
 ];
 const DEMO_SRC = '/samples/demo.mp4';
 
-const fmt = (s: number) => `0:${String(Math.floor(Math.max(0, s))).padStart(2, '0')}`;
+const fmt = (s: number) => {
+  const t = Math.max(0, Math.floor(s));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+};
 
 /**
  * 제품 쇼케이스 — 실제 예시 영상(`/samples/demo.mp4`)이 재생되고 그 위에 자동 자막이 얹힌다.
@@ -26,7 +29,13 @@ export function EditorShowcase() {
   const [videoOk, setVideoOk] = useState(true);
 
   useEffect(() => {
-    setReduce(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const r = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setReduce(r);
+    // reduce-motion: autoPlay 억제와 컨트롤 상태를 일치시킴(정지 아이콘·스크러버 멈춤 방지)
+    if (r) {
+      setPlaying(false);
+      videoRef.current?.pause();
+    }
   }, []);
 
   // 영상 실패 시에만 도는 합성 폴백(영상이 정상이면 timeupdate가 time을 몰아감)

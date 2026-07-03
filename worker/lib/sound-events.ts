@@ -99,8 +99,12 @@ export interface RunSoundEventsOptions {
   /** AudioTagging 모델 디렉터리. 기본 worker/models/... (env SOUND_EVENTS_MODEL_DIR) */
   modelDir?: string;
   device?: 'cpu' | 'cuda';
+  /** 최대 실행 시간(ms). 초과 시 python을 kill하고 [] 반환(베스트에포트). 기본 120s. */
+  timeoutMs?: number;
   onInfo?: (message: string) => void;
 }
+
+export const DEFAULT_SOUND_EVENTS_TIMEOUT_MS = 120_000;
 
 const DEFAULT_MODEL_DIR =
   process.env.SOUND_EVENTS_MODEL_DIR ??
@@ -122,12 +126,31 @@ export function runSoundEvents(
     let stdoutBuf = '';
     let stderrBuf = '';
     let failed = false;
+    let settled = false;
+    const done = (result: RawSoundEvent[]) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
 
     const py = spawn(
       pythonCommand(),
       [scriptPath, modelDir, audioPath, opts.device ?? 'cpu'],
       { stdio: ['ignore', 'pipe', 'pipe'] },
     );
+
+    // 타임아웃: sherpa-onnx가 멈춰도(compute 데드락 등) 잡이 무한 대기하지 않도록
+    // python을 kill하고 [] 반환. "STT 무영향" 불변식 보장.
+    const timer = setTimeout(() => {
+      opts.onInfo?.(`sound-events 타임아웃(${opts.timeoutMs ?? DEFAULT_SOUND_EVENTS_TIMEOUT_MS}ms) — kill 후 생략`);
+      try {
+        py.kill('SIGKILL');
+      } catch {
+        /* ignore */
+      }
+      done([]);
+    }, opts.timeoutMs ?? DEFAULT_SOUND_EVENTS_TIMEOUT_MS);
 
     py.stdout.on('data', (chunk: Buffer) => {
       stdoutBuf += chunk.toString();
@@ -167,7 +190,7 @@ export function runSoundEvents(
     // 베스트에포트: spawn 자체 실패해도 잡을 죽이지 않는다.
     py.on('error', (err) => {
       opts.onInfo?.(`sound-events spawn 실패(무시): ${err.message}`);
-      resolve([]);
+      done([]);
     });
 
     py.on('exit', (code) => {
@@ -175,10 +198,10 @@ export function runSoundEvents(
         opts.onInfo?.(
           `sound-events 종료 ${code}${failed ? '(error)' : ''} — CC 사운드 생략. ${stderrBuf.slice(-300)}`,
         );
-        resolve([]); // 실패해도 STT는 계속
+        done([]); // 실패해도 STT는 계속
         return;
       }
-      resolve(events);
+      done(events);
     });
   });
 }

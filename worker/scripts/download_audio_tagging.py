@@ -18,7 +18,8 @@ URL = (
     "https://github.com/k2-fsa/sherpa-onnx/releases/download/"
     f"audio-tagging-models/{NAME}.tar.bz2"
 )
-DEST = os.path.join("worker", "models")
+# worker/scripts/../models — 실행 cwd와 무관하게 항상 worker/models로.
+DEST = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models"))
 
 
 def main():
@@ -32,7 +33,10 @@ def main():
     urllib.request.urlretrieve(URL, tar_path)
     print(f"압축 해제: {tar_path}")
     with tarfile.open(tar_path, "r:bz2") as t:
-        t.extractall(DEST)
+        try:
+            t.extractall(DEST, filter="data")  # 경로 트래버설 방어 (Python 3.12+)
+        except TypeError:
+            t.extractall(DEST)  # 구버전 폴백
     os.remove(tar_path)
     print(f"완료: {target}")
     return 0

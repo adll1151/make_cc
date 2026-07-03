@@ -61,7 +61,9 @@ export interface SrtBuildOptions {
  */
 export function isSoundCueText(text: string): boolean {
   const t = text.trim();
-  return /^♪.*♪$/.test(t) || /^\[.+\]$/.test(t);
+  // 내부에 여는/닫는 기호가 재등장하지 않는 단일 표기만 매칭 —
+  // "[웃으며] 안녕 [계속]"·"♪ 흥얼 ♪ 대사 ♪" 같은 다중 괄호 대사 오탐 방지.
+  return /^♪[^♪]*♪$/.test(t) || /^\[[^[\]]+\]$/.test(t);
 }
 
 export function parseSrt(input: string, opts: SrtParseOptions = {}): Cue[] {

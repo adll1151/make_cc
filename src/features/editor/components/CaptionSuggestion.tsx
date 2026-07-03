@@ -45,9 +45,9 @@ export function CaptionSuggestion() {
         clearInterval(poll);
       }
     };
-    read();
     const poll = setInterval(read, 250);
     const stop = setTimeout(() => clearInterval(poll), 10000);
+    read(); // poll/stop 선언 후 호출 — read 내부의 clearInterval(poll) TDZ 방지
     return () => {
       clearInterval(poll);
       clearTimeout(stop);

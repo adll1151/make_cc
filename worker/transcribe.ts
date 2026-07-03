@@ -95,6 +95,8 @@ export async function processTranscribe(jobId: string): Promise<{
     //     베스트에포트: 실패해도 [] 반환(STT 무영향). 결과는 SRT 빌드 전에 await.
     const soundEventsPromise: Promise<RawSoundEvent[]> = runSoundEvents(audioPath, {
       device: 'cpu',
+      // 오디오 길이에 비례한 타임아웃(초당 0.8s, 최소 60s) — 행 방지, 베스트에포트.
+      timeoutMs: Math.max(60_000, Math.round((job.videoDurationSec ?? 60) * 800)),
       onInfo: (msg) => log.info({ soundEvents: msg }, 'sound-events info'),
     });
 
@@ -156,8 +158,20 @@ export async function processTranscribe(jobId: string): Promise<{
     );
     await updateProgress(jobId, 92);
 
-    if (cues.length === 0) {
-      throw new Error('Whisper가 음성을 인식하지 못했습니다 (cues = 0).');
+    // 3c. 리치 CC — 사운드 이벤트 → CC 큐 → 대사 큐와 타임라인 병합 (베스트에포트).
+    //     대사 0개여도 사운드 이벤트(음악/웃음)만으로 자막을 낼 수 있으므로 cues 검사 전에 병합.
+    let soundCues: Cue[] = [];
+    try {
+      const rawEvents = await soundEventsPromise;
+      soundCues = eventsToSoundCues(rawEvents);
+      log.info({ rawEvents: rawEvents.length, soundCues: soundCues.length }, 'sound events → CC 큐');
+    } catch (err) {
+      log.warn({ err: (err as Error)?.message }, 'sound events 처리 실패 (CC 사운드 생략)');
+    }
+    const allCues = mergeCuesByTime(cues, soundCues);
+
+    if (allCues.length === 0) {
+      throw new Error('음성·오디오 이벤트를 인식하지 못했습니다 (cues = 0).');
     }
 
     // 3b. 화자 맵 생성·저장 (diarization 결과) — spk_0 → '화자 1' ... 편집기 표시명/이름변경용.
@@ -179,17 +193,6 @@ export async function processTranscribe(jobId: string): Promise<{
     } else {
       log.info({ speakers: speakerIds.length }, '단일/미분리 화자 — speaker_map 생략');
     }
-
-    // 3c. 리치 CC — 사운드 이벤트 → CC 큐 → 대사 큐와 타임라인 병합 (베스트에포트)
-    let soundCues: Cue[] = [];
-    try {
-      const rawEvents = await soundEventsPromise;
-      soundCues = eventsToSoundCues(rawEvents);
-      log.info({ rawEvents: rawEvents.length, soundCues: soundCues.length }, 'sound events → CC 큐');
-    } catch (err) {
-      log.warn({ err: (err as Error)?.message }, 'sound events 처리 실패 (CC 사운드 생략)');
-    }
-    const allCues = mergeCuesByTime(cues, soundCues);
 
     // 4. SRT 빌드 + 업로드 (대사 + CC 사운드 큐)
     log.info('building srt');

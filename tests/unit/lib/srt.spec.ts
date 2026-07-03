@@ -220,5 +220,7 @@ describe('parseSrt — 리치 CC kind 복원 (SRT엔 kind 없음)', () => {
     expect(isSoundCueText('[박수]')).toBe(true);
     expect(isSoundCueText('안녕하세요')).toBe(false);
     expect(isSoundCueText('[중요] 라고 말했다')).toBe(false); // 부분 대괄호는 대사
+    expect(isSoundCueText('[웃으며] 안녕 [계속]')).toBe(false); // 다중 괄호 대사 오탐 방지
+    expect(isSoundCueText('♪ 흥얼 ♪ 대사 ♪')).toBe(false);
   });
 });

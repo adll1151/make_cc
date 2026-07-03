@@ -35,13 +35,20 @@ export function CueList({ onSeek, onPlayCue, getCurrentMs }: CueListProps) {
 
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
+        // 숨겨진 사운드 큐(showSoundCues=false)는 건너뛰고 다음 '보이는' 큐로 이동.
         const base = st.selectedIndex ?? st.activeIndex ?? -1;
-        const next =
-          e.key === 'ArrowDown'
-            ? Math.min(base + 1, list.length - 1)
-            : Math.max(base <= 0 ? 0 : base - 1, 0);
-        st.setSelectedIndex(next);
-        onSeek(list[next]!.startMs);
+        const dir = e.key === 'ArrowDown' ? 1 : -1;
+        let next = -1;
+        for (let i = base + dir; i >= 0 && i < list.length; i += dir) {
+          if (st.showSoundCues || list[i]!.kind !== 'sound') {
+            next = i;
+            break;
+          }
+        }
+        if (next >= 0) {
+          st.setSelectedIndex(next);
+          onSeek(list[next]!.startMs);
+        }
       } else if (e.key === 'Enter') {
         if (st.selectedIndex !== null) {
           e.preventDefault();
