@@ -6,6 +6,8 @@ import {
   BUSY_BAND_RATIO_MIN,
   DETAIL_HEAVY_RATIO_MIN,
   LOWCONTRAST_LUMA_DIFF,
+  MILD_BUSY_RATIO_MIN,
+  OUTLINE_STRONG,
   lumaOfHex,
   type FrameSignals,
 } from './frame-analysis';
@@ -64,6 +66,18 @@ function framePatch(
       stylePatch.box = true;
       patchReasons.push('자막색과 배경색이 비슷해요 — 박스를 켜면 잘 보여요');
     }
+  }
+
+  // Tier 2.1 외곽선: 박스를 쓰지 않지만 배경이 어느 정도 복잡하면(박스 임계 미만)
+  // 외곽선을 굵게 해 가독성을 높인다(박스보다 가벼운 보정).
+  if (
+    !stylePatch.box &&
+    !preset.box &&
+    frame.busyBandRatio >= MILD_BUSY_RATIO_MIN &&
+    preset.outlineWidth < OUTLINE_STRONG
+  ) {
+    stylePatch.outlineWidth = OUTLINE_STRONG;
+    patchReasons.push('배경이 약간 복잡해요 — 외곽선을 굵게 하면 자막이 또렷해져요');
   }
 
   // 위치: 자막 밴드 쪽에 피사체가 쏠려 있으면 반대편으로

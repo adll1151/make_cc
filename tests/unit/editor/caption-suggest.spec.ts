@@ -165,4 +165,29 @@ describe('suggestCaptionStyle — Tier 2 frameSignals 보정', () => {
     expect(s?.presetKey).toBe('top-clean');
     expect(s?.stylePatch?.position).toBeUndefined();
   });
+
+  it('Tier2.1: 애매하게 복잡한 배경(박스 미만) → 외곽선 강화', () => {
+    // busyBandRatio 0.4: 박스 임계(0.5) 미만 + 약복잡 임계(0.3) 이상 → box 없이 outline 굵게
+    const s = suggestCaptionStyle(basicSignals(), frame({ busyBandRatio: 0.4 }));
+    expect(s?.stylePatch?.box).toBeUndefined();
+    expect(s?.stylePatch?.outlineWidth).toBe(3.5);
+    expect(s?.patchReasons?.some((r) => r.includes('외곽선'))).toBe(true);
+  });
+
+  it('Tier2.1: 박스가 적용되면 외곽선 보정은 하지 않음', () => {
+    // busyBandRatio 1 → box:true → outline 보정 생략
+    const s = suggestCaptionStyle(basicSignals(), frame({ busyBandRatio: 1 }));
+    expect(s?.stylePatch?.box).toBe(true);
+    expect(s?.stylePatch?.outlineWidth).toBeUndefined();
+  });
+
+  it('Tier2.1: 이미 외곽선이 굵은 프리셋은 보정 안 함', () => {
+    // 세로+빠름 → bold-yellow(outlineWidth 3.5) → 이미 굵어 보정 없음
+    const s = suggestCaptionStyle(
+      extractCaptionSignals(many(4, FAST, 1000), {}, portrait),
+      frame({ busyBandRatio: 0.4 }),
+    );
+    expect(s?.presetKey).toBe('bold-yellow');
+    expect(s?.stylePatch?.outlineWidth).toBeUndefined();
+  });
 });

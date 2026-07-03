@@ -54,6 +54,9 @@ export const BUSY_BAND_RATIO_MIN = 0.5;
 export const DETAIL_DOMINANCE = 1.3;
 export const DETAIL_HEAVY_RATIO_MIN = 0.6;
 export const LOWCONTRAST_LUMA_DIFF = 0.25;
+// Tier 2.1 외곽선 보정: 박스(busy≥0.5) 미만이지만 어느 정도 복잡한 배경 구간
+export const MILD_BUSY_RATIO_MIN = 0.3;
+export const OUTLINE_STRONG = 3.5;
 
 /** perceptual luma 0~1 (R/G/B 0~255 입력). */
 function lumaAt(data: RgbaImage['data'], idx: number): number {

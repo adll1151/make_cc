@@ -284,6 +284,6 @@ export function suggestCaptionStyle(
 `crossOrigin='anonymous'` 설정 시, cross-origin 응답에 `Access-Control-Allow-Origin`이 **없으면 미디어 load 자체가 실패(`error` 이벤트)** — taint 후 `getImageData`가 아니라 로드 단계에서 걸린다. → **`error` 핸들러와 `getImageData` try/catch를 둘 다 null로** 배선. `crossOrigin`은 **반드시 `src` 할당 전에** 설정(이후 설정은 재로드/무음 taint 유발).
 
 ### 10.8 상수/스코프 정리 (🟢)
-- **외곽선 자동조정 이연**: m3 패치는 **`box`·`position`만**. Plan 표의 "어두운 외곽선 강화"는 후속(추후 Tier 2.1)으로 명시 이연 — 조합 단순화.
+- ~~**외곽선 자동조정 이연**~~ → **Tier 2.1 구현 완료(2026-07-03)**: 박스를 쓰지 않지만 배경이 어느 정도 복잡한 구간(`busyBandRatio` ∈ [`MILD_BUSY_RATIO_MIN`=0.3, `BUSY_BAND_RATIO_MIN`=0.5))에서 `outlineWidth`를 `OUTLINE_STRONG`=3.5로 강화(박스보다 가벼운 보정). 이미 박스가 적용되거나 프리셋 외곽선이 이미 굵으면(≥3.5) 생략. 근거: "배경이 약간 복잡해요 — 외곽선을 굵게 하면 자막이 또렷해져요".
 - **테스트 추가**: `aggregateFrameSignals([])===null` 제로샘플 회귀 케이스 §8에 포함.
 - 샘플러 상수: `SAMPLE_COUNT=8`, `MAX_WIDTH=160`, `TIMEOUT_MS=4000`, `PER_SEEK_TIMEOUT_MS=1200`.
