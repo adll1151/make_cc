@@ -1,3 +1,10 @@
 .env
 .env.local
 .env.*.local
+
+# 대형 로컬 파일 — Vercel 앱 배포에 불필요 (워커는 로컬 GPU, trashcan은 스크래치)
+worker/models/
+trashcan/
+test-tmp/
+server.zip
+*.zip
