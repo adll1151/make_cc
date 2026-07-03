@@ -6,6 +6,20 @@ import {
   extractCaptionSignals,
 } from '@/features/editor/lib/caption-signals';
 import { suggestCaptionStyle } from '@/features/editor/lib/caption-suggest';
+import type { FrameSignals } from '@/features/editor/lib/frame-analysis';
+
+const frame = (p: Partial<FrameSignals> = {}): FrameSignals => ({
+  sampleCount: 8,
+  band: 'bottom',
+  bandLuma: 0.5,
+  bandContrast: 0.1,
+  bandDominant: '#808080',
+  brightBandRatio: 0,
+  busyBandRatio: 0,
+  bottomHeavyRatio: 0,
+  topHeavyRatio: 0,
+  ...p,
+});
 
 const cue = (text: string, durMs: number, i = 1, speakerId?: string): Cue => ({
   index: i,
@@ -98,5 +112,57 @@ describe('suggestCaptionStyle', () => {
   it('고CPS 비율↑ → 박스 배경 근거 추가', () => {
     const s = suggestCaptionStyle(extractCaptionSignals(many(4, FAST, 1000), {}, portrait));
     expect(s?.reasons.some((r) => r.includes('박스'))).toBe(true);
+  });
+});
+
+describe('suggestCaptionStyle — Tier 2 frameSignals 보정', () => {
+  // 가로+짧음 → 'basic'(box:false, color 흰색, position bottom) 기준
+  const basicSignals = () => extractCaptionSignals(many(5, SLOW, 2000), {}, landscape);
+
+  it('frameSignals 없으면 stylePatch 없음(Tier 1 하위호환)', () => {
+    const s = suggestCaptionStyle(basicSignals());
+    expect(s?.stylePatch).toBeUndefined();
+    expect(s?.patchReasons).toBeUndefined();
+  });
+
+  it('밝은 배경 → box:true 보정', () => {
+    const s = suggestCaptionStyle(basicSignals(), frame({ brightBandRatio: 1 }));
+    expect(s?.presetKey).toBe('basic');
+    expect(s?.stylePatch?.box).toBe(true);
+    expect(s?.patchReasons?.some((r) => r.includes('밝'))).toBe(true);
+  });
+
+  it('복잡한 배경 → box:true 보정', () => {
+    const s = suggestCaptionStyle(basicSignals(), frame({ busyBandRatio: 1 }));
+    expect(s?.stylePatch?.box).toBe(true);
+    expect(s?.patchReasons?.some((r) => r.includes('복잡'))).toBe(true);
+  });
+
+  it('자막색과 배경색 유사(저대비) → box:true 보정', () => {
+    // basic color=#FFFFFF(luma 1) — 밝은 밴드(luma 0.85)면 diff<0.25
+    const s = suggestCaptionStyle(basicSignals(), frame({ bandLuma: 0.85 }));
+    expect(s?.stylePatch?.box).toBe(true);
+    expect(s?.patchReasons?.some((r) => r.includes('비슷'))).toBe(true);
+  });
+
+  it('하단 피사체 쏠림 → position:top 보정', () => {
+    const s = suggestCaptionStyle(basicSignals(), frame({ bottomHeavyRatio: 1 }));
+    expect(s?.stylePatch?.position).toBe('top');
+    expect(s?.patchReasons?.some((r) => r.includes('위로'))).toBe(true);
+  });
+
+  it('신호 없으면(중립 프레임) 보정 없음', () => {
+    const s = suggestCaptionStyle(basicSignals(), frame());
+    expect(s?.stylePatch).toBeUndefined();
+  });
+
+  it('이미 상단 프리셋(top-clean)은 position 보정 안 함', () => {
+    // 가로+긴영상(>60 cue) → top-clean(position top)
+    const s = suggestCaptionStyle(
+      extractCaptionSignals(many(61, SLOW, 2000), {}, landscape),
+      frame({ bottomHeavyRatio: 1 }),
+    );
+    expect(s?.presetKey).toBe('top-clean');
+    expect(s?.stylePatch?.position).toBeUndefined();
   });
 });

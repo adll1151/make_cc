@@ -240,3 +240,48 @@ export function suggestCaptionStyle(
 3. prod 검증(밝은 배경 실영상 업로드 → 박스/위치 보정 관찰).
 
 - **비목표 재확인**: 얼굴/객체 검출·ML saliency·비전 LLM(Tier 3)은 범위 밖 — [[project-monetization]] 선행 후 별도 Plan.
+
+---
+
+## 10. 검증 반영 (Design v1.1 — design-validator 2026-07-03)
+
+검증에서 나온 🔴/🟡/🟢을 아래로 확정한다. 구현은 본 절을 우선한다.
+
+### 10.1 명명 상수 (테스트 결정론화 — 🔴 해소)
+`frame-analysis.ts`에 상수로 고정. luma·contrast·detail은 전부 **0~1**.
+
+| 상수 | 값 | 의미/근거 |
+|------|-----|-----------|
+| `BRIGHT_LUMA` | 0.65 | 밴드 평균 luma가 이 위면 "밝은 배경" |
+| `BRIGHT_BAND_RATIO_MIN` | 0.5 | 프레임 절반↑이 밝으면 box 보정 |
+| `BUSY_CONTRAST` | 0.22 | 밴드 luma 표준편차가 이 위면 "복잡한 배경" |
+| `BUSY_BAND_RATIO_MIN` | 0.5 | 프레임 절반↑이 복잡하면 box 보정 |
+| `DETAIL_DOMINANCE` | 1.3 | 한쪽 디테일이 반대편의 1.3배↑여야 "쏠림"으로 카운트 |
+| `DETAIL_HEAVY_RATIO_MIN` | 0.6 | 프레임 60%↑에서 하단쏠림이면 position 보정 |
+| `LOWCONTRAST_LUMA_DIFF` | 0.25 | \|밴드 luma − 자막색 luma\| 가 이 아래면 저대비 위험 |
+
+**정규화 기준(명시)**: `topDetail`/`bottomDetail` = 해당 1/3 영역에서 **가로 인접 픽셀 luma 차 절대값의 평균**. luma·차 모두 [0,1]이라 평균도 [0,1] (별도 max 정규화 불필요). `bandContrast` = 밴드 luma 표준편차(모집단). luma = `0.2126R+0.7152G+0.0722B` (R/G/B는 0~1).
+
+### 10.2 저대비 규칙의 색 출처 (🟡 해소 — 3번째 인자 불필요)
+`suggestCaptionStyle(signals, frameSignals?)` 내부에서 **추천 프리셋의 색**을 쓴다: `getTemplate(presetKey).style.color`의 luma와 `frameSignals.bandLuma` 비교. store의 현재 CaptionStyle을 넘길 필요 없음(시그니처 2인자 유지). 밝은배경 규칙과 겹치면 근거·패치 중복 제거.
+
+### 10.3 `position:'middle'` → 밴드 매핑 (🟡 해소)
+분석 밴드는 `'top'|'bottom'`뿐. 현재 스타일 position이 `'middle'`이면 **`'bottom'`으로 샘플**(대다수 자막 하단). 문서·코드에 주석 명시.
+
+### 10.4 적용 상태 UI (🟡 해소)
+`patchStyle`가 `template:'custom'`으로 바꾸므로 `currentTemplate === presetKey`로는 "적용됨"이 안 잡힌다. → 컴포넌트에 **`appliedRef`(로컬 boolean state)** 를 두어 "추천 적용" 클릭 시 true, 사용자가 프리셋/커스텀 바꾸면 리셋. `stylePatch` 유무와 무관하게 이 플래그로 버튼 라벨 결정.
+
+### 10.5 모바일 디코드 + 프레임 확정 (🟡 해소)
+- **offscreen 비디오는 iOS Safari에서 canvas 페인트 거부** 가능 → 히든 비디오를 **visually-hidden(화면 밖 1px, `position:fixed;opacity:0`)으로 DOM에 부착** + `muted`로 짧게 `play()` 시도 후 seek. 그래도 실패하면 → null 강등(무해).
+- **`seeked` ≠ 프레임 그려짐** → 가능하면 `video.requestVideoFrameCallback`로 페인트 확정 후 `drawImage`. 미지원 브라우저는 `seeked` + 짧은 rAF 폴백. 시점별 `PER_SEEK_TIMEOUT_MS=1200` 초과 시 해당 프레임 skip.
+
+### 10.6 재샘플 방지 (🟡 해소)
+`CaptionSuggestion` 샘플링 effect는 **`cues` 의존 금지**(키 입력마다 재발화). 키 = **`(videoUrl, band)`** 1회만. Tier 1 신호(`suggestCaptionStyle`의 1인자)는 계속 `cues`로 갱신하되, 프레임 신호는 별도 state로 고정.
+
+### 10.7 CORS 정정 (🟢)
+`crossOrigin='anonymous'` 설정 시, cross-origin 응답에 `Access-Control-Allow-Origin`이 **없으면 미디어 load 자체가 실패(`error` 이벤트)** — taint 후 `getImageData`가 아니라 로드 단계에서 걸린다. → **`error` 핸들러와 `getImageData` try/catch를 둘 다 null로** 배선. `crossOrigin`은 **반드시 `src` 할당 전에** 설정(이후 설정은 재로드/무음 taint 유발).
+
+### 10.8 상수/스코프 정리 (🟢)
+- **외곽선 자동조정 이연**: m3 패치는 **`box`·`position`만**. Plan 표의 "어두운 외곽선 강화"는 후속(추후 Tier 2.1)으로 명시 이연 — 조합 단순화.
+- **테스트 추가**: `aggregateFrameSignals([])===null` 제로샘플 회귀 케이스 §8에 포함.
+- 샘플러 상수: `SAMPLE_COUNT=8`, `MAX_WIDTH=160`, `TIMEOUT_MS=4000`, `PER_SEEK_TIMEOUT_MS=1200`.
