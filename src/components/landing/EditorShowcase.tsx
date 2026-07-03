@@ -1,38 +1,55 @@
 'use client';
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
-const DURATION = 9;
+/** 예시 영상(`/samples/demo.mp4`) 위에 얹는 illustrative 자막 3줄. 실제 재생 시간에 3등분해 노출. */
 const CUES = [
-  { start: 0, end: 3.2, t: '00:00', text: '안녕하세요, make_cc입니다' },
-  { start: 3.2, end: 6.1, t: '00:03', text: '영상의 한국어 음성을' },
-  { start: 6.1, end: 9, t: '00:06', text: '자동으로 자막으로 만들어드려요' },
+  { text: '안녕하세요, make_cc입니다' },
+  { text: '영상의 한국어 음성을' },
+  { text: '자동으로 자막으로 만들어드려요' },
 ];
+const DEMO_SRC = '/samples/demo.mp4';
 
-const fmt = (s: number) => `0:${String(Math.floor(s)).padStart(2, '0')}`;
+const fmt = (s: number) => `0:${String(Math.floor(Math.max(0, s))).padStart(2, '0')}`;
 
 /**
- * 제품 쇼케이스 — 디자인된 시네마틱 씬 위에 자막이 재생된다.
- * 타임라인이 연속으로 흐르고(실제 재생처럼) 자막이 시간에 맞춰 바뀐다. 재생/정지 동작.
+ * 제품 쇼케이스 — 실제 예시 영상(`/samples/demo.mp4`)이 재생되고 그 위에 자동 자막이 얹힌다.
+ * 자막·진행바·리스트 강조는 영상의 실제 재생 시간에 동기화된다(재생/정지 동작).
+ * 영상 로드 실패 시엔 합성 타임라인으로 무해하게 폴백(검은 화면이 멈춰 보이지 않게).
  */
 export function EditorShowcase() {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [time, setTime] = useState(0);
+  const [duration, setDuration] = useState(9);
   const [playing, setPlaying] = useState(true);
   const [reduce, setReduce] = useState(false);
+  const [videoOk, setVideoOk] = useState(true);
 
   useEffect(() => {
     setReduce(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }, []);
 
+  // 영상 실패 시에만 도는 합성 폴백(영상이 정상이면 timeupdate가 time을 몰아감)
   useEffect(() => {
-    if (!playing) return;
-    const id = setInterval(() => setTime((t) => (t + 0.08) % DURATION), 80);
+    if (videoOk || !playing) return;
+    const id = setInterval(() => setTime((t) => (t + 0.08) % 9), 80);
     return () => clearInterval(id);
-  }, [playing]);
+  }, [videoOk, playing]);
 
-  const activeIdx = Math.max(0, CUES.findIndex((c) => time >= c.start && time < c.end));
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (v && videoOk) {
+      if (v.paused) void v.play();
+      else v.pause();
+    } else {
+      setPlaying((p) => !p);
+    }
+  };
+
+  const dur = videoOk ? duration : 9;
+  const progress = dur > 0 ? (time / dur) * 100 : 0;
+  const activeIdx = Math.min(CUES.length - 1, Math.max(0, Math.floor((time / dur) * CUES.length)));
   const active = CUES[activeIdx]!;
-  const progress = (time / DURATION) * 100;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]">
@@ -57,9 +74,29 @@ export function EditorShowcase() {
 
       {/* 본문 */}
       <div className="grid grid-cols-1 gap-4 p-4 sm:p-5 lg:grid-cols-[1fr_280px]">
-        {/* 시네마틱 씬 */}
+        {/* 예시 영상 씬 */}
         <div className="relative aspect-video overflow-hidden rounded-xl bg-[#0c0c11]">
-          {!reduce && (
+          {/* 실제 예시 영상 — public/samples/demo.mp4 교체 시 랜딩·/editor/sample에 자동 반영 */}
+          <video
+            ref={videoRef}
+            src={DEMO_SRC}
+            muted
+            loop
+            playsInline
+            autoPlay={!reduce}
+            preload="metadata"
+            className="absolute inset-0 size-full object-cover"
+            onLoadedMetadata={(e) => {
+              setDuration(e.currentTarget.duration || 9);
+              setVideoOk(true);
+            }}
+            onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onError={() => setVideoOk(false)}
+          />
+          {/* 영상 로드 실패 시 폴백(검은 화면 방지) */}
+          {!videoOk && !reduce && (
             <>
               <div
                 className="absolute -inset-[25%]"
@@ -78,7 +115,7 @@ export function EditorShowcase() {
               />
             </>
           )}
-          <div className="absolute inset-0 shadow-[inset_0_0_120px_30px_rgba(0,0,0,0.6)]" />
+          <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_120px_30px_rgba(0,0,0,0.6)]" />
           <div className="grain-overlay !absolute opacity-[0.07]" aria-hidden />
 
           <span className="absolute left-3 top-3 z-10 rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
@@ -97,7 +134,7 @@ export function EditorShowcase() {
           <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-2.5 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-7">
             <button
               type="button"
-              onClick={() => setPlaying((p) => !p)}
+              onClick={togglePlay}
               aria-label={playing ? '일시정지' : '재생'}
               className="grid size-7 shrink-0 place-items-center rounded-full bg-white/20 text-white backdrop-blur-sm transition hover:bg-white/30"
             >
@@ -116,7 +153,7 @@ export function EditorShowcase() {
               <div className="h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
             </div>
             <span className="shrink-0 font-mono text-[11px] text-white/70">
-              {fmt(time)} / 0:09
+              {fmt(time)} / {fmt(dur)}
             </span>
           </div>
         </div>
@@ -128,7 +165,7 @@ export function EditorShowcase() {
             const on = i === activeIdx;
             return (
               <div
-                key={c.t}
+                key={i}
                 className="rounded-lg border p-2.5 transition-all duration-300"
                 style={
                   {
@@ -141,7 +178,9 @@ export function EditorShowcase() {
                   } as CSSProperties
                 }
               >
-                <p className="font-mono text-[10px] text-muted-foreground">{c.t}</p>
+                <p className="font-mono text-[10px] text-muted-foreground">
+                  {fmt((dur / CUES.length) * i)}
+                </p>
                 <p className={`mt-0.5 text-sm ${on ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
                   {c.text}
                 </p>
