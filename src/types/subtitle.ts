@@ -37,6 +37,16 @@ export interface Cue {
    * 없으면 cue 단위 평문으로 렌더 (카라오케 비활성).
    */
   words?: WordTiming[];
+  /**
+   * 큐 종류. 미지정/'speech'는 대사(기존 동작). 'sound'는 비음성 CC(오디오 이벤트,
+   * 예: '♪ 음악 ♪', '[웃음]'). sound 큐는 words 없음·카라오케/CPS 비대상.
+   */
+  kind?: 'speech' | 'sound';
+  /**
+   * sound 큐의 원시 AudioSet 라벨 (옵션, 디버그·재매핑용). 예: 'Laughter'.
+   * SRT엔 저장 안 되고, 재파싱 시 표기 문자열로 kind를 복원한다.
+   */
+  soundTag?: string;
 }
 
 /**

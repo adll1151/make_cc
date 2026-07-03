@@ -18,6 +18,7 @@
     "worker:ingest": "tsx --env-file=.env worker/cli/ingest-and-run.ts",
     "worker:poll": "tsx --env-file=.env worker/cli/poll-loop.ts",
     "worker:render": "tsx --env-file=.env worker/cli/render-one.ts",
+    "worker:models": "python worker/scripts/download_audio_tagging.py",
     "discord:setup": "node --env-file=.env scripts/discord-setup.mjs",
     "discord:relay": "node --env-file=.env scripts/discord-automod-relay.mjs",
     "usage": "node --env-file=.env scripts/usage-stats.mjs",

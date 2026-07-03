@@ -201,3 +201,15 @@ pip install --user pyannote.audio
 - module-5: 편집기 화자 라벨 토글 + 이름 매핑 UI
 - module-6: 랜딩 카피 "CC" 복원
 - module-11: Dockerfile + GPU 노드 배포
+
+## 리치 CC — 오디오 이벤트 태깅 (cc-rich-tagging)
+
+대사 전사(Whisper)와 별개로 **비음성 오디오 이벤트**(음악·박수·웃음·기침 등)를 감지해
+표준 CC 큐(`♪ 음악 ♪`·`[웃음]`…)로 삽입한다. 접근성(청각장애인 CC)·차별점.
+
+- **감지**: `worker/scripts/sound_events.py` — sherpa-onnx AudioTagging(AudioSet 527클래스, zipformer-small, **CPU**). 2s 창·1s hop 윈도잉으로 이벤트+타임스탬프 emit.
+- **GPU 경합 0**: Whisper(GPU)와 SenseVoice류 아님 — AudioTagging은 CPU(NAR·경량). Whisper-turbo와 **병렬** 실행.
+- **매핑·병합**: `worker/lib/sound-events.ts`(순수) — AudioSet 라벨→CC 표기, 임계(prob≥0.5)·인접 병합·최소 지속. `Cue.kind='sound'`.
+- **모델 준비(최초 1회)**: `npm run worker:models` (또는 `python worker/scripts/download_audio_tagging.py`). `worker/models/`(gitignore)에 ~111MB.
+- **베스트에포트**: 모델 부재·감지 실패 시 CC 사운드만 빠지고 STT/잡은 정상.
+- 설계: `docs/02-design/features/cc-rich-tagging.design.md`.

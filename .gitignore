@@ -80,3 +80,6 @@ trashcan/
 # Supabase CLI 임시
 supabase/.temp/
 server.zip
+
+# 오디오태깅 등 대형 모델 가중치(로컬 다운로드)
+worker/models/
