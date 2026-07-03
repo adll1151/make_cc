@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   mapCcLabel,
   eventsToSoundCues,
+  localizeSoundCue,
   MIN_CONFIDENCE,
   type RawSoundEvent,
 } from '../../../worker/lib/sound-events';
@@ -95,5 +96,33 @@ describe('eventsToSoundCues — 임계·매핑·병합', () => {
       ev(5000, 7000, 'Applause', 0.7),
     ]);
     expect(cues.map((c) => c.index)).toEqual([1, 2]);
+  });
+});
+
+describe('localizeSoundCue — CC 표기 대상 언어 로컬라이즈', () => {
+  it('음악/웃음/박수 등을 언어별 CC 표기로 치환', () => {
+    expect(localizeSoundCue('♪ 음악 ♪', 'en')).toBe('♪ Music ♪');
+    expect(localizeSoundCue('♪ 음악 ♪', 'ja')).toBe('♪ 音楽 ♪');
+    expect(localizeSoundCue('♪ 음악 ♪', 'zh')).toBe('♪ 音乐 ♪');
+    expect(localizeSoundCue('[웃음]', 'en')).toBe('[Laughter]');
+    expect(localizeSoundCue('[박수]', 'ja')).toBe('[拍手]');
+    expect(localizeSoundCue('[기침]', 'zh')).toBe('[咳嗽]');
+  });
+
+  it('앞뒤 공백이 있어도 매칭(trim)', () => {
+    expect(localizeSoundCue('  [웃음] ', 'en')).toBe('[Laughter]');
+  });
+
+  it('CC_RULES가 내는 모든 표기는 en/ja/zh 매핑이 존재', () => {
+    for (const cc of ['♪ 음악 ♪', '[웃음]', '[박수]', '[울음]', '[기침]', '[재채기]']) {
+      for (const lang of ['en', 'ja', 'zh']) {
+        expect(localizeSoundCue(cc, lang)).not.toBe(cc); // 원본과 달라야(=매핑됨)
+      }
+    }
+  });
+
+  it('매핑/미지원 언어는 원본 유지', () => {
+    expect(localizeSoundCue('[웃음]', 'fr')).toBe('[웃음]'); // 미지원 언어
+    expect(localizeSoundCue('안녕하세요', 'en')).toBe('안녕하세요'); // 사운드 큐 아님
   });
 });

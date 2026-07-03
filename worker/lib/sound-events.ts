@@ -43,6 +43,24 @@ export function mapCcLabel(label: string): string | null {
   return null;
 }
 
+/**
+ * CC 사운드 표기의 대상 언어 로컬라이즈 맵 (번역 시). 키=한국어 CC 표기(CC_RULES와 동일),
+ * 값=언어코드별 표준 CC 표기. 사운드 큐는 DeepL로 보내지 않고 이 맵으로 치환한다.
+ */
+const CC_LOCALES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  '♪ 음악 ♪': { en: '♪ Music ♪', ja: '♪ 音楽 ♪', zh: '♪ 音乐 ♪' },
+  '[웃음]': { en: '[Laughter]', ja: '[笑い]', zh: '[笑声]' },
+  '[박수]': { en: '[Applause]', ja: '[拍手]', zh: '[掌声]' },
+  '[울음]': { en: '[Crying]', ja: '[泣き声]', zh: '[哭声]' },
+  '[기침]': { en: '[Coughing]', ja: '[咳]', zh: '[咳嗽]' },
+  '[재채기]': { en: '[Sneezing]', ja: '[くしゃみ]', zh: '[喷嚏]' },
+};
+
+/** 사운드 CC 표기를 대상 언어(en/ja/zh)로 로컬라이즈. 매핑 없으면 원본 유지. */
+export function localizeSoundCue(text: string, langCode: string): string {
+  return CC_LOCALES[text.trim()]?.[langCode] ?? text;
+}
+
 export interface SoundCueOptions {
   minConfidence?: number;
   mergeGapMs?: number;

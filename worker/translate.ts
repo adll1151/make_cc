@@ -13,6 +13,7 @@ import {
 } from '@/services/translation';
 import { toDeeplCode, SOURCE_DEEPL } from '@/services/translation/languages';
 import { fitTranslatedCues } from './lib/subtitle-fit';
+import { localizeSoundCue } from './lib/sound-events';
 
 /**
  * 번역 잡 처리 (subtitle-translation) — 워커·CLI 양쪽이 호출.
@@ -79,8 +80,12 @@ export async function processTranslation(translationId: string): Promise<Process
     const cues = parseSrt(srt);
     if (cues.length === 0) throw new Error('원본 자막 cue가 없습니다.');
 
-    // 2. 문자수 상한 검사 (무료 한도 보호)
-    const charCount = cues.reduce((sum, c) => sum + c.text.length, 0);
+    // 리치 CC — 사운드 큐(kind='sound', ♪음악♪·[웃음])는 DeepL로 보내지 않고
+    // 대상 언어 CC 표기로 로컬라이즈한다(대사만 번역 → 쿼터 절약 + 표기 깨짐 방지).
+    const isSound = (c: (typeof cues)[number]) => c.kind === 'sound';
+
+    // 2. 문자수 상한 검사 (무료 한도 보호) — DeepL에 실제 보내는 대사만 카운트
+    const charCount = cues.reduce((sum, c) => sum + (isSound(c) ? 0 : c.text.length), 0);
     if (charCount > env.TRANSLATION_MAX_CHARS_PER_JOB) {
       await safeFail(
         translationId,
@@ -91,10 +96,10 @@ export async function processTranslation(translationId: string): Promise<Process
       throw new Error(`char limit exceeded: ${charCount}`);
     }
 
-    // 3. DeepL 번역 (진행률 갱신, ≥2% 변화 시에만 fire-and-forget)
+    // 3. DeepL 번역 (대사 cue만; 진행률 갱신, ≥2% 변화 시에만 fire-and-forget)
     let lastWritten = 0;
-    const texts = cues.map((c) => c.text);
-    const translated = await deeplTranslate(texts, {
+    const speechTexts = cues.filter((c) => !isSound(c)).map((c) => c.text);
+    const translated = await deeplTranslate(speechTexts, {
       sourceLang: SOURCE_DEEPL,
       targetLang: deeplTarget,
       onProgress: (done, total) => {
@@ -107,8 +112,14 @@ export async function processTranslation(translationId: string): Promise<Process
       },
     });
 
-    // 4. cue.text만 교체 (index/startMs/words/speakerId 보존)
-    const translatedCues = cues.map((c, i) => ({ ...c, text: translated[i] ?? c.text }));
+    // 4. cue.text 교체 — 대사는 DeepL 순서대로, 사운드는 대상 언어 CC 표기로 로컬라이즈.
+    //    (index/startMs/words/speakerId/kind 보존)
+    let si = 0;
+    const translatedCues = cues.map((c) =>
+      isSound(c)
+        ? { ...c, text: localizeSoundCue(c.text, translation.targetLang) }
+        : { ...c, text: translated[si++] ?? c.text },
+    );
     // 5. 가독성 후처리: 번역문이 길어지므로 줄바꿈(2줄) + CPS 높으면 종료시각 연장(간격 내)
     const fitted = fitTranslatedCues(translatedCues, (job.videoDurationSec ?? 0) * 1000);
     const outSrt = buildSrt(fitted);
