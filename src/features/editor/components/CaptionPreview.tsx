@@ -28,7 +28,9 @@ export function CaptionPreview() {
         ? 'center'
         : 'flex-end';
 
-  const textColor = style.karaoke ? style.karaokeColor : style.color;
+  // 리치 CC — 비음성 사운드 큐(♪음악♪·[웃음])는 번인과 동일하게 이탤릭·비카라오케 색으로.
+  const isSound = cue.kind === 'sound';
+  const textColor = !isSound && style.karaoke ? style.karaokeColor : style.color;
 
   const textStyle: CSSProperties = {
     fontFamily:
@@ -37,6 +39,7 @@ export function CaptionPreview() {
         : "'Pretendard', sans-serif",
     fontSize: `${style.fontSizePct}cqh`,
     fontWeight: 700,
+    fontStyle: isSound ? 'italic' : undefined,
     lineHeight: 1.25,
     color: textColor,
     whiteSpace: 'pre-line',

@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import type { Cue, SpeakerMap } from '@/types/subtitle';
+import { isSoundCueText } from '@/lib/srt';
 
 /**
  * 편집기 클라이언트 상태.
@@ -47,6 +48,8 @@ interface SubtitleStore {
   deleteCue(index: number): void;
   /** 해당 cue 뒤(간격)에 새 자막 삽입. 간격 없으면 무시. 새 cue를 선택+편집 */
   addCueAfter(index: number): void;
+  /** 해당 cue 뒤(간격)에 새 사운드(CC) 큐 삽입(♪ 음악 ♪·kind='sound'). 간격 없으면 무시. */
+  addSoundCueAfter(index: number): void;
   /** 활성 cue idx 설정 (useVideoSync 호출) */
   setActiveIndex(idx: number | null): void;
   /** 선택 cue idx 설정 (클릭/키보드) */
@@ -78,6 +81,34 @@ function recomputed(cues: Cue[], originalSignature: string) {
   const sig = computeSignature(cues);
   const dirty = sig !== originalSignature;
   return { cues, signature: sig, dirty, saveStatus: (dirty ? 'dirty' : 'saved') as SaveStatus };
+}
+
+/**
+ * afterIndex 뒤 간격에 새 cue를 삽입해 재인덱싱된 배열과 새 선택 위치를 반환.
+ * 간격(마지막이 아니면 다음 cue와의 gap ≥ MIN_GAP_MS)이 없으면 null.
+ * addCueAfter(대사)·addSoundCueAfter(사운드 CC) 공통 로직.
+ */
+function withInsertedCue(
+  cues: Cue[],
+  afterIndex: number,
+  extra: { text: string; kind?: 'sound' },
+): { cues: Cue[]; selected: number } | null {
+  const i = cues.findIndex((c) => c.index === afterIndex);
+  if (i < 0) return null;
+  const cur = cues[i]!;
+  const nextCue = cues[i + 1];
+  const s = cur.endMs;
+  let e: number;
+  if (nextCue) {
+    const gap = nextCue.startMs - cur.endMs;
+    if (gap < MIN_GAP_MS) return null; // 간격 부족 → 삽입 불가
+    e = cur.endMs + Math.min(NEW_CUE_MS, gap);
+  } else {
+    e = cur.endMs + NEW_CUE_MS;
+  }
+  const arr = cues.slice();
+  arr.splice(i + 1, 0, { index: 0, uid: crypto.randomUUID(), startMs: s, endMs: e, ...extra });
+  return { cues: arr.map((c, k) => ({ ...c, index: k + 1 })), selected: i + 1 };
 }
 
 export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
@@ -123,7 +154,10 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
     const idx = cues.findIndex((c) => c.index === index);
     if (idx < 0) return;
     const nextCues = cues.slice();
-    nextCues[idx] = { ...nextCues[idx]!, text };
+    // 리치 CC — 텍스트가 ♪…♪ / […] 표기면 사운드 큐로 자동 분류(SRT 재파싱과 동일 규칙).
+    // 반대로 표기를 지우면 대사로 복귀. 배지·이탤릭·감지 요약이 라이브로 반영된다.
+    const kind = isSoundCueText(text) ? ('sound' as const) : undefined;
+    nextCues[idx] = { ...nextCues[idx]!, text, kind };
     const nextSig = computeSignature(nextCues);
     const isDirty = nextSig !== get().originalSignature;
     set({
@@ -165,27 +199,22 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
   },
 
   addCueAfter(index) {
-    const cues = get().cues;
-    const i = cues.findIndex((c) => c.index === index);
-    if (i < 0) return;
-    const cur = cues[i]!;
-    const nextCue = cues[i + 1];
-    const s = cur.endMs;
-    let e: number;
-    if (nextCue) {
-      const gap = nextCue.startMs - cur.endMs;
-      if (gap < MIN_GAP_MS) return; // 간격 부족 → 삽입 불가
-      e = cur.endMs + Math.min(NEW_CUE_MS, gap);
-    } else {
-      e = cur.endMs + NEW_CUE_MS;
-    }
-    const arr = cues.slice();
-    arr.splice(i + 1, 0, { index: 0, uid: crypto.randomUUID(), startMs: s, endMs: e, text: '새 자막' });
-    const next = arr.map((c, k) => ({ ...c, index: k + 1 }));
+    const res = withInsertedCue(get().cues, index, { text: '새 자막' });
+    if (!res) return;
     set({
-      ...recomputed(next, get().originalSignature),
-      selectedIndex: i + 1,
-      editingIndex: i + 1,
+      ...recomputed(res.cues, get().originalSignature),
+      selectedIndex: res.selected,
+      editingIndex: res.selected,
+    });
+  },
+
+  addSoundCueAfter(index) {
+    const res = withInsertedCue(get().cues, index, { text: '♪ 음악 ♪', kind: 'sound' });
+    if (!res) return;
+    set({
+      ...recomputed(res.cues, get().originalSignature),
+      selectedIndex: res.selected,
+      editingIndex: res.selected,
     });
   },
 

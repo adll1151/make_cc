@@ -37,6 +37,7 @@ export function CueItem({
   const updateCueTiming = useSubtitleStore((s) => s.updateCueTiming);
   const deleteCue = useSubtitleStore((s) => s.deleteCue);
   const addCueAfter = useSubtitleStore((s) => s.addCueAfter);
+  const addSoundCueAfter = useSubtitleStore((s) => s.addSoundCueAfter);
   const speakerMap = useSubtitleStore((s) => s.speakerMap);
   const editing = useSubtitleStore((s) => s.editingIndex === idx);
   const setSelectedIndex = useSubtitleStore((s) => s.setSelectedIndex);
@@ -198,6 +199,14 @@ export function CueItem({
             onClick={(e) => { e.stopPropagation(); addCueAfter(cue.index); }}
           >
             <PlusIcon />
+          </IconBtn>
+          <IconBtn
+            title={canAddAfter ? '아래에 사운드 자막(♪음악♪) 추가' : '간격이 없어 추가할 수 없어요'}
+            disabled={!canAddAfter}
+            sound
+            onClick={(e) => { e.stopPropagation(); addSoundCueAfter(cue.index); }}
+          >
+            <SoundNoteIcon />
           </IconBtn>
           <IconBtn
             title="자막 삭제"
@@ -376,6 +385,7 @@ function IconBtn({
   children,
   active,
   danger,
+  sound,
   disabled,
 }: {
   title: string;
@@ -383,6 +393,8 @@ function IconBtn({
   children: React.ReactNode;
   active?: boolean;
   danger?: boolean;
+  /** 사운드(CC) 관련 액션 — 앰버 톤 */
+  sound?: boolean;
   disabled?: boolean;
 }) {
   return (
@@ -398,7 +410,9 @@ function IconBtn({
           ? 'bg-primary/10 text-primary'
           : danger
             ? 'text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive'
-            : 'text-muted-foreground/60 hover:bg-primary/10 hover:text-primary',
+            : sound
+              ? 'text-muted-foreground/60 hover:bg-amber-500/10 hover:text-amber-500'
+              : 'text-muted-foreground/60 hover:bg-primary/10 hover:text-primary',
       )}
     >
       {children}
@@ -422,6 +436,10 @@ function ClockIcon() {
 }
 function PlusIcon() {
   return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>;
+}
+/** 사운드 큐 추가 — 음표 + 작은 플러스 */
+function SoundNoteIcon() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 18V5l10-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="16" cy="16" r="3" /></svg>;
 }
 function TrashIcon() {
   return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6" /></svg>;
