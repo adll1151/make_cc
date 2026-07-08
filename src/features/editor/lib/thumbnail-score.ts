@@ -19,11 +19,15 @@ export interface ThumbFrameSignals {
   lowerThirdBusy: number;
 }
 
-// ── 결합 가중 (Design §4 m4 — Tier A 재정규화) ──────────────────────
-export const W_SHARP = 0.5;
-export const W_BRIGHT = 0.25;
-export const W_COLOR = 0.25;
-export const P_LOWER_BUSY = 0.15; // 하단 번잡 penalty
+// ── 결합 가중 (Design §4 m4) — 존재하는 양성 신호만 쓰고 합=1로 재정규화 ──
+export const W = {
+  aesthetic: 0.35, // Tier B (NIMA) — 미구현, signals.aesthetic 있을 때만
+  face: 0.2, // Tier B (BlazeFace)
+  sharp: 0.2,
+  bright: 0.1,
+  color: 0.1,
+} as const;
+export const P_LOWER_BUSY = 0.15; // 하단 번잡 penalty (항상 적용)
 // saturating 상수 (신호 스케일 → 0..1 결정론화)
 export const K_SHARP = 12;
 export const K_COLOR = 1 / 60;
@@ -129,14 +133,29 @@ export function analyzeThumbFrame(img: RgbaImage): ThumbFrameSignals {
   return { sharpness, brightness, colorfulness, lowerThirdBusy };
 }
 
-/** Tier A 결합 점수 (0~1). aesthetic·face 없이 성립. */
+/** Tier A/B 통합 신호 — aesthetic·face는 있을 때만. */
+export type CombinedSignals = ThumbFrameSignals & { aesthetic?: number; face?: number };
+
+/**
+ * 결합 점수 (0~1). 존재하는 양성 신호(sharp·bright·color + 있으면 aesthetic·face)의
+ * 가중치만 합=1로 재정규화 → Tier B 부재 시에도 스케일 일관. lowerThirdBusy는 penalty.
+ */
+export function combineScore(s: CombinedSignals): number {
+  const terms: Array<[number, number]> = [
+    [W.sharp, s.sharpness],
+    [W.bright, s.brightness],
+    [W.color, s.colorfulness],
+  ];
+  if (s.aesthetic != null) terms.push([W.aesthetic, s.aesthetic]);
+  if (s.face != null) terms.push([W.face, s.face]);
+  const wsum = terms.reduce((a, [w]) => a + w, 0) || 1;
+  const positive = terms.reduce((a, [w, v]) => a + w * v, 0) / wsum;
+  return clamp01(positive - P_LOWER_BUSY * s.lowerThirdBusy);
+}
+
+/** Tier A 결합 점수 (0~1). aesthetic·face 없이 성립 (combineScore의 특수형). */
 export function scoreTierA(s: ThumbFrameSignals): number {
-  return clamp01(
-    W_SHARP * s.sharpness +
-      W_BRIGHT * s.brightness +
-      W_COLOR * s.colorfulness -
-      P_LOWER_BUSY * s.lowerThirdBusy,
-  );
+  return combineScore(s);
 }
 
 /**

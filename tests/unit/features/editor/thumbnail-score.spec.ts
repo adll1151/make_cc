@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   analyzeThumbFrame,
   scoreTierA,
+  combineScore,
   type ThumbFrameSignals,
 } from '@/features/editor/lib/thumbnail-score';
 import type { RgbaImage } from '@/features/editor/lib/frame-analysis';
@@ -106,5 +107,24 @@ describe('scoreTierA — 결합 점수', () => {
     const s = analyzeThumbFrame(busyBottom);
     const withoutPenalty = 0.5 * s.sharpness + 0.25 * s.brightness + 0.25 * s.colorfulness;
     expect(scoreTierA(s)).toBeLessThan(withoutPenalty);
+  });
+});
+
+describe('combineScore — Tier A/B 통합', () => {
+  const sig = analyzeThumbFrame(checker);
+
+  it('aesthetic·face 없으면 scoreTierA와 동일', () => {
+    expect(combineScore(sig)).toBe(scoreTierA(sig));
+  });
+
+  it('높은 face 신호는 점수를 올린다(낮은 베이스 기준)', () => {
+    const base = analyzeThumbFrame(grayMid); // 낮은 베이스
+    expect(combineScore({ ...base, face: 0.9 })).toBeGreaterThan(combineScore(base));
+  });
+
+  it('결과 0~1 clamp', () => {
+    const s = combineScore({ ...sig, face: 1, aesthetic: 1 });
+    expect(s).toBeGreaterThanOrEqual(0);
+    expect(s).toBeLessThanOrEqual(1);
   });
 });

@@ -3,7 +3,7 @@
 import type { RgbaImage } from './frame-analysis';
 import {
   analyzeThumbFrame,
-  scoreTierA,
+  combineScore,
   aHash,
   hammingDistance,
   type ThumbFrameSignals,
@@ -42,6 +42,10 @@ export interface RankInputFrame {
   timeMs: number;
   image: RgbaImage;
   dataUrl: string;
+  /** Tier B — BlazeFace 얼굴 신호(0~1). 감지기 실행됐으면 값(0 포함) 존재 */
+  face?: number;
+  /** Tier B — NIMA 미학(0~1, 미구현) */
+  aesthetic?: number;
 }
 
 export interface RankOptions {
@@ -55,12 +59,19 @@ export function rankCandidates(frames: RankInputFrame[], opts: RankOptions = {})
   const dedupThreshold = opts.dedupThreshold ?? DEFAULT_DEDUP_THRESHOLD;
   if (frames.length === 0) return { best: null, candidates: [], tier: 'A' };
 
+  // 어느 프레임이든 face/aesthetic가 있으면 Tier B 적용된 것으로 표기
+  const tier: 'A' | 'AB' = frames.some((f) => f.face != null || f.aesthetic != null) ? 'AB' : 'A';
+
   const scored = frames.map((f) => {
-    const signals = analyzeThumbFrame(f.image);
+    const signals = {
+      ...analyzeThumbFrame(f.image),
+      ...(f.face != null ? { face: f.face } : {}),
+      ...(f.aesthetic != null ? { aesthetic: f.aesthetic } : {}),
+    };
     return {
       timeMs: f.timeMs,
       dataUrl: f.dataUrl,
-      score: scoreTierA(signals),
+      score: combineScore(signals),
       signals,
       hash: aHash(f.image),
     };
@@ -82,7 +93,7 @@ export function rankCandidates(frames: RankInputFrame[], opts: RankOptions = {})
     score: c.score,
     signals: c.signals,
   }));
-  return { best: candidates[0] ?? null, candidates, tier: 'A' };
+  return { best: candidates[0] ?? null, candidates, tier };
 }
 
 /** DOM — videoUrl에서 후보 추출 후 랭킹. 실패 시 빈 추천. */

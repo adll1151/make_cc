@@ -2,12 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
-import {
-  suggestThumbnails,
-  type ThumbSuggestion,
-  type ThumbCandidate,
-} from '../lib/thumbnail-suggest';
-import { extractFrameBlob } from '../lib/thumbnail-extract';
+import { rankCandidates, type ThumbSuggestion, type ThumbCandidate } from '../lib/thumbnail-suggest';
+import { extractCandidateFrames, extractFrameBlob } from '../lib/thumbnail-extract';
+import { loadFaceDetector, detectFrameFace } from '../lib/thumbnail-ai';
 
 interface ThumbnailPanelProps {
   videoUrl: string | null;
@@ -41,15 +38,36 @@ export function ThumbnailPanel({ videoUrl, fileName }: ThumbnailPanelProps) {
     setSuggestion(null);
     setSelected(null);
     (async () => {
-      const res = await suggestThumbnails(videoUrl, { signal: ctrl.signal });
+      const frames = await extractCandidateFrames(videoUrl, { signal: ctrl.signal });
       if (ctrl.signal.aborted) return;
-      if (!res.best) {
+
+      // Tier A(휴리스틱) 즉시 렌더
+      const base = rankCandidates(
+        frames.map((f) => ({ timeMs: f.timeMs, image: f.image, dataUrl: f.previewDataUrl })),
+      );
+      if (!base.best) {
         setState('empty');
         return;
       }
-      setSuggestion(res);
-      setSelected(res.best);
+      setSuggestion(base);
+      setSelected(base.best);
       setState('ready');
+
+      // Tier B(얼굴 감지) 강화 — 비차단·graceful. 실패/모델없음 → Tier A 유지.
+      const detector = await loadFaceDetector();
+      if (ctrl.signal.aborted || !detector) return;
+      const withFace = [];
+      for (const f of frames) {
+        if (ctrl.signal.aborted) return;
+        const face = await detectFrameFace(detector, f.image);
+        withFace.push({ timeMs: f.timeMs, image: f.image, dataUrl: f.previewDataUrl, face });
+      }
+      if (ctrl.signal.aborted) return;
+      const enhanced = rankCandidates(withFace);
+      setSuggestion(enhanced);
+      setSelected(
+        (prev) => enhanced.candidates.find((c) => c.timeMs === prev?.timeMs) ?? enhanced.best,
+      );
     })();
     return () => ctrl.abort();
   }, [videoUrl]);
@@ -86,6 +104,14 @@ export function ThumbnailPanel({ videoUrl, fileName }: ThumbnailPanelProps) {
         <span className="rounded-md bg-accent/15 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
           NEW
         </span>
+        {suggestion?.tier === 'AB' && (
+          <span
+            className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary"
+            title="AI 얼굴 감지로 정밀 추천"
+          >
+            AI 분석
+          </span>
+        )}
         <span className="ml-1 text-xs text-muted-foreground">영상에서 커버로 좋은 컷을 골라드려요</span>
       </header>
 

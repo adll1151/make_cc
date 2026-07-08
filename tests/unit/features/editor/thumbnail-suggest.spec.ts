@@ -76,8 +76,20 @@ describe('rankCandidates — 채점·유사제거·랭킹', () => {
     expect(res.candidates).toHaveLength(5);
   });
 
-  it('결과 tier는 현재 A (Tier B 미적용)', () => {
+  it('face/aesthetic 없으면 tier=A', () => {
     expect(rankCandidates([frame(0, colorLR)]).tier).toBe('A');
+  });
+
+  it('face 신호가 있으면 tier=AB', () => {
+    expect(rankCandidates([{ ...frame(0, colorLR), face: 0.9 }]).tier).toBe('AB');
+  });
+
+  it('동일 베이스면 얼굴 있는 프레임이 best', () => {
+    const withFace = { timeMs: 1000, image: topBottom, dataUrl: 'a', face: 0.9 };
+    const noFace = { timeMs: 2000, image: topBottom, dataUrl: 'b', face: 0 };
+    // dedupThreshold -1 → 동일 해시라도 제거 안 함(두 장 유지)
+    const res = rankCandidates([noFace, withFace], { dedupThreshold: -1 });
+    expect(res.best?.timeMs).toBe(1000);
   });
 });
 

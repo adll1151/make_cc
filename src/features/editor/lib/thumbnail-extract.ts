@@ -1,6 +1,5 @@
 'use client';
 
-import type { RgbaImage } from './frame-analysis';
 import { once, waitForFrame } from './frame-sampler';
 
 /**
@@ -24,8 +23,8 @@ export const PREVIEW_QUALITY = 0.85;
 export interface CandidateFrame {
   /** 프레임 시각(ms) */
   timeMs: number;
-  /** 다운스케일 픽셀 — Tier A/B 채점 입력 */
-  image: RgbaImage;
+  /** 다운스케일 픽셀(ImageData) — Tier A 채점·얼굴 감지 입력 */
+  image: ImageData;
   /** 미리보기용 data URL (webp, 미지원 시 png 폴백) */
   previewDataUrl: string;
   width: number;
