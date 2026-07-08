@@ -73,6 +73,7 @@ tools/**/bin/
 tools/**/obj/
 start.zip
 makecc.config.json
+makecc.operators.json
 
 # 미사용 스크래치 보관함 (수동 정리 대상)
 trashcan/

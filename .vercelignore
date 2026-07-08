@@ -8,3 +8,6 @@ trashcan/
 test-tmp/
 server.zip
 *.zip
+
+# 콘솔 RBAC 운영자 파일 (PIN 해시 포함 — 로컬 전용)
+makecc.operators.json
