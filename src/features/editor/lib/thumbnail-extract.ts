@@ -155,3 +155,87 @@ export async function extractCandidateFrames(
     video.remove();
   }
 }
+
+export interface FrameBlobOptions {
+  /** 긴 변 상한 px (기본 1280 — 커버 다운로드 화질). 원본보다 크게 확대하지 않음. */
+  maxEdge?: number;
+  /** MIME (기본 image/png) */
+  type?: string;
+  /** webp/jpeg quality 0~1 */
+  quality?: number;
+  timeoutMs?: number;
+  signal?: AbortSignal;
+}
+
+/**
+ * 지정 시각의 단일 프레임을 **고해상**으로 재추출해 Blob 반환 (m5 다운로드용).
+ * 미리보기(≤320)와 달리 커버 화질(기본 ≤1280)로 뽑는다. 실패/taint → null.
+ */
+export async function extractFrameBlob(
+  videoUrl: string | null | undefined,
+  timeMs: number,
+  opts: FrameBlobOptions = {},
+): Promise<Blob | null> {
+  if (!videoUrl || typeof document === 'undefined') return null;
+
+  const maxEdge = opts.maxEdge ?? 1280;
+  const type = opts.type ?? 'image/png';
+  const deadline = Date.now() + (opts.timeoutMs ?? TIMEOUT_MS);
+  const { signal } = opts;
+
+  const video = document.createElement('video');
+  video.crossOrigin = 'anonymous';
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = 'auto';
+  video.style.cssText =
+    'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+  video.setAttribute('aria-hidden', 'true');
+  video.src = videoUrl;
+  document.body.appendChild(video);
+
+  try {
+    await once(video, 'loadedmetadata', Math.max(0, deadline - Date.now()), signal);
+    const duration = video.duration;
+    if (!Number.isFinite(duration) || duration <= 0) return null;
+
+    try {
+      await video.play();
+      video.pause();
+    } catch {
+      /* autoplay 차단 — seek만으로 진행 */
+    }
+
+    const t = Math.min(Math.max(0, timeMs / 1000), Math.max(0, duration - 0.05));
+    video.currentTime = t;
+    await once(video, 'seeked', Math.min(PER_SEEK_TIMEOUT_MS, Math.max(0, deadline - Date.now())), signal);
+    await waitForFrame(video);
+
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) return null;
+
+    const canvas = document.createElement('canvas');
+    const scale = Math.min(1, maxEdge / Math.max(vw, vh));
+    canvas.width = Math.max(1, Math.round(vw * scale));
+    canvas.height = Math.max(1, Math.round(vh * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // tainted canvas → toBlob이 SecurityError. Promise로 감싸고 실패 시 null.
+    return await new Promise<Blob | null>((resolve) => {
+      try {
+        canvas.toBlob((blob) => resolve(blob), type, opts.quality);
+      } catch {
+        resolve(null);
+      }
+    });
+  } catch {
+    return null;
+  } finally {
+    video.removeAttribute('src');
+    video.load();
+    video.remove();
+  }
+}

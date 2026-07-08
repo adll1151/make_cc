@@ -14,6 +14,7 @@ import { SaveStatusBadge } from './SaveStatusBadge';
 import { SpeakerLegend } from './SpeakerLegend';
 import { CaptionPreview } from './CaptionPreview';
 import { CaptionStylePanel } from './CaptionStylePanel';
+import { ThumbnailPanel } from './ThumbnailPanel';
 import { ExportButton } from './ExportButton';
 import { RenderProgress } from './RenderProgress';
 import { TranslationsPanel } from './TranslationsPanel';
@@ -330,6 +331,11 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
             </div>
           </aside>
         </div>
+
+        {/* 섬네일 추천 — 커버 이미지 자동 추출·추천·다운로드 (클라이언트·게스트 OK) */}
+        <section className="mt-4 lg:mt-6">
+          <ThumbnailPanel videoUrl={videoUrl} fileName={fileName} />
+        </section>
 
         {/* 번인 자막 스타일 + 내보내기 (모바일은 '번인 스타일' 탭일 때만) — 샘플 체험에선 숨김 */}
         {!isSample && (

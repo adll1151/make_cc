@@ -138,3 +138,41 @@ export function scoreTierA(s: ThumbFrameSignals): number {
       P_LOWER_BUSY * s.lowerThirdBusy,
   );
 }
+
+/**
+ * 평균 해시(aHash) — size×size 그리드 셀 평균 luma가 전체 평균보다 밝으면 1.
+ * 유사 프레임(연속 seek의 거의 동일한 컷) 제거용 지문. Design §2 Q2.
+ */
+export function aHash(img: RgbaImage, size = 8): number[] {
+  const { data, width, height } = img;
+  if (width < 1 || height < 1) return new Array(size * size).fill(0);
+  const cells: number[] = [];
+  for (let gy = 0; gy < size; gy++) {
+    const y0 = Math.floor((gy * height) / size);
+    const y1 = Math.max(y0 + 1, Math.floor(((gy + 1) * height) / size));
+    for (let gx = 0; gx < size; gx++) {
+      const x0 = Math.floor((gx * width) / size);
+      const x1 = Math.max(x0 + 1, Math.floor(((gx + 1) * width) / size));
+      let sum = 0;
+      let n = 0;
+      for (let y = y0; y < y1 && y < height; y++) {
+        const rowBase = y * width * 4;
+        for (let x = x0; x < x1 && x < width; x++) {
+          sum += lumaAt(data, rowBase + x * 4);
+          n++;
+        }
+      }
+      cells.push(n ? sum / n : 0);
+    }
+  }
+  const mean = cells.reduce((s, v) => s + v, 0) / (cells.length || 1);
+  return cells.map((v) => (v > mean ? 1 : 0));
+}
+
+/** 두 해시의 해밍 거리 (다른 비트 수). 길이 다르면 초과분을 거리에 가산. */
+export function hammingDistance(a: number[], b: number[]): number {
+  const len = Math.min(a.length, b.length);
+  let d = 0;
+  for (let i = 0; i < len; i++) if (a[i] !== b[i]) d++;
+  return d + Math.abs(a.length - b.length);
+}
