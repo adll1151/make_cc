@@ -33,8 +33,8 @@ export interface SampleOptions {
   signal?: AbortSignal;
 }
 
-/** el의 event를 1회 대기. 타임아웃/abort 시 reject. */
-function once(
+/** el의 event를 1회 대기. 타임아웃/abort 시 reject. (thumbnail-extract 등과 공유) */
+export function once(
   el: HTMLElement,
   event: string,
   timeoutMs: number,
@@ -75,7 +75,7 @@ function once(
  * 히든/오프스크린 비디오는 컴포지터에 프레임을 표시하지 않아 rVFC가 영영 안 올 수 있으므로
  * 반드시 타임아웃 폴백을 둔다. 'seeked' 이후엔 currentTime 프레임이 drawImage로 그릴 수 있다.
  */
-function waitForFrame(video: HTMLVideoElement): Promise<void> {
+export function waitForFrame(video: HTMLVideoElement): Promise<void> {
   return new Promise((resolve) => {
     let done = false;
     const finish = () => {
