@@ -5,7 +5,7 @@ feature: thumbnail-suggest
 date: 2026-07-08
 author: shong7500
 project: make_cc
-status: Draft
+status: Reviewed (design-validator 86→반영, 2026-07-08)
 architecture: Option C (Pragmatic Balance)
 plan: docs/01-plan/features/thumbnail-suggest.plan.md
 ---
@@ -72,7 +72,7 @@ plan: docs/01-plan/features/thumbnail-suggest.plan.md
 ### Q2. 후보 수 / 샘플 전략 → **균등 16 샘플 → 상위 5 표시, 베스트 1**
 - 영상 길이를 균등 분할해 최대 **16 프레임** 추출(양끝 5% 제외: 인트로/아웃트로 회피).
 - 다운스케일(예: 긴 변 ≤320px)해 추출·추론 → 성능 확보.
-- 인접 **유사 프레임 dedup**(평균 해시 거리) 후 상위 5 표시. 장면전환 감지 모델은 이연.
+- 인접 **유사 프레임 dedup**(평균 해시 aHash 해밍거리 ≤ 6 → 유사, 튜닝 파라미터) 후 상위 5 표시. 장면전환 감지 모델은 이연.
 
 ### Q3. NIMA 가중치 소싱 / 호스팅 → **idealo 변환본 · 자체 호스팅 · lazy**
 - 출처: `idealo/image-quality-assessment` aesthetic MobileNet(AVA), Apache-2.0(라이선스 확인 후 반영).
@@ -81,11 +81,11 @@ plan: docs/01-plan/features/thumbnail-suggest.plan.md
 
 ### Q4. 포스터 영속 스키마 → **`jobs.thumbnail_path` 단일 + `thumbnails` 버킷**
 - 선택 시에만 업로드(수십 KB WebP 1장). 다중 후보 저장은 이연.
-- private 버킷 + signed URL(videos/subtitles와 동일 패턴).
+- private 버킷 + **앱레이어 소유권 검증 + admin(service_role) 업로드/다운로드 + 짧은 만료 signed URL**. storage RLS 미의존(renders 선례와 동일 — buckets insert만, storage 정책 없음).
 
 ### Q5. 게스트 정책 → **다운로드=게스트 허용 · 포스터 영속=회원 한정**
 - 다운로드는 순수 클라이언트라 신원 무관 허용.
-- 포스터 영속은 회원만 — 게스트 잡은 영상 즉시삭제·스토리지 정책 단순화 목적. API가 인증·소유권 검증.
+- 포스터 영속은 회원만 — 게스트 잡은 영상 즉시삭제·스토리지 정책 단순화 목적. API가 인증·소유권 검증(미인증 401·비소유 403).
 
 ---
 
@@ -98,11 +98,18 @@ alter table public.jobs
 
 comment on column public.jobs.thumbnail_path is
   '사용자가 지정한 대표 섬네일 이미지 경로(thumbnails 버킷). null=미지정.';
+
+-- thumbnails 버킷 (private) — renders 선례(20260616000002)와 동일 방식.
+-- storage RLS 정책은 두지 않는다(접근은 admin + signed URL로 강제).
+insert into storage.buckets (id, name, public)
+values ('thumbnails', 'thumbnails', false)
+on conflict (id) do nothing;
 ```
 
 ### 3.2 스토리지 버킷
-- `thumbnails` (private) — `env.SUPABASE_BUCKET_THUMBNAILS`(기본 'thumbnails'). 마이그레이션에서 `storage.buckets` insert(videos/subtitles/renders와 동일 방식) + RLS.
-- 경로 규칙: `thumbnails/{userId}/{jobId}.webp`.
+- `thumbnails` (private) — `env.SUPABASE_BUCKET_THUMBNAILS`(기본 'thumbnails'). **`env.ts` Zod + `.env.example`에 추가**(m6 산출물).
+- 접근 강제 = **앱레이어 소유권 검증 + admin(service_role) 업로드/다운로드 + 짧은 만료 signed URL**. storage RLS 미의존(renders 선례와 동일).
+- 키 규칙 = `storage.ts`에 `thumbnailStorageKey(jobId)` 추가 → **`{yyyy}/{mm}/{jobId}/thumbnail.webp`**(UTC, videos/subtitles와 동일 컨벤션). **버킷 이름은 path에 미포함**. userId는 키에 넣지 않고 소유권 검증에만 사용.
 
 ### 3.3 타입
 ```ts
@@ -156,12 +163,15 @@ export interface ThumbSuggestion {
 - `downloadCandidate(cand, fmt)` = 원본 해상도 재추출(또는 보관) → `canvas.toBlob('image/png'|'image/webp')` → 저장. 서버 불필요·게스트 OK.
 
 ### m6 — 포스터 영속
-- `POST /api/jobs/[id]/thumbnail`(얇은 controller): 인증·소유권·Zod(body=선택 timeMs 또는 업로드 blob) → `services/jobs.setThumbnail(jobId, blob)` → `lib/storage.uploadThumbnail`(admin, thumbnails 버킷) → `jobs.thumbnail_path` update → `job_events` 기록.
-- 히스토리 카드·편집기 `<video poster>` = `thumbnail_path` signed URL.
-- 게스트 요청 → 401/403.
+- `POST /api/jobs/[jobId]/thumbnail`(얇은 controller): 인증·소유권 검증 → **body = 이미지 blob 전용**(`multipart/form-data`, WebP). 서버 프레임 재추출 없음(서버 ffmpeg=비목표·워커 경로 없음). `timeMs`는 클라 재추출 좌표로만 쓰고 서버엔 항상 blob 전달.
+- controller → `services/jobs.setThumbnail(jobId, blob)` → `lib/storage.uploadThumbnail`(admin, thumbnails 버킷, `thumbnailStorageKey`) → `jobs.thumbnail_path` update → **`job_events`에 `thumbnail_set` 메타 이벤트**(status 전이 아님 — "직접 update로 status 변경 금지" 규칙과 무충돌).
+- 에러 = `lib/api.ts` 표준 코드: 미인증 401·비소유 403(FORBIDDEN)·검증실패 422(VALIDATION_ERROR)·잡없음 404(NOT_FOUND).
+- 산출물: 마이그레이션(§3.1) · `thumbnailStorageKey`/`uploadThumbnail`(storage.ts) · `SUPABASE_BUCKET_THUMBNAILS`(env.ts·.env.example) · API route · `services/jobs.setThumbnail` · 히스토리/poster 배선.
+- 히스토리 카드·편집기 `<video poster>` = `thumbnail_path` signed URL(짧은 만료).
 
 ### m7 — QA · 정책
 - 채점 단위테스트(대표 신호 → 기대 순위·티어 강등), graceful(모델 null), 실브라우저 육안(밝은/어두운/인물 영상), 성능(16프레임 추론 시간), 문서.
+- **API 통합테스트**: 포스터 영속 소유권/게스트 거부(비소유 403·게스트 401·타인 잡 접근 차단) — 수용기준 7 대응.
 
 ---
 
@@ -232,3 +242,21 @@ export interface ThumbSuggestion {
 1. **세션 1 (MVP)**: m1 + m2 + m4 + m5 — 워커 없이 동작하는 휴리스틱 추천 + 다운로드. 여기까지로도 가치 성립.
 2. **세션 2 (AI 강화)**: m3 — NIMA·BlazeFace 얹기(graceful).
 3. **세션 3 (영속·QA)**: m6 + m7 — 포스터 저장·히스토리 반영·검증.
+
+---
+
+## 10. 검증 반영 (design-validator 86/100 → 2026-07-08)
+
+Critical 0. Important 3 + Minor 다수 반영:
+
+| # | 지적 | 반영 |
+|---|------|------|
+| I-1 | 포스터 body `timeMs`만으론 서버 재추출 불가(서버 ffmpeg=비목표) | §2 Q5·§4 m6 — **blob 전용(multipart/form-data)** 확정, timeMs는 클라 좌표로만 |
+| I-2 | 스토리지 키가 컨벤션 위반(버킷명 prefix·userId 사용) | §3.2 — `thumbnailStorageKey(jobId)`=`{yyyy}/{mm}/{jobId}/thumbnail.webp`, 버킷명 미포함, userId는 소유권검증에만 |
+| I-3 | "RLS" 표현이 renders 선례와 불일치 | §3.2·Q4 — storage RLS 미의존, **admin+signed URL+앱레이어 소유권**으로 정정 |
+| M-1 | API 경로 `[id]` | `[jobId]`로 통일 |
+| M-2 | 마이그레이션에 buckets insert 누락 | §3.1에 insert 블록 추가 |
+| M-3 | `SUPABASE_BUCKET_THUMBNAILS` env 산출물 누락 | m6 산출물에 env.ts·.env.example 명시 |
+| M-4 | job_events 성격 모호 | `thumbnail_set` 메타 이벤트(status 무변경) 명기 |
+| M-5 | 표준 에러코드 미지정 | 401/403/422/404 → lib/api 표준코드 매핑 |
+| M-6 | 게스트 거부 테스트 누락 | m7에 API 소유권/게스트 통합테스트 추가 |
