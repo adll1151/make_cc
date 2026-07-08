@@ -16,7 +16,7 @@ import {
 } from '@/services/jobs';
 import { saveSubtitle, putWordsJson } from '@/services/storage';
 import { videosBucket } from '@/lib/storage';
-import { dispatchJobCompleted, dispatchJobFailed } from '@/services/notify';
+import { dispatchJobCompleted, dispatchJobFailed, alertJobFailed } from '@/services/notify';
 import { extractAudio } from './lib/ffmpeg';
 import { runWhisper } from './lib/whisper';
 import { runSoundEvents, eventsToSoundCues, type RawSoundEvent } from './lib/sound-events';
@@ -284,6 +284,14 @@ export async function processTranscribe(jobId: string): Promise<{
     }).catch((notifyErr) =>
       log.warn({ err: (notifyErr as Error)?.message }, 'notify failed (failed job)'),
     );
+    // 운영자 시스템 알림 (사용자 DM과 분리, Discord 웹훅) — Notification Matrix #4
+    void alertJobFailed({
+      jobId,
+      videoOriginalName: job.videoOriginalName,
+      errorCode: 'STT_FAILED',
+      errorMessage,
+      stage: 'STT',
+    });
     throw err;
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});

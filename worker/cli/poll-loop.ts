@@ -18,6 +18,8 @@ import { cleanupExpiredJobs } from '@/services/jobs';
 import { fetchOldestPendingRender, cleanupExpiredRenders } from '@/services/render';
 import { fetchOldestPendingTranslation, cleanupExpiredTranslations } from '@/services/translation';
 import { putWorkerHeartbeat } from '@/services/storage';
+import { getWorkerHeartbeatTs } from '@/lib/storage';
+import { alertWorkerOnline } from '@/services/notify';
 import { processTranscribe } from '../transcribe';
 import { processRender } from '../render';
 import { processTranslation } from '../translate';
@@ -54,9 +56,16 @@ let tickCount = 0;
 (async function main() {
   log.info({ pollIntervalMs: POLL_INTERVAL_MS }, 'polling worker started');
 
+  // 운영 알림(기동/복구): 첫 하트비트를 쓰기 **전**에 이전 하트비트·적체를 읽어야
+  // "꺼져 있었는지"를 판정할 수 있다. best-effort(웹훅 미설정 시 no-op).
+  const prevHeartbeatTs = await getWorkerHeartbeatTs().catch(() => null);
+  const backlogCount = await countQueued();
+
   // 하트비트: 시작 즉시 1회 + 주기적. 잡 처리로 메인 루프가 블록돼도 계속 갱신됨.
   await touchHeartbeat();
   const heartbeatTimer = setInterval(() => void touchHeartbeat(), HEARTBEAT_INTERVAL_MS);
+
+  void alertWorkerOnline({ backlogCount, prevHeartbeatTs });
 
   while (!isShuttingDown) {
     // cleanup (만료 자산 자동 삭제) — 잡 비디오 + 렌더 출력
@@ -171,6 +180,20 @@ async function fetchOldestQueued(): Promise<string | null> {
     return null;
   }
   return data?.[0]?.id ?? null;
+}
+
+/** 대기(queued) 잡 수 — 기동/복구 알림의 적체 건수용. 실패 시 0. */
+async function countQueued(): Promise<number> {
+  const admin = createAdminClient();
+  const { count, error } = await admin
+    .from('jobs')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'queued');
+  if (error) {
+    log.warn({ err: error.message }, 'count queued failed');
+    return 0;
+  }
+  return count ?? 0;
 }
 
 function sleep(ms: number): Promise<void> {
