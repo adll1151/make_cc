@@ -15,7 +15,9 @@ import { once, waitForFrame } from './frame-sampler';
 
 export const DEFAULT_COUNT = 16;
 export const DEFAULT_MAX_EDGE = 320;
-export const DEFAULT_SKIP_EDGE = 0.05; // 양 끝(인트로/아웃트로) 스킵 비율
+// 양 끝은 아주 살짝만 스킵(첫/끝 프레임 디코드 아티팩트 회피). 인트로의 좋은 컷(얼굴 등)을
+// 버리지 않도록 과하게 자르지 않는다 — 검은/저품질 프레임은 채점(밝기·선명)이 이미 감점.
+export const DEFAULT_SKIP_EDGE = 0.02;
 export const TIMEOUT_MS = 15_000; // 16 seek는 sampler(8)보다 여유 필요
 export const PER_SEEK_TIMEOUT_MS = 1_500;
 export const PREVIEW_QUALITY = 0.85;
@@ -96,6 +98,7 @@ export async function extractCandidateFrames(
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return [];
+    let sized = false; // canvas 기본 300×150(truthy)이라 width 검사로 판별 불가 → 명시 플래그
 
     const fractions = uniformFractions(count, skipEdgePct);
     for (const frac of fractions) {
@@ -115,11 +118,12 @@ export async function extractCandidateFrames(
         const vw = video.videoWidth;
         const vh = video.videoHeight;
         if (!vw || !vh) continue;
-        if (!canvas.width) {
-          // 긴 변을 maxEdge로 다운스케일 (비율 유지)
+        if (!sized) {
+          // 긴 변을 maxEdge로 다운스케일 (비율 유지) — 첫 유효 프레임에서 1회
           const scale = Math.min(1, maxEdge / Math.max(vw, vh));
           canvas.width = Math.max(1, Math.round(vw * scale));
           canvas.height = Math.max(1, Math.round(vh * scale));
+          sized = true;
         }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         // cross-origin taint → getImageData/toDataURL이 SecurityError. 전체 중단(강등).

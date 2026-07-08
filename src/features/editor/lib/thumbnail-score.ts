@@ -19,14 +19,17 @@ export interface ThumbFrameSignals {
   lowerThirdBusy: number;
 }
 
-// ── 결합 가중 (Design §4 m4) — 존재하는 양성 신호만 쓰고 합=1로 재정규화 ──
+// ── 결합 가중 (Design §4 m4) ──
+// 베이스: 존재하는 양성 신호(sharp/bright/color + 있으면 aesthetic)만 합=1로 재정규화.
+// face는 **가산 보너스**로 분리 — 화려한 타이틀/CG 프레임이 sharp·bright·color를 만점내면
+// 재정규화 평균 안의 얼굴 항은 묻힌다. 실사 얼굴은 커버로서 강해야 하므로 별도 보너스.
 export const W = {
   aesthetic: 0.35, // Tier B (NIMA) — 미구현, signals.aesthetic 있을 때만
-  face: 0.2, // Tier B (BlazeFace)
   sharp: 0.2,
   bright: 0.1,
   color: 0.1,
 } as const;
+export const FACE_BONUS = 0.35; // 얼굴 신호(0~1) × 이 값을 점수에 가산
 export const P_LOWER_BUSY = 0.15; // 하단 번잡 penalty (항상 적용)
 // saturating 상수 (신호 스케일 → 0..1 결정론화)
 export const K_SHARP = 12;
@@ -147,10 +150,10 @@ export function combineScore(s: CombinedSignals): number {
     [W.color, s.colorfulness],
   ];
   if (s.aesthetic != null) terms.push([W.aesthetic, s.aesthetic]);
-  if (s.face != null) terms.push([W.face, s.face]);
   const wsum = terms.reduce((a, [w]) => a + w, 0) || 1;
-  const positive = terms.reduce((a, [w, v]) => a + w * v, 0) / wsum;
-  return clamp01(positive - P_LOWER_BUSY * s.lowerThirdBusy);
+  const base = terms.reduce((a, [w, v]) => a + w * v, 0) / wsum;
+  const faceBonus = s.face != null ? FACE_BONUS * s.face : 0;
+  return clamp01(base + faceBonus - P_LOWER_BUSY * s.lowerThirdBusy);
 }
 
 /** Tier A 결합 점수 (0~1). aesthetic·face 없이 성립 (combineScore의 특수형). */
