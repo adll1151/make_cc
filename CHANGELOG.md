@@ -9,6 +9,22 @@ make_cc의 버전별 작업 기록입니다. 형식은 [Keep a Changelog](https:
 
 ---
 
+## [0.8.0] · 섬네일 자동 추천 + 편집기 CC 개선
+<!-- date: 2026-07-08 -->
+
+자막에 인접한 부가가치 — 커버 이미지를 무료·온디바이스로. 리치 CC 편집 경험도 다듬었다.
+
+### Added
+- **섬네일 자동 추천 (MVP)** — 편집기에서 히든 `<video>`로 균등 16프레임을 온디바이스 추출·다운스케일 → 순수 Tier A 채점(선명도 Laplacian·밝기 적정·색감 Hasler-Süsstrunk·하단 복잡도) → aHash 유사 제거·랭킹으로 **베스트 1 + 후보 그리드**를 근거 칩과 함께 제시, PNG/WebP 다운로드. 워커 0·$0(free-tier 정체성). `features/editor/lib/thumbnail-{extract,score,suggest}.ts` + `ThumbnailPanel`. 테스트 +17.
+- **편집기 사운드 CC 큐 수동 추가/편집** — 자동 감지 외에 사용자가 직접 사운드 큐를 추가·수정, 미리보기 이탤릭 표기.
+- **리치 CC on/off 토글** — 업로드 시 사운드 태깅 사용 여부 선택.
+- **편집기 CC 감지 요약** — 감지된 음악·웃음 등 개수 요약 표시.
+
+### Notes
+- 섬네일 Tier B(NIMA 미학·BlazeFace 얼굴)와 포스터 영속(`thumbnails` 버킷), 실브라우저 육안검증은 다음 세션 예정.
+
+---
+
 ## [0.7.0] · 리치 CC(오디오 이벤트 태깅) + Whisper Turbo
 <!-- date: 2026-07-03 -->
 
