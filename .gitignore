@@ -75,6 +75,9 @@ start.zip
 makecc.config.json
 makecc.operators.json
 
+# 사내/외부 문의 문서 — 실명·내부 요청 포함, 공개 저장소 배포 제외 (로컬 전용)
+docs/inquiries/
+
 # 미사용 스크래치 보관함 (수동 정리 대상)
 trashcan/
 
