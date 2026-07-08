@@ -9,6 +9,8 @@ export {
   presignRenderDownload,
   deleteRender,
   renderStorageKey,
+  saveThumbnail,
+  createThumbnailUrl,
   putWordsJson,
   getWordsJson,
   getSubtitleText,

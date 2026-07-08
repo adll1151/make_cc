@@ -28,6 +28,10 @@ export function rendersBucket() {
   return env.SUPABASE_BUCKET_RENDERS;
 }
 
+export function thumbnailsBucket() {
+  return env.SUPABASE_BUCKET_THUMBNAILS;
+}
+
 // =========================================
 // 영상 업로드
 // =========================================
@@ -225,6 +229,46 @@ export async function deleteRender(storageKey: string): Promise<void> {
 }
 
 // =========================================
+// 포스터 섬네일 (thumbnails 버킷) — thumbnail-suggest m6
+// =========================================
+
+/** 사용자가 지정한 대표 섬네일(WebP) 저장. 반환 path를 jobs.thumbnail_path에 기록. */
+export async function putThumbnail(params: {
+  jobId: string;
+  body: Uint8Array | Blob;
+  contentType?: string;
+}): Promise<{ bucket: string; path: string }> {
+  const admin = createAdminClient();
+  const bucket = thumbnailsBucket();
+  const path = thumbnailStorageKey(params.jobId);
+  const { error } = await admin.storage.from(bucket).upload(path, params.body, {
+    contentType: params.contentType ?? 'image/webp',
+    upsert: true,
+  });
+  if (error) throw new Error(`섬네일 업로드 실패: ${error.message}`);
+  return { bucket, path };
+}
+
+/** 저장된 섬네일 키로 짧은 만료 signed URL. 포스터·히스토리 표시용. */
+export async function presignThumbnailDownload(params: {
+  storageKey: string;
+  expiresIn?: number;
+}): Promise<string> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage
+    .from(thumbnailsBucket())
+    .createSignedUrl(params.storageKey, params.expiresIn ?? SIGN_DOWNLOAD_EXPIRES);
+  if (error || !data) throw new Error(`섬네일 signed URL 실패: ${error?.message ?? 'unknown'}`);
+  return data.signedUrl;
+}
+
+export async function deleteThumbnailByKey(storageKey: string): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin.storage.from(thumbnailsBucket()).remove([storageKey]);
+  if (error) throw new Error(`섬네일 삭제 실패: ${error.message}`);
+}
+
+// =========================================
 // 단어 타이밍 JSON (subtitles 버킷, {jobId}.words.json)
 // =========================================
 
@@ -348,6 +392,14 @@ export function renderStorageKey(renderId: string): string {
   const yyyy = now.getUTCFullYear();
   const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
   return `${yyyy}/${mm}/${renderId}/${renderId}.mp4`;
+}
+
+/** thumbnails 버킷 내부 path. jobId 기반. 버킷 이름은 미포함(기존 컨벤션). */
+export function thumbnailStorageKey(jobId: string): string {
+  const now = new Date();
+  const yyyy = now.getUTCFullYear();
+  const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${yyyy}/${mm}/${jobId}/thumbnail.webp`;
 }
 
 export const STORAGE_EXPIRES = {

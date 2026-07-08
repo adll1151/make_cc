@@ -15,6 +15,8 @@ export interface JobListItem {
   videoSizeBytes: number;
   hasSubtitle: boolean;
   hasVideo: boolean;
+  /** 사용자가 지정한 대표 섬네일 signed URL (thumbnail-suggest m6) */
+  thumbnailUrl?: string | null;
   videoDeleteAt: string | null;
   createdAt: string;
   finishedAt: string | null;
@@ -37,9 +39,18 @@ export function JobCard({
   return (
     <article className="bento group flex flex-col gap-3 p-5">
       <header className="flex items-start gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <FilmIcon />
-        </div>
+        {job.thumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={job.thumbnailUrl}
+            alt=""
+            className="size-10 shrink-0 rounded-xl object-cover"
+          />
+        ) : (
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <FilmIcon />
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-semibold tracking-tight" title={job.videoOriginalName}>
             {job.videoOriginalName}

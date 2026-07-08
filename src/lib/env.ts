@@ -32,6 +32,7 @@ const envSchema = z.object({
   SUPABASE_BUCKET_VIDEOS: z.string().default('videos'),
   SUPABASE_BUCKET_SUBTITLES: z.string().default('subtitles'),
   SUPABASE_BUCKET_RENDERS: z.string().default('renders'), // 번인 출력 MP4
+  SUPABASE_BUCKET_THUMBNAILS: z.string().default('thumbnails'), // 사용자 지정 포스터 섬네일
 
   // Redis (BullMQ) — STT 잡 큐. Self-host Whisper 워커와 연결
   REDIS_URL: z.string().url(),

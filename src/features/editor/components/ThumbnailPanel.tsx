@@ -10,9 +10,17 @@ interface ThumbnailPanelProps {
   videoUrl: string | null;
   /** 다운로드 파일명 베이스 (영상 원본명) */
   fileName?: string;
+  jobId: string;
+  /** 회원 여부 — 포스터 지정은 회원 전용 */
+  isMember?: boolean;
+  /** 샘플 체험 모드 — 포스터 지정 숨김 */
+  isSample?: boolean;
+  /** 포스터 지정 성공 시 새 signed URL 전달 (편집기 <video poster> 갱신) */
+  onPosterSet?: (url: string) => void;
 }
 
 type PanelState = 'idle' | 'loading' | 'ready' | 'empty';
+type PosterState = 'idle' | 'saving' | 'saved' | 'error';
 
 /**
  * 섬네일 추천 패널 (Design §4 m4·m5).
@@ -20,11 +28,19 @@ type PanelState = 'idle' | 'loading' | 'ready' | 'empty';
  * 선택 컷을 커버 화질(PNG/WebP)로 다운로드한다. 순수 클라이언트($0·게스트 OK).
  * 신호 부족·디코드/CORS 실패 시 조용히 비표시.
  */
-export function ThumbnailPanel({ videoUrl, fileName }: ThumbnailPanelProps) {
+export function ThumbnailPanel({
+  videoUrl,
+  fileName,
+  jobId,
+  isMember,
+  isSample,
+  onPosterSet,
+}: ThumbnailPanelProps) {
   const [state, setState] = useState<PanelState>('idle');
   const [suggestion, setSuggestion] = useState<ThumbSuggestion | null>(null);
   const [selected, setSelected] = useState<ThumbCandidate | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [posterState, setPosterState] = useState<PosterState>('idle');
 
   const base = useMemo(() => {
     const name = (fileName ?? '').replace(/\.[^.]+$/, '').trim();
@@ -72,8 +88,32 @@ export function ThumbnailPanel({ videoUrl, fileName }: ThumbnailPanelProps) {
     return () => ctrl.abort();
   }, [videoUrl]);
 
+  // 선택이 바뀌면 포스터 지정 상태 초기화
+  useEffect(() => setPosterState('idle'), [selected]);
+
   // 신호 부족/실패/미시작 → 비표시
   if (state === 'idle' || state === 'empty') return null;
+
+  const onSetPoster = async () => {
+    if (!selected || !videoUrl || posterState === 'saving') return;
+    setPosterState('saving');
+    try {
+      const blob = await extractFrameBlob(videoUrl, selected.timeMs, {
+        type: 'image/webp',
+        quality: 0.9,
+      });
+      if (!blob) return setPosterState('error');
+      const form = new FormData();
+      form.append('file', blob, 'thumbnail.webp');
+      const res = await fetch(`/api/jobs/${jobId}/thumbnail`, { method: 'POST', body: form });
+      if (!res.ok) return setPosterState('error');
+      const json = await res.json().catch(() => null);
+      setPosterState('saved');
+      if (json?.data?.url) onPosterSet?.(json.data.url);
+    } catch {
+      setPosterState('error');
+    }
+  };
 
   const onDownload = async (type: 'image/png' | 'image/webp') => {
     if (!selected || !videoUrl || downloading) return;
@@ -163,6 +203,28 @@ export function ThumbnailPanel({ videoUrl, fileName }: ThumbnailPanelProps) {
                 >
                   WebP
                 </button>
+                {isMember && !isSample && (
+                  <button
+                    type="button"
+                    onClick={onSetPoster}
+                    disabled={posterState === 'saving'}
+                    title="이 컷을 이 영상의 대표 이미지로 저장 (히스토리·미리보기에 표시)"
+                    className={cn(
+                      'ml-auto rounded-lg border px-3 py-2 text-sm font-medium transition disabled:opacity-50',
+                      posterState === 'saved'
+                        ? 'border-accent/40 text-accent'
+                        : 'border-border text-muted-foreground hover:border-border-strong hover:text-foreground',
+                    )}
+                  >
+                    {posterState === 'saving'
+                      ? '지정 중…'
+                      : posterState === 'saved'
+                        ? '✓ 포스터로 지정됨'
+                        : posterState === 'error'
+                          ? '실패 · 다시'
+                          : '이 컷을 포스터로'}
+                  </button>
+                )}
               </div>
             </div>
 

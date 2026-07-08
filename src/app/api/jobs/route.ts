@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { apiOk, getRequestId, handleApiError } from '@/lib/api';
 import { requireUserContext } from '@/services/auth';
 import { listMyJobs } from '@/services/jobs';
+import { createThumbnailUrl } from '@/services/storage';
 
 /**
  * GET /api/jobs
@@ -25,21 +26,37 @@ export async function GET(req: NextRequest) {
 
     const jobs = await listMyJobs({ limit, offset });
 
+    const items = await Promise.all(
+      jobs.map(async (j) => {
+        // 지정된 포스터가 있으면 짧은 만료 signed URL (best-effort — 실패해도 목록엔 영향 없음)
+        let thumbnailUrl: string | null = null;
+        if (j.thumbnailPath) {
+          try {
+            thumbnailUrl = await createThumbnailUrl({ storageKey: j.thumbnailPath });
+          } catch {
+            /* 무시 */
+          }
+        }
+        return {
+          jobId: j.id,
+          status: j.status,
+          progressPercent: j.progressPercent,
+          videoOriginalName: j.videoOriginalName,
+          videoDurationSec: j.videoDurationSec,
+          videoSizeBytes: j.videoSizeBytes,
+          hasSubtitle: !!j.subtitleStorageKey,
+          hasVideo: !!j.videoStorageKey,
+          thumbnailUrl,
+          videoDeleteAt: j.videoDeleteAt?.toISOString() ?? null,
+          createdAt: j.createdAt.toISOString(),
+          finishedAt: j.finishedAt?.toISOString() ?? null,
+          errorMessage: j.errorMessage,
+        };
+      }),
+    );
+
     return apiOk({
-      jobs: jobs.map((j) => ({
-        jobId: j.id,
-        status: j.status,
-        progressPercent: j.progressPercent,
-        videoOriginalName: j.videoOriginalName,
-        videoDurationSec: j.videoDurationSec,
-        videoSizeBytes: j.videoSizeBytes,
-        hasSubtitle: !!j.subtitleStorageKey,
-        hasVideo: !!j.videoStorageKey,
-        videoDeleteAt: j.videoDeleteAt?.toISOString() ?? null,
-        createdAt: j.createdAt.toISOString(),
-        finishedAt: j.finishedAt?.toISOString() ?? null,
-        errorMessage: j.errorMessage,
-      })),
+      jobs: items,
       pagination: { limit, offset, returned: jobs.length },
     });
   } catch (err) {

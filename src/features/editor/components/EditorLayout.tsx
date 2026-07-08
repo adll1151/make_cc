@@ -48,6 +48,7 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [poster, setPoster] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>('');
   const [isMember, setIsMember] = useState(false);
   const [showShare, setShowShare] = useState(false);
@@ -133,6 +134,25 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
       reset();
     };
   }, [jobId, setLoaded, reset]);
+
+  // 지정된 대표 섬네일(포스터) 로드 (thumbnail-suggest m6)
+  useEffect(() => {
+    if (jobId === 'sample') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/thumbnail`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!cancelled && json?.data?.url) setPoster(json.data.url);
+      } catch {
+        /* 포스터 없음 — 무시 */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
 
   // 자동 저장
   useAutoSave();
@@ -267,6 +287,7 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
               loading={loading && !videoUrl}
               error={videoError}
               overlay={<CaptionPreview />}
+              poster={poster}
             />
             {/* 활성 자막 카드는 데스크톱만 (모바일은 영상 오버레이로 충분) */}
             <div className="hidden lg:block">
@@ -334,7 +355,14 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
 
         {/* 섬네일 추천 — 커버 이미지 자동 추출·추천·다운로드 (클라이언트·게스트 OK) */}
         <section className="mt-4 lg:mt-6">
-          <ThumbnailPanel videoUrl={videoUrl} fileName={fileName} />
+          <ThumbnailPanel
+            videoUrl={videoUrl}
+            fileName={fileName}
+            jobId={jobId}
+            isMember={isMember}
+            isSample={isSample}
+            onPosterSet={setPoster}
+          />
         </section>
 
         {/* 번인 자막 스타일 + 내보내기 (모바일은 '번인 스타일' 탭일 때만) — 샘플 체험에선 숨김 */}

@@ -8,6 +8,9 @@ import {
   presignTranslationDownload,
   deleteVideo,
   deleteSubtitle,
+  putThumbnail,
+  presignThumbnailDownload,
+  deleteThumbnailByKey,
   videoStorageKey,
   videosBucket,
   subtitlesBucket,
@@ -122,6 +125,27 @@ export async function createTranslationDownloadUrl(params: {
 }
 
 // =========================================
+// 포스터 섬네일 (thumbnail-suggest m6)
+// =========================================
+
+/** 사용자가 지정한 대표 섬네일 저장. 반환 path를 Job.thumbnailPath에 기록. */
+export async function saveThumbnail(params: {
+  jobId: string;
+  body: Uint8Array | Blob;
+  contentType?: string;
+}): Promise<{ bucket: string; path: string }> {
+  return putThumbnail(params);
+}
+
+/** 저장된 섬네일 signed URL (포스터·히스토리 표시용). */
+export async function createThumbnailUrl(params: {
+  storageKey: string;
+  expiresIn?: number;
+}): Promise<string> {
+  return presignThumbnailDownload(params);
+}
+
+// =========================================
 // 자산 정리 (자동 삭제 잡)
 // =========================================
 
@@ -144,6 +168,13 @@ export async function deleteJobAssets(job: Job): Promise<void> {
   if (job.subtitleStorageKey) {
     try {
       await deleteSubtitle(job.id);
+    } catch (err) {
+      if (!(err instanceof Error) || !err.message.includes('not found')) throw err;
+    }
+  }
+  if (job.thumbnailPath) {
+    try {
+      await deleteThumbnailByKey(job.thumbnailPath);
     } catch (err) {
       if (!(err instanceof Error) || !err.message.includes('not found')) throw err;
     }

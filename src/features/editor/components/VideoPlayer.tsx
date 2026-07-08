@@ -8,10 +8,12 @@ interface VideoPlayerProps {
   error?: string | null;
   /** 영상 위에 절대배치되는 오버레이 (예: 자막 미리보기) */
   overlay?: ReactNode;
+  /** 지정된 대표 섬네일(포스터) URL (thumbnail-suggest m6) */
+  poster?: string | null;
 }
 
 export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
-  function VideoPlayer({ src, loading, error, overlay }, ref) {
+  function VideoPlayer({ src, loading, error, overlay, poster }, ref) {
     return (
       <div className="bento relative aspect-video w-full overflow-hidden">
         {loading && (
@@ -28,6 +30,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           <video
             ref={ref}
             src={src}
+            poster={poster ?? undefined}
             controls
             // crossOrigin=anonymous: 자막 스타일 어시(Tier 2) 프레임 샘플러가 같은 URL을
             // CORS-clean하게 재사용하려면 메인 로드도 CORS 요청이어야 캐시가 오염되지 않는다.

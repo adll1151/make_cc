@@ -12,6 +12,7 @@ export {
   cancelJob,
   updateSpeakerMap,
   getSpeakerMap,
+  setThumbnail,
 } from './service';
 
 export { appendJobEvent } from './events';

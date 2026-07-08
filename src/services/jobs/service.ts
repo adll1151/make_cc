@@ -6,6 +6,7 @@ import type { Database } from '@/lib/supabase/database.types';
 import { assertTransition, isTerminal } from './state-machine';
 import { appendJobEvent } from './events';
 import { incrementGuestDaily } from '@/services/auth/quotas';
+import { putThumbnail } from '@/lib/storage';
 
 type JobUpdate = Database['public']['Tables']['jobs']['Update'];
 type JobRow = Database['public']['Tables']['jobs']['Row'];
@@ -251,6 +252,8 @@ function rowToJob(row: JobRow): Job {
     (row as JobRow & { diarization_enabled?: boolean }).diarization_enabled ?? true;
   const soundEventsEnabled =
     (row as JobRow & { sound_events_enabled?: boolean }).sound_events_enabled ?? true;
+  const thumbnailPath =
+    (row as JobRow & { thumbnail_path?: string | null }).thumbnail_path ?? null;
 
   return {
     id: row.id,
@@ -265,6 +268,7 @@ function rowToJob(row: JobRow): Job {
     videoDurationSec: row.video_duration_sec,
     videoStorageKey: row.video_storage_key,
     subtitleStorageKey: row.subtitle_storage_key,
+    thumbnailPath,
     language: 'ko',
     errorCode: row.error_code,
     errorMessage: row.error_message,
@@ -301,4 +305,29 @@ export async function updateSpeakerMap(
 export async function getSpeakerMap(jobId: string): Promise<SpeakerMap> {
   const job = await getJobAdmin(jobId);
   return job?.speakerMap ?? {};
+}
+
+// =========================================
+// 포스터 섬네일 (thumbnail-suggest m6)
+// =========================================
+
+/**
+ * 사용자가 지정한 대표 섬네일 저장 + jobs.thumbnail_path 갱신 + 감사 이벤트.
+ * status 전이가 아닌 메타 업데이트(thumbnail_set)이므로 state-machine과 무관.
+ * 호출자(route)가 인증·소유권을 검증한 뒤 호출한다.
+ */
+export async function setThumbnail(
+  jobId: string,
+  body: Uint8Array | Blob,
+  contentType?: string,
+): Promise<{ path: string }> {
+  const { path } = await putThumbnail({ jobId, body, contentType });
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('jobs')
+    .update({ thumbnail_path: path } as unknown as JobUpdate)
+    .eq('id', jobId);
+  if (error) throw new Error(`thumbnail_path 갱신 실패: ${error.message}`);
+  await appendJobEvent({ jobId, type: 'thumbnail_set', payload: { path } });
+  return { path };
 }

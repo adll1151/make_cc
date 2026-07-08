@@ -52,6 +52,7 @@ function finishedJob(over: Partial<Job> = {}): Job {
     videoDurationSec: 60,
     videoStorageKey: 'k',
     subtitleStorageKey: 's',
+    thumbnailPath: null,
     language: 'ko',
     errorCode: null,
     errorMessage: null,

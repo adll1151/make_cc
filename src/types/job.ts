@@ -36,6 +36,8 @@ export interface Job {
   videoStorageKey: string;
 
   subtitleStorageKey: string | null;
+  /** 사용자가 지정한 대표 섬네일(포스터) 경로. null=미지정 (thumbnail-suggest m6) */
+  thumbnailPath: string | null;
 
   language: 'ko';
   errorCode: string | null;
@@ -62,7 +64,8 @@ export type JobEventType =
   | 'finished'
   | 'failed'
   | 'cancelled'
-  | 'notified';
+  | 'notified'
+  | 'thumbnail_set';
 
 export interface JobEvent {
   id: string;
