@@ -10,7 +10,7 @@ make_cc의 버전별 작업 기록입니다. 형식은 [Keep a Changelog](https:
 ---
 
 ## [0.8.0] · 섬네일 자동 추천 + 편집기 CC 개선
-<!-- date: 2026-07-08 -->
+<!-- date: 2026-10-04 -->
 
 자막에 인접한 부가가치 — 커버 이미지를 무료·온디바이스로. 리치 CC 편집 경험도 다듬었다.
 
@@ -20,8 +20,17 @@ make_cc의 버전별 작업 기록입니다. 형식은 [Keep a Changelog](https:
 - **리치 CC on/off 토글** — 업로드 시 사운드 태깅 사용 여부 선택.
 - **편집기 CC 감지 요약** — 감지된 음악·웃음 등 개수 요약 표시.
 
+- **섬네일 AI 얼굴 감지 (Tier B)** — BlazeFace(tfjs, lazy 동적 로드)로 얼굴이 잘 보이는 컷을 우대. Tier A 즉시 렌더 → 얼굴 감지 후 비차단 재랭킹, "AI 분석" 배지·😀 얼굴 칩. 얼굴은 가산 보너스로 분리해 화려한 CG 프레임에 묻히지 않음.
+- **섬네일 포스터 영속** — 편집기에서 고른 컷을 잡의 대표 포스터로 저장(`thumbnails` 버킷 + `jobs.thumbnail_path`). 편집기 `<video poster>`·히스토리 카드에 반영. 회원·본인 잡 전용, `POST/GET /api/jobs/[jobId]/thumbnail`.
+- **Discord 운영 알림 3종** — 워커 기동/복구(적체 N건)·잡 처리 실패를 운영자 웹훅으로 통지(`DISCORD_WORKER_ALERT_WEBHOOK` 미설정 시 no-op).
+- **랜딩 리디자인 시안 (`/test`, 프로덕션 404)** — clean SaaS 톤 + 살아있는 제품 데모, 히어로 word-cascade 헤드라인(`TranscribeHeadline`, WAAPI라 reduced-motion에서도 페이드).
+
+### Fixed
+- **섬네일 프레임 찌그러짐** — extract canvas 크기 미설정(기본 300×150 고정)으로 미리보기 비율 깨짐·얼굴 감지 실패하던 잠복 버그.
+- **랜딩 EditorShowcase** — reduced-motion 환경에서 데모 영상이 검은 첫 프레임에 멈추던 문제, 캐시된 영상의 duration 미동기화.
+
 ### Notes
-- 섬네일 Tier B(NIMA 미학·BlazeFace 얼굴)와 포스터 영속(`thumbnails` 버킷), 실브라우저 육안검증은 다음 세션 예정.
+- 섬네일 NIMA 미학 점수는 가중치 변환·호스팅 선행 필요 → 이연. 테스트 279.
 
 ---
 

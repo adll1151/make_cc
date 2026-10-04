@@ -13,7 +13,7 @@
   <img alt="Supabase" src="https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=white">
   <img alt="BullMQ" src="https://img.shields.io/badge/BullMQ_+_Redis-DC382D?logo=redis&logoColor=white">
   <img alt="Whisper" src="https://img.shields.io/badge/Whisper_large--v3--turbo-412991?logo=openai&logoColor=white">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-262_passing-3FCF8E">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-279_passing-3FCF8E">
   <img alt="Version" src="https://img.shields.io/badge/version-0.8.0-blue">
 </p>
 
@@ -175,7 +175,7 @@ npm run worker:poll         # Redis 없이 DB 폴링
 ## ✅ 테스트
 
 ```bash
-npm test         # Vitest (262 tests)
+npm test         # Vitest (279 tests)
 npm run typecheck
 npm run lint
 ```
@@ -210,7 +210,7 @@ Supabase·Redis는 단위 테스트에서 mock 처리하고, 핵심 도메인 �
 
 | 버전 | 날짜 | 핵심 |
 |------|------|------|
-| **0.8.0** | 2026-07-08 | 섬네일 자동 추천(온디바이스 Tier A · MVP) · 편집기 사운드 CC 큐 수동 추가/편집 · 리치 CC on/off 토글 + 감지 요약 · 테스트 262 |
+| **0.8.0** | 2026-10-04 | 섬네일 자동 추천(Tier A + BlazeFace 얼굴 Tier B · 포스터 저장) · 편집기 사운드 CC 큐 수동 추가/편집 · 리치 CC on/off 토글 + 감지 요약 · Discord 운영 알림 · 테스트 279 |
 | **0.7.0** | 2026-07-03 | **리치 CC — 오디오 이벤트 태깅**(♪음악♪·[웃음]) · Whisper large-v3-turbo · 자막 어시 Tier 2.1(외곽선) · 실영상 CC E2E |
 | **0.6.1** | 2026-07-03 | 자막 어시 Tier2 실동작 수정(dims 폴링·CORS·프레임 대기) — headed E2E 검증 |
 | **0.6.0** | 2026-07-03 | 자막 스타일 어시(프레임 인지형 Tier1+2) · 퍼스트파티 퍼널 분석 + 운영자 대시보드 · 가입 전 샘플 편집기 |
