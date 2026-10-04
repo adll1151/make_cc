@@ -29,12 +29,17 @@ export function EditorShowcase() {
   const [videoOk, setVideoOk] = useState(true);
 
   useEffect(() => {
-    const r = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    setReduce(r);
-    // reduce-motion: autoPlay 억제와 컨트롤 상태를 일치시킴(정지 아이콘·스크러버 멈춤 방지)
-    if (r) {
-      setPlaying(false);
-      videoRef.current?.pause();
+    // 데모 영상은 reduce에서도 재생한다: 음소거·루프된 제품 데모는 콘텐츠(자막 싱크 시연)이며
+    // 멈추면 검은 첫 프레임에 갇혀 "정지된 화면"으로 보인다. `autoPlay` 속성이 재생을 시작하므로
+    // 수동 play()는 호출하지 않는다(이미 시작된 재생과 충돌해 AbortError→폴백 오작동).
+    // reduce는 장식성 배경 드리프트 등 CSS 모션 억제에만 사용.
+    setReduce(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    // 캐시된 영상은 metadata가 React 핸들러 부착 전에 로드돼 onLoadedMetadata가
+    // 안 불릴 수 있다 → duration이 초기값(9)에 갇힘. 마운트 시 실제 값으로 동기화.
+    const v = videoRef.current;
+    if (v && v.readyState >= 1 && v.duration) {
+      setDuration(v.duration);
+      setVideoOk(true);
     }
   }, []);
 
@@ -92,7 +97,7 @@ export function EditorShowcase() {
             muted
             loop
             playsInline
-            autoPlay={!reduce}
+            autoPlay
             preload="metadata"
             className="absolute inset-0 size-full object-cover"
             onLoadedMetadata={(e) => {
