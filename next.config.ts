@@ -8,6 +8,18 @@ const nextConfig: NextConfig = {
   // RSC/edge bundling 제외
   serverExternalPackages: ['bullmq', 'ioredis', 'pino', 'pino-pretty'],
 
+  // dev 감시 제외 — 마스코트 하트비트(scripts/mascot/.state, 1초 주기)와 bkit 감사 로그가
+  // Tailwind 소스 스캔(프로젝트 루트)을 건드려 초당 2회+ 무한 재컴파일 → RSC 500 유발.
+  webpack(config, { dev }) {
+    if (dev) {
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: ['**/node_modules/**', '**/.git/**', '**/scripts/mascot/**', '**/.bkit/**'],
+      };
+    }
+    return config;
+  },
+
   async headers() {
     return [
       {
