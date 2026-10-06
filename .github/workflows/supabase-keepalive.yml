@@ -1,0 +1,25 @@
+# Supabase 무료 티어는 일정 기간 요청이 없으면 프로젝트를 일시정지한다(2026-10 실제 발생).
+# 2일마다 prod /api/health(DB 경량 쿼리)를 호출해 활동을 유지하고, DB 불통이면 실패로 알린다.
+# 비밀값 불필요 — 공개 헬스체크 엔드포인트만 호출.
+name: supabase-keepalive
+
+on:
+  schedule:
+    - cron: '17 0 */2 * *' # 2일마다 09:17 KST
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping /api/health
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o body.json -w '%{http_code}' --max-time 30 https://makecc.vercel.app/api/health || true)
+            echo "attempt $i → HTTP $code"; cat body.json 2>/dev/null; echo
+            [ "$code" = "200" ] && exit 0
+            sleep 20
+          done
+          echo "::error::DB 헬스체크 실패 — Supabase 대시보드에서 프로젝트 상태(Paused?) 확인"
+          exit 1
