@@ -13,8 +13,8 @@
   <img alt="Supabase" src="https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=white">
   <img alt="BullMQ" src="https://img.shields.io/badge/BullMQ_+_Redis-DC382D?logo=redis&logoColor=white">
   <img alt="Whisper" src="https://img.shields.io/badge/Whisper_large--v3--turbo-412991?logo=openai&logoColor=white">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-279_passing-3FCF8E">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.8.0-blue">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-284_passing-3FCF8E">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.9.0-blue">
 </p>
 
 ---
@@ -62,8 +62,8 @@
 - **자막 자동 생성** — 영상 업로드 → self-hosted Whisper(large-v3-turbo, ko)로 STT → 표준 **SRT** 산출
 - **리치 CC (오디오 이벤트 태깅)** ⭐ — 대사뿐 아니라 **음악·박수·웃음** 같은 비음성 소리도 감지해 `♪ 음악 ♪`·`[웃음]`으로 자막에 삽입. 청각장애인 접근성까지 챙긴 진짜 폐쇄자막(CC). sherpa-onnx AudioTagging(AudioSet, CPU)로 GPU 경합 없이 Whisper와 병렬 처리. 업로드 시 **on/off 토글**, 편집기에 **CC 감지 요약**(음악·웃음 개수) 표시.
 - **자막 스타일 어시** — 영상 종횡비·CPS·화자 + **프레임 픽셀(밝기·대비·주색·피사체 위치)** 을 브라우저 canvas로 분석해 어울리는 번인 프리셋·색·박스·위치를 추천(Tier 1~2.1). 순수 클라이언트·$0.
-- **섬네일 자동 추천** 🆕 — 편집기에서 영상 프레임을 온디바이스로 추출·채점(선명도·밝기·색감·하단 복잡도)해 **베스트 커버 1장 + 후보 그리드**를 근거 칩과 함께 제시하고 PNG/WebP 다운로드. 순수 클라이언트·워커 0·$0. *(MVP · 실브라우저 육안검증 진행 중)*
-- **브라우저 편집기** — `<video>` 동기화 + cue 단위 텍스트 편집 + 5초 디바운스 자동 저장. 사운드 CC 큐는 시각 구분·표시 토글 + **수동 추가/편집**, 미리보기 이탤릭.
+- **섬네일 자동 추천** — 편집기에서 영상 프레임을 온디바이스로 추출·채점(선명도·밝기·색감·하단 복잡도) + **BlazeFace 얼굴 감지**로 재랭킹해 **베스트 커버 1장 + 후보 그리드**를 근거 칩과 함께 제시, PNG/WebP 다운로드. 회원은 고른 컷을 **대표 포스터로 저장**(편집기·이력 카드 표시). 워커 0·$0.
+- **브라우저 편집기** — `<video>` 동기화 + cue 단위 텍스트 편집 + 5초 디바운스 자동 저장 + **되돌리기/다시 실행**(Ctrl+Z · Ctrl+Shift+Z, 100단계). 사운드 CC 큐는 시각 구분·표시 토글 + **수동 추가/편집**, 미리보기 이탤릭.
 - **번인 자막 스튜디오** ⭐ — 프리셋 5종 + 폰트·색·외곽선·위치·박스·카라오케 커스텀 → **스타일이 박힌 MP4** 내보내기 (원본 / 9:16 / 1:1)
 - **자막 다국어 번역** — 완성된 한국어 자막을 DeepL로 영어·일본어·중국어 번역 (cue 텍스트만 교체, 타임스탬프 보존). 무료 영상당 1언어 / Pro 무제한. 번역본 번인도 지원.
 - **화자 분리** — pyannote로 화자를 구분해 편집기에서 화자별로 표시.
@@ -72,7 +72,8 @@
 - **게스트 지원** — 비로그인도 HTTP-only 쿠키로 잡 생성 (일일 캡)
 - **알림** — 잡 완료 시 이메일(Resend) / Discord DM. **Discord 계정 연동**으로 알림 채널 선택(email/discord/both)
 - **자동 청소** — 만료된 영상·렌더 출력 스토리지 자동 삭제 (게스트 영상은 번인용 1시간 보존)
-- **콘텐츠/법적 페이지** — 사용법 가이드(`/guide`) · FAQ(`/faq`) · 개인정보처리방침(`/privacy`)
+- **콘텐츠/법적 페이지** — 사용법 가이드(`/guide`) · FAQ(`/faq`) · 요금제(`/pricing`) · 이용약관(`/terms`) · 개인정보처리방침(`/privacy`). 요금제·약관·업로드 안내의 한도 수치는 실제 게이팅 env/상수에서 읽어 항상 일치
+- **운영 헬스체크** — `GET /api/health`(DB 경량 쿼리) + GitHub Actions keep-alive(2일 주기)로 Supabase 무료 티어 비활성 일시정지 방지
 
 ---
 
@@ -142,6 +143,7 @@ worker/         GPU 노드에서 실행되는 별도 패키지 (services/ 재사
 supabase/       SQL 마이그레이션
 tests/          vitest 단위·통합
 docs/           PDCA 설계 문서 (plan · design · qa)
+_unused/        삭제 후보 보관함 (미사용 파일 — 빌드·배포 제외)
 ```
 
 ---
@@ -175,7 +177,7 @@ npm run worker:poll         # Redis 없이 DB 폴링
 ## ✅ 테스트
 
 ```bash
-npm test         # Vitest (279 tests)
+npm test         # Vitest (284 tests)
 npm run typecheck
 npm run lint
 ```
@@ -197,7 +199,8 @@ Supabase·Redis는 단위 테스트에서 mock 처리하고, 핵심 도메인 �
 - [x] Whisper large-v3-turbo 전환 (VRAM ~40%↓ · 속도 ~2배↑ · 전사 동일)
 - [x] **리치 CC — 오디오 이벤트 태깅** (♪음악♪·[웃음], AudioSet · 실영상 E2E 검증)
 - [x] 편집기 사운드 CC 큐 수동 추가/편집 + 감지 요약
-- [ ] 🚧 섬네일 자동 추출 + 추천 (온디바이스 · Tier A 휴리스틱 · MVP 구현 완료, 실브라우저 검증·Tier B AI·포스터 영속 진행 중)
+- [x] 섬네일 자동 추출 + 추천 (온디바이스 Tier A + BlazeFace 얼굴 Tier B · 포스터 저장)
+- [x] 편집기 되돌리기/다시 실행 · 요금제/이용약관 페이지 · DB 헬스체크 keep-alive
 - [ ] 클라우드 워커(RunPod) — STT 상시가동 · scale-to-zero
 - [ ] 리치 CC 감정(SER) 태깅 + 코드스위칭 대응 (Qwen3-ASR)
 
@@ -210,6 +213,7 @@ Supabase·Redis는 단위 테스트에서 mock 처리하고, 핵심 도메인 �
 
 | 버전 | 날짜 | 핵심 |
 |------|------|------|
+| **0.9.0** | 2026-10-06 | 편집기 되돌리기/다시 실행 · 샘플 체험 UX 정리 · 요금제/이용약관 페이지 · `/api/health` + Supabase keep-alive · 섬네일 점수 비노출 · 모바일 히어로 정리 · 미사용 파일 `_unused/` 격리 · 테스트 284 |
 | **0.8.0** | 2026-10-04 | 섬네일 자동 추천(Tier A + BlazeFace 얼굴 Tier B · 포스터 저장) · 편집기 사운드 CC 큐 수동 추가/편집 · 리치 CC on/off 토글 + 감지 요약 · Discord 운영 알림 · 테스트 279 |
 | **0.7.0** | 2026-07-03 | **리치 CC — 오디오 이벤트 태깅**(♪음악♪·[웃음]) · Whisper large-v3-turbo · 자막 어시 Tier 2.1(외곽선) · 실영상 CC E2E |
 | **0.6.1** | 2026-07-03 | 자막 어시 Tier2 실동작 수정(dims 폴링·CORS·프레임 대기) — headed E2E 검증 |
