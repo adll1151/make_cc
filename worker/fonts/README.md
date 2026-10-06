@@ -19,7 +19,7 @@ ffmpeg `ass` 필터(`fontsdir=worker/fonts`)가 여기서 폰트를 로드합니
 >   Thin이라 정적화하지 않으면 자막이 너무 얇게 렌더됨)
 >
 > WSL Ubuntu ffmpeg `ass:fontsdir=worker/fonts`로 두 폰트 모두 한국어 번인 렌더
-> tofu 없이 검증 완료(2026-06-20). 재현: `scripts/poc/gen-font-qa.mts`.
+> tofu 없이 검증 완료(2026-06-20). 재현: `_unused/scripts/poc/gen-font-qa.mts` (삭제 후보 보관함).
 
 ## 출처
 

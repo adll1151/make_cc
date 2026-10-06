@@ -11,3 +11,6 @@ server.zip
 
 # 콘솔 RBAC 운영자 파일 (PIN 해시 포함 — 로컬 전용)
 makecc.operators.json
+
+# 삭제 후보 보관함 — 앱 배포와 무관
+_unused/

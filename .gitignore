@@ -87,3 +87,6 @@ server.zip
 
 # 오디오태깅 등 대형 모델 가중치(로컬 다운로드)
 worker/models/
+
+# 삭제 후보 보관함 — git 미추적 로컬 잔여물(대용량 로그·zip·영상)
+_unused/local/
