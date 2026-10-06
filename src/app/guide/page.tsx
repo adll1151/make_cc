@@ -47,7 +47,7 @@ export default function GuidePage() {
 
         <Step n="02" title="자동 자막 생성 기다리기">
           <p>
-            업로드가 끝나면 self-hosted <strong className="text-foreground">Whisper</strong>(large-v3,
+            업로드가 끝나면 self-hosted <strong className="text-foreground">Whisper</strong>(large-v3-turbo,
             한국어) 엔진이 음성을 인식해 자막을 만듭니다. 진행 상태(대기 → 인식 중 → 완료)가 실시간으로
             표시되며, 5분 분량 영상은 평균 3분 안팎이면 완성됩니다. 회원은 처리가 끝나면 이메일 알림을
             받을 수 있어 화면을 지키고 있지 않아도 됩니다.

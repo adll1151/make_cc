@@ -269,6 +269,8 @@ export default function LandingPage() {
               <Link href="/blog" className="transition hover:text-white">블로그</Link>
               <Link href="/guide" className="transition hover:text-white">가이드</Link>
               <Link href="/faq" className="transition hover:text-white">FAQ</Link>
+              <Link href="/pricing" className="transition hover:text-white">요금제</Link>
+              <Link href="/terms" className="transition hover:text-white">이용약관</Link>
               <Link href="/privacy" className="transition hover:text-white">개인정보</Link>
               <span className="text-white/35">© 2026 make_cc</span>
             </div>
@@ -284,15 +286,15 @@ export default function LandingPage() {
 const STEPS = [
   { n: '01', title: '영상 업로드', desc: '브라우저에 끌어다 놓기. 설치·로그인 없이 게스트로도.', icon: <IconUpload /> },
   { n: '02', title: '자동 자막 생성', desc: 'Whisper가 한국어 음성을 인식해 타임코드까지 자동으로.', icon: <IconMic /> },
-  { n: '03', title: '편집 · 다운로드', desc: '라인 단위로 다듬고 SRT 다운로드 · 번인 영상 · 공유까지.', icon: <IconDownload /> },
+  { n: '03', title: '편집 · 다운로드', desc: '라인 단위로 다듬고 SRT 다운로드 · 번역 · 번인 영상까지.', icon: <IconDownload /> },
 ];
 
 const FEATURES = [
-  { title: 'Whisper 기반 인식', desc: 'self-hosted large-v3로 한국어 음성을 정확하게 인식합니다.', icon: <IconMic />, span: 'sm:col-span-2', featured: true },
+  { title: 'Whisper 기반 인식', desc: 'self-hosted large-v3-turbo로 한국어 음성을 정확하게 인식합니다.', icon: <IconMic />, span: 'sm:col-span-2', featured: true },
   { title: '표준 SRT 다운로드', desc: '유튜브·편집 프로그램에 바로 쓰는 표준 자막.', icon: <IconDoc /> },
   { title: '브라우저 편집기', desc: '라인 단위 수정 + 영상 위 실시간 미리보기.', icon: <IconEdit />, preview: 'editor' as const },
   { title: '번인 자막 영상', desc: '쇼츠·릴스용으로 자막이 박힌 MP4 출력.', icon: <IconFilm />, preview: 'burnin' as const },
-  { title: '공유 링크', desc: '회원은 링크 하나로 자막을 공유·다운로드.', icon: <IconLink /> },
+  { title: '섬네일 자동 추천', desc: '영상에서 커버로 좋은 컷을 골라 PNG·WebP로. 얼굴이 잘 보이는 컷을 AI가 우대.', icon: <IconImage /> },
   { title: '진짜 CC — 소리까지 자막', desc: '대사만이 아니라 음악·박수·웃음 같은 소리도 감지해 ♪음악♪·[웃음]으로 표시합니다. 청각장애인 접근성까지 챙긴 진짜 폐쇄자막(CC).', icon: <IconSound />, span: 'sm:col-span-3', featured: true },
   { title: '프라이버시 우선', desc: '학습 미사용 + 처리 후 원본 자동 삭제. 게스트 1시간 · 회원 30일 후 자동 삭제.', icon: <IconLock />, span: 'sm:col-span-3', wide: true },
 ];
@@ -462,5 +464,5 @@ function IconDoc() { return <I d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 
 function IconEdit() { return <I d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7|M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z" />; }
 function IconFilm() { return <I d="M3 4h18v16H3z|M7 4v16|M17 4v16|M3 9h4|M17 9h4|M3 15h4|M17 15h4" />; }
 function IconSound() { return <I d="M4 10v4|M8 6v12|M12 3v18|M16 8v8|M20 11v2" />; }
-function IconLink() { return <I d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71|M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />; }
+function IconImage() { return <I d="M3 5h18v14H3z|M3 16l5-5 4 4 3-3 6 6|M15.5 9.5h.01" />; }
 function IconLock() { return <I d="M5 11h14v10H5z|M8 11V7a4 4 0 0 1 8 0v4" />; }

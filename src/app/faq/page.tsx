@@ -18,8 +18,13 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
     q: '무료로 쓸 수 있나요?',
     a: (
       <>
-        네. 회원가입 없이 게스트로 무료 체험할 수 있습니다. 더 긴 영상, 더 많은 처리량, 광고 없는
-        환경, 번인 영상의 워터마크 제거·고화질(1080p) 출력이 필요하면 Pro 플랜을 이용하시면 됩니다.
+        네. 회원가입 없이 게스트로 무료 체험할 수 있고, 무료 회원은 더 긴 영상과 이력 보관을 쓸 수
+        있습니다. 번역 언어 무제한·워터마크 없는 1080p 번인·광고 제거를 담은 Pro 플랜은 준비 중입니다.
+        플랜별 한도는{' '}
+        <Link href="/pricing" className="text-primary underline underline-offset-2">
+          요금제
+        </Link>
+        에서 확인할 수 있습니다.
       </>
     ),
   },
@@ -37,7 +42,7 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
     q: '자막 정확도는 어느 정도인가요?',
     a: (
       <>
-        self-hosted Whisper(large-v3) 한국어 모델을 사용하며, 또렷한 음성 기준 단어 오류율(WER)은 대체로
+        self-hosted Whisper(large-v3-turbo) 한국어 모델을 사용하며, 또렷한 음성 기준 단어 오류율(WER)은 대체로
         15% 안팎입니다. 다만 잡음이 많거나 발음이 뭉개지면 오차가 커질 수 있어, 고유명사·전문 용어가
         많은 영상은 편집기에서 한 번 다듬는 것을 권장합니다.
       </>

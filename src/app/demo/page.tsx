@@ -71,7 +71,7 @@ export default function DemoPage() {
             <FlowStep n="03" title="브라우저에서 편집" desc="오타·타이밍을 라인 단위로 바로 수정. 영상 위 미리보기.">
               <MockEditor />
             </FlowStep>
-            <FlowStep n="04" title="다운로드 · 공유" desc="표준 SRT 다운로드, 번인 영상(MP4), 공유 링크까지.">
+            <FlowStep n="04" title="다운로드 · 내보내기" desc="표준 SRT 다운로드, 번역 자막, 번인 영상(MP4)까지.">
               <MockDownload />
             </FlowStep>
           </div>
@@ -208,10 +208,10 @@ export default function DemoPage() {
 const FEATURES = [
   { icon: '📄', title: '표준 SRT 다운로드', desc: '유튜브·편집 프로그램에 바로 쓰는 표준 자막 파일.' },
   { icon: '✍️', title: '브라우저 자막 편집', desc: '라인 단위 수정 + 영상 위 실시간 미리보기.' },
-  { icon: '🔗', title: '공유 링크', desc: '회원은 링크 하나로 자막을 공유·다운로드.' },
+  { icon: '🖼️', title: '섬네일 자동 추천', desc: '영상에서 커버로 좋은 컷을 골라 PNG·WebP로.' },
   { icon: '⏱️', title: '자동 타임싱크', desc: '음성에 맞춘 타임코드를 자동으로 생성.' },
   { icon: '🎬', title: '번인 자막 영상', desc: '쇼츠·릴스용으로 자막이 박힌 MP4 출력.' },
-  { icon: '🎙️', title: 'Whisper 기반 인식', desc: 'self-hosted large-v3, 한국어 음성 인식.' },
+  { icon: '🎙️', title: 'Whisper 기반 인식', desc: 'self-hosted large-v3-turbo, 한국어 음성 인식.' },
   { icon: '🎞️', title: '다양한 포맷 지원', desc: 'MP4·MOV·MKV·WebM 등 대부분의 영상.' },
   { icon: '🔒', title: '개인정보 보호', desc: '학습 미사용 + 처리 후 원본 자동 삭제.' },
 ];
@@ -347,7 +347,7 @@ function MockDownload() {
   return (
     <div className="flex flex-col items-center gap-2">
       <span className="rounded-lg bg-foreground px-3 py-1.5 text-xs font-semibold text-background">.SRT</span>
-      <span className="text-[11px] text-muted-foreground">+ MP4 · 공유 링크</span>
+      <span className="text-[11px] text-muted-foreground">+ MP4 · 번역 SRT</span>
     </div>
   );
 }

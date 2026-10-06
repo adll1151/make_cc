@@ -235,7 +235,7 @@ export function ThumbnailPanel({
                   key={c.timeMs}
                   type="button"
                   onClick={() => setSelected(c)}
-                  title={`${(c.timeMs / 1000).toFixed(1)}초 · 점수 ${(c.score * 100).toFixed(0)}`}
+                  title={`${(c.timeMs / 1000).toFixed(1)}초 지점`}
                   className={cn(
                     'relative overflow-hidden rounded-lg border transition',
                     selected === c
@@ -269,7 +269,9 @@ function ReasonChips({ cand }: { cand: ThumbCandidate }) {
   if (s.sharpness > 0.6) chips.push('✨ 선명');
   if (s.colorfulness > 0.5) chips.push('🌈 색감');
   if (s.brightness > 0.7) chips.push('☀️ 밝기');
-  if (chips.length === 0) chips.push(`점수 ${(cand.score * 100).toFixed(0)}`);
+  // 절대 점수는 노출하지 않는다 — 어두운 영상에선 베스트도 낮게 나와 "추천인데 11점?"으로 읽힘.
+  // 점수는 같은 영상 안 후보끼리의 순위용이므로, 두드러진 신호가 없으면 상대 평가 문구만 보인다.
+  if (chips.length === 0) chips.push('⚖️ 이 영상에서 가장 고른 컷');
   return (
     <>
       {chips.map((c) => (

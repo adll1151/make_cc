@@ -50,13 +50,13 @@ const SCENES: Scene[] = [
   },
   {
     id: 'transcribe',
-    tag: 'WHISPER large-v3',
+    tag: 'WHISPER large-v3-turbo',
     stage: '인식',
     head1: '말을,',
     accent: '자막으로',
     sub: 'Whisper가 한국어를 인식해 타임코드까지 자동으로 정렬합니다.',
     metricLabel: 'MODEL',
-    metricValue: 'large-v3',
+    metricValue: 'v3-turbo',
     caption: '영상의 한국어 음성을 자동으로',
     en: 'Korean speech, transcribed automatically',
   },
@@ -79,11 +79,11 @@ const SCENES: Scene[] = [
     head1: '어디서나 쓰는',
     accent: 'SRT',
     head2: '한 장.',
-    sub: '표준 SRT 다운로드 · 번인 영상 · 공유 링크까지 한 번에.',
+    sub: '표준 SRT 다운로드 · 번역 · 번인 영상까지 한 번에.',
     metricLabel: 'OUTPUT',
     metricValue: '100%',
-    caption: 'SRT 다운로드 · 공유까지 한 번에',
-    en: 'Download SRT & share — in one go',
+    caption: 'SRT 다운로드 · 번인까지 한 번에',
+    en: 'Download SRT & burn-in — in one go',
   },
 ];
 
@@ -121,10 +121,10 @@ const CBARS = Array.from({ length: 30 }, (_, i) => ({
 }));
 
 const FRAGMENTS = [
-  { pos: 'left-[4%] top-[24%] sm:left-[7%]', px: 2.2, tag: 'ENGINE', title: 'Whisper large-v3', meta: 'self-hosted GPU · ko-KR', hideMobile: false },
+  { pos: 'left-[4%] top-[24%] sm:left-[7%]', px: 2.2, tag: 'ENGINE', title: 'Whisper large-v3-turbo', meta: 'self-hosted GPU · ko-KR', hideMobile: true },
   { pos: 'right-[4%] top-[30%] sm:right-[8%]', px: 1.4, tag: 'SPEED', title: '1분 영상 ≈ 1분 30초', meta: '평균 처리 시간', hideMobile: true },
-  { pos: 'left-[6%] bottom-[20%] sm:left-[11%]', px: 3.0, tag: 'OUTPUT', title: 'SRT · 번인 MP4 · 공유', meta: '표준 자막 그대로 사용', hideMobile: true },
-  { pos: 'right-[5%] bottom-[24%] sm:right-[10%]', px: 2.6, tag: 'PRIVACY', title: '처리 후 자동 삭제', meta: '게스트 1시간 · 회원 30일', hideMobile: false },
+  { pos: 'left-[6%] bottom-[20%] sm:left-[11%]', px: 3.0, tag: 'OUTPUT', title: 'SRT · 번인 MP4 · 번역', meta: '표준 자막 그대로 사용', hideMobile: true },
+  { pos: 'right-[5%] bottom-[24%] sm:right-[10%]', px: 2.6, tag: 'PRIVACY', title: '처리 후 자동 삭제', meta: '게스트 1시간 · 회원 30일', hideMobile: true },
 ] as const;
 
 const fmtTC = (p: number) => {
@@ -521,7 +521,7 @@ function HudFrame({
 
       {!reduce && <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent hud-sweep" />}
 
-      <div className="absolute left-4 top-4 font-mono text-[10px] leading-relaxed tracking-wider text-white/55 sm:left-9 sm:top-9 sm:text-[11px]">
+      <div className="absolute left-4 top-4 hidden font-mono text-[10px] leading-relaxed sm:block tracking-wider text-white/55 sm:left-9 sm:top-9 sm:text-[11px]">
         <div className="flex items-center gap-1.5 text-white/80">
           <span className="rounded bg-accent px-1 py-0.5 text-[9px] font-bold text-accent-foreground">CC</span>
           MAKE_CC <span className="text-white/35">/ ENGINE</span>
@@ -535,7 +535,7 @@ function HudFrame({
         </div>
       </div>
 
-      <div className="absolute right-4 top-4 text-right font-mono text-[10px] tracking-wider text-white/55 sm:right-9 sm:top-9 sm:text-[11px]">
+      <div className="absolute right-4 top-4 hidden text-right font-mono sm:block text-[10px] tracking-wider text-white/55 sm:right-9 sm:top-9 sm:text-[11px]">
         <div className="text-white/35">CC ENGINE</div>
         <div className="mt-1 text-2xl font-bold tabular-nums text-white/85 sm:text-3xl">
           <span ref={engNumRef}>01</span>
@@ -546,7 +546,7 @@ function HudFrame({
         </div>
       </div>
 
-      <div className="absolute bottom-4 left-4 font-mono text-[10px] tracking-wider text-white/45 sm:bottom-9 sm:left-9 sm:text-[11px]">
+      <div className="absolute bottom-4 left-4 hidden font-mono sm:block text-[10px] tracking-wider text-white/45 sm:bottom-9 sm:left-9 sm:text-[11px]">
         <div className="text-white/30">VOL · REL</div>
         <div className="mt-1 flex items-end gap-0.5">
           {Array.from({ length: 16 }).map((_, i) => (
@@ -555,7 +555,7 @@ function HudFrame({
         </div>
       </div>
 
-      <div className="absolute bottom-4 right-4 text-right font-mono text-[10px] tracking-wider text-white/55 sm:bottom-9 sm:right-9 sm:text-[11px]">
+      <div className="absolute bottom-4 right-4 hidden text-right font-mono sm:block text-[10px] tracking-wider text-white/55 sm:bottom-9 sm:right-9 sm:text-[11px]">
         <div className="text-white/30">{scene.metricLabel}</div>
         <div key={`m-${active}`} className="enter-fade-up mt-1 text-xl font-bold tabular-nums sm:text-2xl" style={{ color: 'var(--sa)' }}>{scene.metricValue}</div>
       </div>
