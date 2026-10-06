@@ -31,6 +31,22 @@ export function CueList({ onSeek, onPlayCue, getCurrentMs }: CueListProps) {
       if (st.editingIndex !== null) return; // 편집 중엔 textarea가 처리
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      // 되돌리기/다시 실행 — 입력 중엔 브라우저 기본(텍스트 undo)에 맡기고 위에서 이미 빠짐
+      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+        const k = e.key.toLowerCase();
+        if (k === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          st.undo();
+          return;
+        }
+        if ((k === 'z' && e.shiftKey) || k === 'y') {
+          e.preventDefault();
+          st.redo();
+          return;
+        }
+      }
+
       const list = st.cues;
       if (list.length === 0) return;
 

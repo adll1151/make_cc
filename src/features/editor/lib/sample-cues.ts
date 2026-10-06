@@ -14,7 +14,6 @@ function srtTimeToMs(t: string): number {
 
 export const SAMPLE_JOB_ID = 'sample' as const;
 export const SAMPLE_VIDEO_SRC = '/samples/demo.mp4';
-export const SAMPLE_SRT_HREF = '/samples/make_cc-korean-sample.srt';
 
 const SAMPLE_SPEECH_CUES: Cue[] = DEMO_CUES.map((c) => {
   const parts = c.time.split('-->');

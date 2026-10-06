@@ -7,6 +7,7 @@ import { FloatingNav } from '@/components/ui/floating-nav';
 import { ShareLinkCard } from '@/features/share';
 import { createBrowserSupabase } from '@/lib/supabase/browser';
 import { track } from '@/lib/analytics';
+import { buildSrt } from '@/lib/srt';
 import type { Cue } from '@/types/subtitle';
 import { VideoPlayer } from './VideoPlayer';
 import { CueList } from './CueList';
@@ -21,7 +22,7 @@ import { TranslationsPanel } from './TranslationsPanel';
 import { useSubtitleStore } from '../hooks/useSubtitleStore';
 import { useAutoSave, saveNow } from '../hooks/useAutoSave';
 import { useVideoSync, seekToCue, playCueSegment } from '../hooks/useVideoSync';
-import { SAMPLE_CUES, SAMPLE_VIDEO_SRC, SAMPLE_SRT_HREF } from '../lib/sample-cues';
+import { SAMPLE_CUES, SAMPLE_VIDEO_SRC } from '../lib/sample-cues';
 
 interface EditorLayoutProps {
   jobId: string;
@@ -241,19 +242,30 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
                 <span className="ml-1.5">{showShare ? '닫기' : '공유'}</span>
               </Button>
             )}
-            <Button
-              asChild
-              variant="gradient"
-              size="default"
-            >
-              <a
-                href={isSample ? SAMPLE_SRT_HREF : `/api/subtitles/${jobId}/download`}
-                download={isSample ? 'make_cc-korean-sample.srt' : undefined}
-                onClick={() => track('srt_downloaded', { jobId })}
+            {isSample ? (
+              // 샘플은 서버 저장이 없으므로 현재 편집 상태(store)로 SRT를 만들어 내려준다.
+              // 정적 파일을 주면 사용자가 고친 내용이 빠져 "편집이 안 됐다"로 오해함.
+              <Button
+                type="button"
+                variant="gradient"
+                size="default"
+                onClick={() => {
+                  downloadCurrentSrt('make_cc-korean-sample.srt');
+                  track('srt_downloaded', { jobId });
+                }}
               >
                 SRT 다운로드
-              </a>
-            </Button>
+              </Button>
+            ) : (
+              <Button asChild variant="gradient" size="default">
+                <a
+                  href={`/api/subtitles/${jobId}/download`}
+                  onClick={() => track('srt_downloaded', { jobId })}
+                >
+                  SRT 다운로드
+                </a>
+              </Button>
+            )}
           </div>
         </header>
 
@@ -329,7 +341,11 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
           >
             <div className="mb-2 flex items-center justify-between px-2 pt-1">
               <h2 className="text-sm font-semibold text-muted-foreground">자막</h2>
-              <ManualSaveButton />
+              <div className="flex items-center gap-1">
+                <HistoryButtons />
+                {/* 샘플은 서버 저장이 없음 → 눌러도 무반응인 버튼을 노출하지 않는다 */}
+                {!isSample && <ManualSaveButton />}
+              </div>
             </div>
             {!loading && (
               <div className="mb-2 px-1">
@@ -388,6 +404,21 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
         </section>
         )}
 
+        {/* 샘플 + 모바일 '번인 스타일' 탭: 패널을 숨기는 대신 안내 (빈 탭 방지) */}
+        {isSample && mobileTab === 'style' && (
+          <section className="mt-4 lg:hidden">
+            <div className="bento flex flex-col items-center gap-3 p-6 text-center">
+              <h2 className="text-base font-semibold tracking-tight">번인 자막 영상 만들기</h2>
+              <p className="text-sm text-muted-foreground">
+                자막 스타일을 골라 영상에 박는 번인 MP4는 내 영상에서 만들 수 있어요.
+              </p>
+              <Button asChild variant="gradient" size="default">
+                <Link href="/upload">내 영상 올리기 →</Link>
+              </Button>
+            </div>
+          </section>
+        )}
+
         {/* 다국어 자막 (번역) — 메인 편집 store와 분리된 read-only 트랙 관리 · 샘플 체험에선 숨김 */}
         {!isSample && (
         <section className="mt-4 lg:mt-6">
@@ -403,7 +434,8 @@ export function EditorLayout({ jobId }: EditorLayoutProps) {
           <Hint kbd="Enter">편집 (편집 중엔 다음 줄로)</Hint>
           <Hint kbd="Esc">편집 취소</Hint>
           <Hint kbd="Space">재생/정지</Hint>
-          <span>자동 저장 5초</span>
+          <Hint kbd="Ctrl+Z">되돌리기</Hint>
+          {!isSample && <span>자동 저장 5초</span>}
         </footer>
       </div>
     </main>
@@ -426,6 +458,44 @@ function ActiveCueCard() {
     <div className="bento border-primary/30 bg-primary/5 p-4 text-center">
       <p className="text-lg leading-snug">{cue.text}</p>
     </div>
+  );
+}
+
+/** 현재 편집 상태(cues·화자 이름)를 SRT 파일로 내려받는다 (샘플 체험용). */
+function downloadCurrentSrt(fileName: string) {
+  const { cues, speakerMap } = useSubtitleStore.getState();
+  const blob = new Blob([buildSrt(cues, { speakerMap })], { type: 'application/x-subrip' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function HistoryButtons() {
+  const canUndo = useSubtitleStore((s) => s.past.length > 0);
+  const canRedo = useSubtitleStore((s) => s.future.length > 0);
+  const undo = useSubtitleStore((s) => s.undo);
+  const redo = useSubtitleStore((s) => s.redo);
+  const cls =
+    'rounded-md p-1.5 text-muted-foreground transition hover:bg-white/5 hover:text-foreground disabled:pointer-events-none disabled:opacity-30';
+
+  return (
+    <>
+      <button type="button" onClick={undo} disabled={!canUndo} title="되돌리기 (Ctrl+Z)" aria-label="되돌리기 (Ctrl+Z)" className={cls}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M9 14 4 9l5-5" />
+          <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+        </svg>
+      </button>
+      <button type="button" onClick={redo} disabled={!canRedo} title="다시 실행 (Ctrl+Shift+Z)" aria-label="다시 실행 (Ctrl+Shift+Z)" className={cls}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="m15 14 5-5-5-5" />
+          <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
+        </svg>
+      </button>
+    </>
   );
 }
 

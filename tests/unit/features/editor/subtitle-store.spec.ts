@@ -87,3 +87,72 @@ describe('useSubtitleStore — 리치 CC 수동 편집', () => {
     });
   });
 });
+
+describe('useSubtitleStore — 되돌리기/다시 실행', () => {
+  beforeEach(() => {
+    useSubtitleStore.getState().reset();
+  });
+
+  const texts = () => useSubtitleStore.getState().cues.map((c) => c.text);
+
+  it('텍스트 수정을 undo하면 원래 텍스트·dirty=false로 복귀, redo로 재적용', () => {
+    load([cue(1, 0, 1000, '안녕'), cue(2, 2000, 3000, '하세요')]);
+    const st = useSubtitleStore.getState();
+    st.updateCueText(1, '안녕!');
+    expect(texts()).toEqual(['안녕!', '하세요']);
+
+    useSubtitleStore.getState().undo();
+    expect(texts()).toEqual(['안녕', '하세요']);
+    expect(useSubtitleStore.getState().dirty).toBe(false);
+
+    useSubtitleStore.getState().redo();
+    expect(texts()).toEqual(['안녕!', '하세요']);
+    expect(useSubtitleStore.getState().dirty).toBe(true);
+  });
+
+  it('삭제·추가·타이밍 변경을 순서대로 되돌린다', () => {
+    load([cue(1, 0, 1000, 'A'), cue(2, 5000, 6000, 'B')]);
+    const s = () => useSubtitleStore.getState();
+    s().updateCueTiming(1, 0, 1500);
+    s().addCueAfter(1);
+    s().deleteCue(1);
+    expect(texts()).toEqual(['새 자막', 'B']);
+
+    s().undo(); // 삭제 취소
+    expect(texts()).toEqual(['A', '새 자막', 'B']);
+    s().undo(); // 추가 취소
+    expect(texts()).toEqual(['A', 'B']);
+    s().undo(); // 타이밍 취소
+    expect(s().cues[0]!.endMs).toBe(1000);
+    expect(s().past).toHaveLength(0);
+  });
+
+  it('undo 후 새 편집을 하면 redo 갈래가 사라진다', () => {
+    load([cue(1, 0, 1000, 'A')]);
+    const s = () => useSubtitleStore.getState();
+    s().updateCueText(1, 'B');
+    s().undo();
+    s().updateCueText(1, 'C');
+    expect(s().future).toHaveLength(0);
+    s().redo();
+    expect(texts()).toEqual(['C']);
+  });
+
+  it('스택이 비어 있으면 undo/redo는 무시, 새 로드 시 히스토리 초기화', () => {
+    load([cue(1, 0, 1000, 'A')]);
+    const s = () => useSubtitleStore.getState();
+    s().undo();
+    s().redo();
+    expect(texts()).toEqual(['A']);
+    s().updateCueText(1, 'B');
+    load([cue(1, 0, 1000, 'X')]);
+    expect(s().past).toHaveLength(0);
+    expect(s().future).toHaveLength(0);
+  });
+
+  it('값이 그대로인 타이밍 변경은 히스토리에 쌓지 않는다', () => {
+    load([cue(1, 0, 1000, 'A')]);
+    useSubtitleStore.getState().updateCueTiming(1, 0, 1000);
+    expect(useSubtitleStore.getState().past).toHaveLength(0);
+  });
+});

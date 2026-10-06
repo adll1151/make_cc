@@ -35,6 +35,10 @@ interface SubtitleStore {
   lastSavedAt: number | null;
   /** 리치 CC — 사운드(비음성) 큐 목록 표시 여부. 뷰 전용(데이터·저장·export 불변). */
   showSoundCues: boolean;
+  /** 되돌리기 스택 — 편집 직전의 cues 스냅샷 (최근이 끝). */
+  past: Cue[][];
+  /** 다시 실행 스택 — undo로 물러난 cues 스냅샷 (최근이 끝). */
+  future: Cue[][];
 
   /** 최초 데이터 로드 */
   setLoaded(params: { jobId: string; cues: Cue[]; speakerMap?: SpeakerMap }): void;
@@ -58,6 +62,10 @@ interface SubtitleStore {
   setEditingIndex(idx: number | null): void;
   /** 사운드 큐 표시 토글 (뷰 전용) */
   setShowSoundCues(v: boolean): void;
+  /** 마지막 편집 되돌리기 (텍스트·타이밍·추가·삭제). 스택이 비면 무시 */
+  undo(): void;
+  /** 되돌린 편집 다시 실행. 스택이 비면 무시 */
+  redo(): void;
   /** 저장 시작 마킹 */
   markSaving(): void;
   /** 저장 완료 마킹 (signature 갱신) */
@@ -75,6 +83,15 @@ function computeSignature(cues: Cue[]): string {
 
 const MIN_GAP_MS = 200; // 자막 삽입에 필요한 최소 간격
 const NEW_CUE_MS = 2000; // 새 자막 기본 길이
+
+const HISTORY_LIMIT = 100;
+
+/** 편집 직전 cues를 past에 쌓고 future를 비운다 (새 편집은 redo 갈래를 끊음). */
+function pushHistory(past: Cue[][], cur: Cue[]) {
+  const next = past.length >= HISTORY_LIMIT ? past.slice(1) : past.slice();
+  next.push(cur);
+  return { past: next, future: [] as Cue[][] };
+}
 
 /** cues 배열 → dirty 재계산 set 페이로드 (구조 변경 공통). */
 function recomputed(cues: Cue[], originalSignature: string) {
@@ -125,6 +142,8 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
   lastSaveError: null,
   lastSavedAt: null,
   showSoundCues: true,
+  past: [],
+  future: [],
 
   setLoaded({ jobId, cues, speakerMap }) {
     const withUid = cues.map((c) => ({ ...c, uid: c.uid ?? crypto.randomUUID() }));
@@ -142,6 +161,8 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
       saveStatus: 'idle',
       lastSaveError: null,
       lastSavedAt: null,
+      past: [],
+      future: [],
     });
   },
 
@@ -165,6 +186,7 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
       signature: nextSig,
       dirty: isDirty,
       saveStatus: isDirty ? 'dirty' : 'saved',
+      ...pushHistory(get().past, cues),
     });
   },
 
@@ -183,8 +205,9 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
       else return; // 공간 없음
     }
     const next = cues.slice();
+    if (next[i]!.startMs === s && next[i]!.endMs === e) return; // 무변경은 히스토리에 안 쌓음
     next[i] = { ...next[i]!, startMs: s, endMs: e };
-    set(recomputed(next, get().originalSignature));
+    set({ ...recomputed(next, get().originalSignature), ...pushHistory(get().past, cues) });
   },
 
   deleteCue(index) {
@@ -195,7 +218,12 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
     const next = cues.filter((_, k) => k !== i).map((c, k) => ({ ...c, index: k + 1 }));
     const sel = get().selectedIndex;
     const newSel = sel === null ? null : Math.min(sel, next.length - 1);
-    set({ ...recomputed(next, get().originalSignature), selectedIndex: newSel, editingIndex: null });
+    set({
+      ...recomputed(next, get().originalSignature),
+      ...pushHistory(get().past, cues),
+      selectedIndex: newSel,
+      editingIndex: null,
+    });
   },
 
   addCueAfter(index) {
@@ -203,6 +231,7 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
     if (!res) return;
     set({
       ...recomputed(res.cues, get().originalSignature),
+      ...pushHistory(get().past, get().cues),
       selectedIndex: res.selected,
       editingIndex: res.selected,
     });
@@ -213,6 +242,7 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
     if (!res) return;
     set({
       ...recomputed(res.cues, get().originalSignature),
+      ...pushHistory(get().past, get().cues),
       selectedIndex: res.selected,
       editingIndex: res.selected,
     });
@@ -234,6 +264,32 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
 
   setShowSoundCues(v) {
     set({ showSoundCues: v });
+  },
+
+  undo() {
+    const { past, future, cues, selectedIndex, originalSignature } = get();
+    const prev = past[past.length - 1];
+    if (!prev) return;
+    set({
+      ...recomputed(prev, originalSignature),
+      past: past.slice(0, -1),
+      future: [...future, cues],
+      editingIndex: null,
+      selectedIndex: selectedIndex === null ? null : Math.min(selectedIndex, prev.length - 1),
+    });
+  },
+
+  redo() {
+    const { past, future, cues, selectedIndex, originalSignature } = get();
+    const next = future[future.length - 1];
+    if (!next) return;
+    set({
+      ...recomputed(next, originalSignature),
+      past: [...past, cues],
+      future: future.slice(0, -1),
+      editingIndex: null,
+      selectedIndex: selectedIndex === null ? null : Math.min(selectedIndex, next.length - 1),
+    });
   },
 
   markSaving() {
@@ -269,6 +325,8 @@ export const useSubtitleStore = create<SubtitleStore>((set, get) => ({
       saveStatus: 'idle',
       lastSaveError: null,
       lastSavedAt: null,
+      past: [],
+      future: [],
     });
   },
 }));
