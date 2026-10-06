@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { POSTS } from '@/data/blog';
 
-/** sitemap — 색인 대상은 콘텐츠 페이지(랜딩·데모·블로그·가이드·FAQ·개인정보). */
+/** sitemap — 색인 대상은 콘텐츠 페이지(랜딩·데모·블로그·가이드·FAQ·요금제·약관·개인정보). */
 const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://makecc.vercel.app';
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -18,6 +18,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/blog`, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${BASE}/guide`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${BASE}/faq`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${BASE}/pricing`, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${BASE}/terms`, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${BASE}/privacy`, changeFrequency: 'monthly', priority: 0.3 },
     ...posts,
   ];

@@ -89,6 +89,7 @@ export function FloatingNav() {
           <NavLink href="/demo">예시</NavLink>
           <NavLink href="/blog">블로그</NavLink>
           <NavLink href="/guide">가이드</NavLink>
+          <NavLink href="/pricing">요금제</NavLink>
           <NavLink href="/upload">업로드</NavLink>
           {email && <NavLink href="/jobs">내 이력</NavLink>}
           <DiscordInviteLink className="rounded-full px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground" />
@@ -141,6 +142,7 @@ export function FloatingNav() {
               <MobileLink href="/demo" onClick={close}>예시</MobileLink>
               <MobileLink href="/blog" onClick={close}>블로그</MobileLink>
               <MobileLink href="/guide" onClick={close}>가이드</MobileLink>
+              <MobileLink href="/pricing" onClick={close}>요금제</MobileLink>
               <MobileLink href="/upload" onClick={close}>업로드</MobileLink>
               {email && (
                 <MobileLink href="/jobs" onClick={close}>

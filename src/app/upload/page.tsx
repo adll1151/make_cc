@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { UploadFlow } from '@/features/upload';
 import { FloatingNav } from '@/components/ui/floating-nav';
+import { getPlanLimits } from '@/services/auth';
 
 export const metadata = {
   title: '영상 업로드 — make_cc',
@@ -8,6 +9,8 @@ export const metadata = {
 };
 
 export default function UploadPage() {
+  const l = getPlanLimits();
+
   return (
     <main className="relative min-h-screen overflow-hidden">
       <div className="pointer-events-none fixed inset-0 -z-10 aurora-subtle" aria-hidden />
@@ -39,6 +42,15 @@ export default function UploadPage() {
         <div className="enter-fade-up mt-12" style={{ animationDelay: '0.4s' }}>
           <UploadFlow />
         </div>
+
+        {/* 한도 안내 — 업로드 후 거절되기 전에 미리 알 수 있게 (값은 guards와 같은 env) */}
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          게스트 {l.guest.duration} · {l.guest.size}까지 · 무료 회원 {l.member.duration} ·{' '}
+          {l.member.size}까지 ·{' '}
+          <Link href="/pricing" className="underline-offset-2 hover:underline">
+            요금제 보기
+          </Link>
+        </p>
 
         <p className="mt-12 text-center text-xs text-muted-foreground">
           업로드된 영상은 학습에 사용되지 않으며, 처리 후 자동 삭제됩니다. ·{' '}
